@@ -1,0 +1,193 @@
+{
+  "eventCards": [
+    {
+      "id": "war",
+      "name": "전쟁",
+      "icon": "🔥",
+      "category": "negative",
+      "mvp": true,
+      "description": "전쟁이 발발해 부동산이 국유화됩니다.",
+      "effects": [
+        {
+          "type": "seize_random_property",
+          "target": "any_player",
+          "count": 1,
+          "description": "랜덤 플레이어의 랜덤 부동산 1개 소유권을 은행으로 회수"
+        },
+        {
+          "type": "destroy_buildings",
+          "target": "seized_property",
+          "count": [1, 2],
+          "random": true,
+          "description": "회수된 부동산에 빌라/아파트가 있다면 1~2채 랜덤 파괴 (반환 없음)"
+        }
+      ],
+      "npcLines": [
+        "전쟁이 발발했습니다. {playerName}님의 {property}가 국유화되었습니다.",
+        "이런… 전쟁의 여파로 {property}이(가) 국가에 귀속되었습니다."
+      ]
+    },
+    {
+      "id": "redevelopment",
+      "name": "재개발",
+      "icon": "🏗",
+      "category": "positive",
+      "mvp": true,
+      "description": "대규모 재개발로 모든 부동산 시세가 추가 상승합니다.",
+      "effects": [
+        {
+          "type": "inflation_boost",
+          "target": "all_properties",
+          "rate": 0.10,
+          "description": "모든 부동산 시세 +10% 추가 상승 (그 해 인플레 4% + 재개발 10% = 총 14%)"
+        }
+      ],
+      "npcLines": [
+        "대규모 재개발 발표! 모든 부동산 시세가 10% 추가 상승했습니다.",
+        "신도시 개발 계획이 발표되었습니다. 부동산 가치 폭등!"
+      ]
+    },
+    {
+      "id": "interest_rate_hike",
+      "name": "금리 인상",
+      "icon": "💰",
+      "category": "negative",
+      "mvp": false,
+      "description": "기준금리가 인상되어 대출 이자가 늘어납니다.",
+      "effects": [
+        {
+          "type": "loan_interest_multiplier",
+          "rate": 1.5,
+          "duration_years": 1,
+          "description": "1년간 모든 대출 이자 +50%"
+        }
+      ],
+      "npcLines": [
+        "기준금리가 인상되었습니다. 대출 이자 부담이 커집니다."
+      ]
+    },
+    {
+      "id": "bubble_burst",
+      "name": "거품 붕괴",
+      "icon": "🏚",
+      "category": "negative",
+      "mvp": false,
+      "description": "부동산 거품이 붕괴되어 비싼 지역이 폭락합니다.",
+      "effects": [
+        {
+          "type": "price_change",
+          "target": "color_groups",
+          "groups": ["green", "darkblue"],
+          "rate": -0.25,
+          "description": "초록/남색 부동산 시세 -25%"
+        },
+        {
+          "type": "price_change",
+          "target": "color_groups",
+          "groups": ["brown", "lightblue"],
+          "rate": 0.05,
+          "description": "갈색/하늘색 부동산 시세 +5% (반사 이익)"
+        }
+      ],
+      "npcLines": [
+        "부동산 거품이 붕괴되었습니다. 비싼 지역의 시세가 폭락합니다."
+      ]
+    },
+    {
+      "id": "natural_disaster",
+      "name": "자연재해",
+      "icon": "🌪",
+      "category": "negative",
+      "mvp": false,
+      "description": "자연재해로 한 지역이 큰 피해를 입습니다.",
+      "effects": [
+        {
+          "type": "price_change",
+          "target": "random_color_group",
+          "rate": -0.30,
+          "description": "랜덤 1개 색깔 그룹 -30%"
+        },
+        {
+          "type": "destroy_buildings",
+          "target": "random_color_group_properties",
+          "count": 1,
+          "description": "해당 색깔 그룹 부동산에서 빌라/아파트 1채씩 강제 철거"
+        }
+      ],
+      "npcLines": [
+        "자연재해 발생! {colorGroup} 지역이 큰 피해를 입었습니다."
+      ]
+    },
+    {
+      "id": "economic_boom",
+      "name": "경제 호황",
+      "icon": "🎉",
+      "category": "positive",
+      "mvp": false,
+      "description": "경제가 호황을 맞아 모든 부동산이 상승합니다.",
+      "effects": [
+        {
+          "type": "inflation_boost",
+          "target": "all_properties",
+          "rate": 0.08,
+          "description": "모든 부동산 +8% 추가 상승"
+        },
+        {
+          "type": "money_bonus",
+          "target": "all_players",
+          "amount": 500,
+          "description": "모든 플레이어 +500만원 보너스"
+        }
+      ],
+      "npcLines": [
+        "경제 호황! 모든 부동산이 상승하고 모두에게 보너스가 지급됩니다."
+      ]
+    },
+    {
+      "id": "school_district",
+      "name": "학군 신설",
+      "icon": "🏫",
+      "category": "positive",
+      "mvp": false,
+      "description": "랜덤 지역에 명문 학군이 신설됩니다.",
+      "effects": [
+        {
+          "type": "price_change",
+          "target": "random_color_group",
+          "rate": 0.25,
+          "description": "랜덤 1개 색깔 그룹 +25% (학군 효과)"
+        }
+      ],
+      "npcLines": [
+        "{colorGroup}에 명문 학군이 신설되었습니다. 시세 +25%!"
+      ]
+    },
+    {
+      "id": "new_subway",
+      "name": "신규 노선 개통",
+      "icon": "🚄",
+      "category": "positive",
+      "mvp": false,
+      "description": "지하철 신규 노선이 개통되어 인근 지역이 상승합니다.",
+      "effects": [
+        {
+          "type": "price_change",
+          "target": "adjacent_to_random_railroad",
+          "rate": 0.20,
+          "description": "랜덤 기차역 인접 부동산 +20%"
+        }
+      ],
+      "npcLines": [
+        "{railroad} 인근 신규 노선 개통! 주변 부동산 +20%"
+      ]
+    }
+  ],
+  "_meta": {
+    "mvp_cards": ["war", "redevelopment"],
+    "v2_cards": ["interest_rate_hike", "bubble_burst", "natural_disaster", "economic_boom", "school_district", "new_subway"],
+    "trigger": {
+      "mvp": "정의만 (발동 X)",
+      "v2": "매년 1장씩 자동 추첨"
+    }
+  }
+}

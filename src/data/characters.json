@@ -1,0 +1,102 @@
+{
+  "_meta": {
+    "description": "보드별 플레이어 캐릭터 풀",
+    "mvpBoard": "korea",
+    "v2Boards": ["japan"],
+    "illustrationNote": "일러스트는 Claude Design (https://claude.ai/design)에서 생성. 등 돌린 실루엣 + 정면 모습 둘 다 필요. MVP에서는 이모지로 임시 대체 가능."
+  },
+
+  "korea": [
+    {
+      "id": "yangban",
+      "name": "정약용",
+      "role": "양반",
+      "description": "갓 쓰고 도포 입은 조선 사대부 (대표 인물: 정약용)",
+      "emoji": "🎓",
+      "slot": "character.yangban",
+      "color": "#D32F2F",
+      "_promptHint": "조선 양반, 갓+도포, 책, 친근한 만화 스타일"
+    },
+    {
+      "id": "general",
+      "name": "이순신",
+      "role": "장군",
+      "description": "갑옷 입고 칼 찬 조선 무관 (대표 인물: 이순신)",
+      "emoji": "⚔️",
+      "slot": "character.general",
+      "color": "#1976D2",
+      "_promptHint": "조선 장군, 흑색 갑옷+금장식, 칼, 친근한 만화 스타일"
+    },
+    {
+      "id": "magistrate",
+      "name": "세종대왕",
+      "role": "임금",
+      "description": "곤룡포 입은 조선 임금 (대표 인물: 세종대왕)",
+      "emoji": "👑",
+      "slot": "character.magistrate",
+      "color": "#F57C00",
+      "_promptHint": "조선 임금, 곤룡포+익선관, 친근한 만화 스타일"
+    },
+    {
+      "id": "farmer",
+      "name": "녹두장군",
+      "role": "농부",
+      "description": "패랭이 쓰고 호미 든 서민 (대표 인물: 녹두장군 녹두장군)",
+      "emoji": "🌾",
+      "slot": "character.farmer",
+      "color": "#388E3C",
+      "_promptHint": "조선 농부, 패랭이+호미, 친근한 만화 스타일"
+    }
+  ],
+
+  "japan": [
+    {
+      "id": "samurai",
+      "name": "사무라이",
+      "nameKanji": "侍",
+      "nameFurigana": "さむらい",
+      "description": "칼 찬 무사",
+      "emoji": "⚔️",
+      "avatar": null,
+      "silhouette": null,
+      "_promptHint": "에도 시대 사무라이, 칼 찬 무사, 친근한 만화 스타일",
+      "_v2": true
+    },
+    {
+      "id": "ninja",
+      "name": "닌자",
+      "nameKanji": "忍者",
+      "nameFurigana": "にんじゃ",
+      "description": "검은 복장의 첩자",
+      "emoji": "🥷",
+      "avatar": null,
+      "silhouette": null,
+      "_promptHint": "에도 시대 닌자, 검은 복장, 친근한 만화 스타일",
+      "_v2": true
+    },
+    {
+      "id": "geisha",
+      "name": "게이샤",
+      "nameKanji": "芸者",
+      "nameFurigana": "げいしゃ",
+      "description": "기모노 입은 여인",
+      "emoji": "👘",
+      "avatar": null,
+      "silhouette": null,
+      "_promptHint": "에도 시대 게이샤, 기모노, 부채, 친근한 만화 스타일",
+      "_v2": true
+    },
+    {
+      "id": "merchant_jp",
+      "name": "상인",
+      "nameKanji": "商人",
+      "nameFurigana": "しょうにん",
+      "description": "에도 시대 상인",
+      "emoji": "💴",
+      "avatar": null,
+      "silhouette": null,
+      "_promptHint": "에도 시대 상인, 하오리 입고 주판 든 모습, 친근한 만화 스타일",
+      "_v2": true
+    }
+  ]
+}

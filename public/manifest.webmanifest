@@ -1,0 +1,10 @@
+{
+  "name": "THE REALLIFE — 리얼라이프",
+  "short_name": "리얼라이프",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0a0a0a",
+  "theme_color": "#D32F2F",
+  "icons": []
+}

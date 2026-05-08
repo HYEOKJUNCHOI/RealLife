@@ -1,0 +1,406 @@
+{
+  "boardId": "korea",
+  "name": "모노폴리 한국판",
+  "currency": "만원",
+  "language": "ko",
+  "tiles": [
+    {
+      "pos": 0,
+      "type": "go",
+      "names": {
+        "ko": "출발",
+        "en": "GO"
+      },
+      "effect": {
+        "passReward": 200
+      }
+    },
+    {
+      "pos": 1,
+      "type": "property",
+      "color": "brown",
+      "price": 60,
+      "houseCost": 50,
+      "names": {
+        "ko": "수원",
+        "region": "경기도"
+      }
+    },
+    {
+      "pos": 2,
+      "type": "community_chest",
+      "names": {
+        "ko": "사회사업기금"
+      }
+    },
+    {
+      "pos": 3,
+      "type": "property",
+      "color": "brown",
+      "price": 60,
+      "houseCost": 50,
+      "names": {
+        "ko": "용인",
+        "region": "경기도"
+      }
+    },
+    {
+      "pos": 4,
+      "type": "tax",
+      "amount": 200,
+      "names": {
+        "ko": "소득세"
+      }
+    },
+    {
+      "pos": 5,
+      "type": "railroad",
+      "price": 200,
+      "mortgage": 100,
+      "names": {
+        "ko": "광주역"
+      }
+    },
+    {
+      "pos": 6,
+      "type": "property",
+      "color": "lightblue",
+      "price": 100,
+      "houseCost": 50,
+      "names": {
+        "ko": "군산",
+        "region": "전라북도"
+      }
+    },
+    {
+      "pos": 7,
+      "type": "chance",
+      "names": {
+        "ko": "찬스"
+      }
+    },
+    {
+      "pos": 8,
+      "type": "property",
+      "color": "lightblue",
+      "price": 100,
+      "houseCost": 50,
+      "names": {
+        "ko": "익산",
+        "region": "전라북도"
+      }
+    },
+    {
+      "pos": 9,
+      "type": "property",
+      "color": "lightblue",
+      "price": 120,
+      "houseCost": 50,
+      "names": {
+        "ko": "전주",
+        "region": "전라북도"
+      }
+    },
+    {
+      "pos": 10,
+      "type": "jail",
+      "names": {
+        "ko": "감옥",
+        "subLabel": "방문"
+      }
+    },
+    {
+      "pos": 11,
+      "type": "property",
+      "color": "pink",
+      "price": 140,
+      "houseCost": 100,
+      "names": {
+        "ko": "경주",
+        "region": "경상북도"
+      }
+    },
+    {
+      "pos": 12,
+      "type": "utility",
+      "price": 150,
+      "mortgage": 75,
+      "rentMultiplier": [
+        4,
+        10
+      ],
+      "utilityKind": "electric",
+      "names": {
+        "ko": "전매공사"
+      }
+    },
+    {
+      "pos": 13,
+      "type": "property",
+      "color": "pink",
+      "price": 140,
+      "houseCost": 100,
+      "names": {
+        "ko": "포항",
+        "region": "경상북도"
+      }
+    },
+    {
+      "pos": 14,
+      "type": "property",
+      "color": "pink",
+      "price": 160,
+      "houseCost": 100,
+      "names": {
+        "ko": "대구",
+        "region": "광역시"
+      }
+    },
+    {
+      "pos": 15,
+      "type": "railroad",
+      "price": 200,
+      "mortgage": 100,
+      "names": {
+        "ko": "부산역"
+      }
+    },
+    {
+      "pos": 16,
+      "type": "property",
+      "color": "orange",
+      "price": 180,
+      "houseCost": 100,
+      "names": {
+        "ko": "창원",
+        "region": "경상남도"
+      }
+    },
+    {
+      "pos": 17,
+      "type": "community_chest",
+      "names": {
+        "ko": "사회사업기금"
+      }
+    },
+    {
+      "pos": 18,
+      "type": "property",
+      "color": "orange",
+      "price": 180,
+      "houseCost": 100,
+      "names": {
+        "ko": "울산",
+        "region": "광역시"
+      }
+    },
+    {
+      "pos": 19,
+      "type": "property",
+      "color": "orange",
+      "price": 200,
+      "houseCost": 100,
+      "names": {
+        "ko": "부산",
+        "region": "광역시"
+      }
+    },
+    {
+      "pos": 20,
+      "type": "free_parking",
+      "names": {
+        "ko": "무료주차장"
+      }
+    },
+    {
+      "pos": 21,
+      "type": "property",
+      "color": "red",
+      "price": 220,
+      "houseCost": 150,
+      "names": {
+        "ko": "제주",
+        "region": "특별자치도"
+      }
+    },
+    {
+      "pos": 22,
+      "type": "chance",
+      "names": {
+        "ko": "찬스"
+      }
+    },
+    {
+      "pos": 23,
+      "type": "property",
+      "color": "red",
+      "price": 220,
+      "houseCost": 150,
+      "names": {
+        "ko": "여수",
+        "region": "전라남도"
+      }
+    },
+    {
+      "pos": 24,
+      "type": "property",
+      "color": "red",
+      "price": 240,
+      "houseCost": 150,
+      "names": {
+        "ko": "광주",
+        "region": "광역시"
+      }
+    },
+    {
+      "pos": 25,
+      "type": "railroad",
+      "price": 200,
+      "mortgage": 100,
+      "names": {
+        "ko": "춘천역"
+      }
+    },
+    {
+      "pos": 26,
+      "type": "property",
+      "color": "yellow",
+      "price": 260,
+      "houseCost": 150,
+      "names": {
+        "ko": "춘천",
+        "region": "강원도"
+      }
+    },
+    {
+      "pos": 27,
+      "type": "property",
+      "color": "yellow",
+      "price": 260,
+      "houseCost": 150,
+      "names": {
+        "ko": "강릉",
+        "region": "강원도"
+      }
+    },
+    {
+      "pos": 28,
+      "type": "utility",
+      "price": 150,
+      "mortgage": 75,
+      "rentMultiplier": [
+        4,
+        10
+      ],
+      "utilityKind": "water",
+      "names": {
+        "ko": "수도공사"
+      }
+    },
+    {
+      "pos": 29,
+      "type": "property",
+      "color": "yellow",
+      "price": 280,
+      "houseCost": 150,
+      "names": {
+        "ko": "원주",
+        "region": "강원도"
+      }
+    },
+    {
+      "pos": 30,
+      "type": "go_to_jail",
+      "names": {
+        "ko": "감옥으로 가시오!"
+      }
+    },
+    {
+      "pos": 31,
+      "type": "property",
+      "color": "green",
+      "price": 300,
+      "houseCost": 200,
+      "names": {
+        "ko": "청주",
+        "region": "충청북도"
+      }
+    },
+    {
+      "pos": 32,
+      "type": "property",
+      "color": "green",
+      "price": 300,
+      "houseCost": 200,
+      "names": {
+        "ko": "천안",
+        "region": "충청남도"
+      }
+    },
+    {
+      "pos": 33,
+      "type": "community_chest",
+      "names": {
+        "ko": "사회사업기금"
+      }
+    },
+    {
+      "pos": 34,
+      "type": "property",
+      "color": "green",
+      "price": 320,
+      "houseCost": 200,
+      "names": {
+        "ko": "대전",
+        "region": "광역시"
+      }
+    },
+    {
+      "pos": 35,
+      "type": "railroad",
+      "price": 200,
+      "mortgage": 100,
+      "names": {
+        "ko": "서울역"
+      }
+    },
+    {
+      "pos": 36,
+      "type": "chance",
+      "names": {
+        "ko": "찬스"
+      }
+    },
+    {
+      "pos": 37,
+      "type": "property",
+      "color": "darkblue",
+      "price": 350,
+      "houseCost": 200,
+      "names": {
+        "ko": "인천",
+        "region": "광역시"
+      }
+    },
+    {
+      "pos": 38,
+      "type": "tax",
+      "amount": 100,
+      "names": {
+        "ko": "사치세"
+      }
+    },
+    {
+      "pos": 39,
+      "type": "property",
+      "color": "darkblue",
+      "price": 400,
+      "houseCost": 200,
+      "names": {
+        "ko": "서울",
+        "region": "특별시"
+      }
+    }
+  ],
+  "currencyUnit": "만원"
+}

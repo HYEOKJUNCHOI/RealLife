@@ -1,0 +1,350 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   THE REALLIFE — 정통 모노폴리 결 글로벌 스타일
+   - 양피지 카드 + 두꺼운 검정 윤곽 + 굵은 압축 서체
+   - 도심 배경(CityBackground)은 그대로 유지
+   ================================================================ */
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  font-family: '"Noto Sans KR"', system-ui, sans-serif;
+  /* 양피지 종이 결 노이즈 (subtle) — 모노폴리 보드 느낌 */
+  background-color: #F4EAD0;
+}
+
+/* 헤드라인은 무조건 굵은 압축 산세리프 */
+h1, h2, h3, h4, .font-display {
+  font-family: 'Oswald', '"Bebas Neue"', Impact, '"Black Han Sans"', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* 한글 도시명 등 — Black Han Sans 굵은 결 */
+.font-board {
+  font-family: '"Black Han Sans"', 'Oswald', '"Noto Sans KR"', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* 매트릭스 페이드아웃 (현금 토스트) */
+@layer components {
+  .matrix-pop {
+    @apply font-mono text-sm pointer-events-none;
+    animation: matrix-fade 1.5s ease-out forwards;
+  }
+  .matrix-pop-green { color: #00FF41; }
+  .matrix-pop-red { color: #FF0040; }
+}
+
+@keyframes matrix-fade {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+
+/* 도심 배경 차 슬라이드 */
+@keyframes car-slide-right {
+  0%   { transform: translateX(-80px); }
+  100% { transform: translateX(100vw); }
+}
+@keyframes car-slide-left {
+  0%   { transform: translateX(100vw); }
+  100% { transform: translateX(-80px); }
+}
+
+/* ===== 시간 포탈 — 차원문 결 (회전 + 깜빡 + 글로우 펄스) ===== */
+/* 포탈 자체 천천히 회전 — 시계바늘 결 */
+@keyframes portal-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+/* 포탈 PNG 자체 — 깜빡 강도 낮춰 차분한 결 */
+@keyframes portal-flicker {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 8px rgba(96,165,250,0.55))
+      drop-shadow(0 0 20px rgba(59,130,246,0.4))
+      brightness(1.05) saturate(1.1);
+  }
+  18% {
+    filter:
+      drop-shadow(0 0 16px rgba(125,211,252,0.65))
+      drop-shadow(0 0 38px rgba(99,102,241,0.5))
+      brightness(1.25) saturate(1.25);
+  }
+  37% {
+    filter:
+      drop-shadow(0 0 10px rgba(96,165,250,0.55))
+      drop-shadow(0 0 24px rgba(168,85,247,0.35))
+      brightness(1.1) saturate(1.15) hue-rotate(-10deg);
+  }
+  58% {
+    filter:
+      drop-shadow(0 0 22px rgba(56,189,248,0.7))
+      drop-shadow(0 0 46px rgba(99,102,241,0.6))
+      brightness(1.32) saturate(1.3);
+  }
+  76% {
+    filter:
+      drop-shadow(0 0 12px rgba(167,139,250,0.55))
+      drop-shadow(0 0 30px rgba(59,130,246,0.45))
+      brightness(1.15) saturate(1.2) hue-rotate(15deg);
+  }
+}
+/* 글로우 halo — 크기·투명도 펄스 + 색온도 흔들림 */
+@keyframes portal-halo {
+  0%, 100% {
+    opacity: 0.75;
+    transform: scale(1);
+    filter: blur(10px) hue-rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.18);
+    filter: blur(16px) hue-rotate(15deg);
+  }
+  45% {
+    opacity: 0.9;
+    transform: scale(1.08);
+    filter: blur(12px) hue-rotate(-20deg);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(1.25);
+    filter: blur(20px) hue-rotate(25deg);
+  }
+  85% {
+    opacity: 0.85;
+    transform: scale(1.12);
+    filter: blur(14px) hue-rotate(-10deg);
+  }
+}
+/* 미세 sparkle — 화면 가장자리 짧은 깜빡 */
+@keyframes portal-sparkle {
+  0%, 60%, 100% { opacity: 0; }
+  10%, 14%      { opacity: 1; }
+  30%, 34%      { opacity: 0.6; }
+}
+
+/* 포탈 아래편 신비 연기 — 위로 흐르며 페이드 */
+@keyframes portal-smoke {
+  0%   { opacity: 0.4; transform: translateY(6px) scale(0.95); }
+  50%  { opacity: 0.85; transform: translateY(-10px) scale(1.1); }
+  100% { opacity: 0.4; transform: translateY(6px) scale(0.95); }
+}
+@keyframes portal-smoke-slow {
+  0%   { opacity: 0.3; transform: translate(-4px, 4px) scale(1); }
+  50%  { opacity: 0.7; transform: translate(6px, -14px) scale(1.18); }
+  100% { opacity: 0.3; transform: translate(-4px, 4px) scale(1); }
+}
+
+/* 포탈 윗편 네온 반짝이 — 점들이 빠르게 깜빡 (네온 사인 결) */
+@keyframes neon-twinkle-a {
+  0%, 100% { opacity: 0.15; }
+  18%, 22% { opacity: 1; }
+  45%, 48% { opacity: 0.7; }
+  72%, 76% { opacity: 0.95; }
+}
+@keyframes neon-twinkle-b {
+  0%, 100% { opacity: 0.6; }
+  15%, 19% { opacity: 0.2; }
+  40%, 44% { opacity: 1; }
+  68%, 72% { opacity: 0.35; }
+  90%      { opacity: 0.9; }
+}
+
+/* 노을 반짝이 — 주황·빨강·앰버 톤 별빛 깜빡 (포탈 네온과 다른 timing) */
+@keyframes sunset-twinkle-a {
+  0%, 100% { opacity: 0.2; }
+  15%, 19% { opacity: 1; }
+  40%, 44% { opacity: 0.55; }
+  65%, 69% { opacity: 0.95; }
+  85%, 89% { opacity: 0.4; }
+}
+@keyframes sunset-twinkle-b {
+  0%, 100% { opacity: 0.5; }
+  10%, 14% { opacity: 0.15; }
+  35%, 39% { opacity: 1; }
+  60%, 64% { opacity: 0.4; }
+  82%, 86% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="car-slide"],
+  [style*="portal-"] { animation: none !important; }
+}
+
+/* ================================================================
+   모노폴리 결 컴포넌트 유틸
+   ================================================================ */
+@layer components {
+  /* 양피지 카드 — 도심 배경 위에 떠있는 게임 UI 표면 + 종이 노이즈 질감 */
+  .deed-surface {
+    background-color: #FBF6E9;
+    background-image:
+      /* 종이 fiber noise (SVG turbulence) */
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.58 0 0 0 0 0.45 0 0 0 0 0.30 0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
+      radial-gradient(circle at 20% 10%, rgba(149,84,54,0.05), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(15,12,10,0.06), transparent 40%);
+    background-blend-mode: multiply, normal, normal;
+    border: 2.5px solid #0F0C0A;
+    border-radius: 10px;
+    /* 검정 윤곽 + 갈색 글로우 (카드 태두리 전체에서 은은하게 발광) */
+    box-shadow:
+      0 4px 0 0 #0F0C0A,
+      0 0 0 4px rgba(149, 84, 54, 0.55),
+      0 0 0 9px rgba(149, 84, 54, 0.30),
+      0 0 24px 6px rgba(149, 84, 54, 0.70),
+      0 0 60px 12px rgba(149, 84, 54, 0.45),
+      0 14px 32px -4px rgba(0,0,0,0.45);
+  }
+  .deed-surface-flat {
+    background-color: #FBF6E9;
+    border: 2px solid #0F0C0A;
+    border-radius: 8px;
+  }
+
+  /* 모노폴리 칩 버튼 — 키보드 키캡 결 (두꺼운 검정 테두리 + 입체 그림자 + 눌림) */
+  .btn-chip {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-lg border-2 border-ink-line
+           bg-parchment-50 px-4 py-2 font-display font-semibold uppercase tracking-wide
+           text-ink shadow-chip transition-all duration-100 ease-out
+           hover:-translate-y-0.5 active:translate-y-[4px] active:shadow-chip-pressed
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+    /* 키캡 상단 하이라이트 — 미세한 inner glow 로 입체감 강화 */
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.05) 100%);
+  }
+  .btn-chip-red {
+    @apply btn-chip bg-monopoly-red text-white border-ink-line
+           hover:bg-monopoly-deep;
+  }
+  .btn-chip-gold {
+    @apply btn-chip bg-monopoly-gold text-ink border-ink-line
+           hover:bg-amber-300;
+  }
+  .btn-chip-ghost {
+    @apply btn-chip bg-transparent text-ink/80 shadow-none border-ink/30
+           hover:bg-ink/5;
+  }
+
+  /* deed card 색띠 — 컬러셋 상단 띠 */
+  .deed-band {
+    @apply relative w-full border-b-2 border-ink-line;
+  }
+
+  /* 글래스 (배경 위 패널) */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-xl;
+  }
+  .glass-card-dark {
+    @apply bg-neutral-900/75 backdrop-blur-md border border-white/10 shadow-xl text-white;
+  }
+}
+
+/* deed card 도착 애니메이션 — 모달 오픈 시 카드가 살짝 떨어지는 결 */
+@keyframes deed-drop {
+  0% { opacity: 0; transform: translateY(-14px) rotate(-1.5deg) scale(0.96); }
+  60% { opacity: 1; transform: translateY(2px) rotate(0.5deg) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+
+/* 자기 턴 펄스 */
+@keyframes turn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(211,47,47,0.55), 0 4px 0 0 #0F0C0A; }
+  50% { box-shadow: 0 0 0 10px rgba(211,47,47,0), 0 4px 0 0 #0F0C0A; }
+}
+
+/* 로고 — Lucid 결 에너지 흐름 (느리고 차분한 sweep) */
+.energy-text {
+  background: linear-gradient(
+    100deg,
+    #9F1F1F 0%,
+    #B82828 25%,
+    #D32F2F 42%,
+    #E68A4A 50%,
+    #D32F2F 58%,
+    #B82828 75%,
+    #9F1F1F 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: energy-flow 3.5s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 8px rgba(211,47,47,0.4))
+    drop-shadow(0 0 22px rgba(211,47,47,0.22))
+    drop-shadow(0 4px 0 rgba(0,0,0,0.55));
+}
+@keyframes energy-flow {
+  0%   { background-position: 220% 50%; }
+  100% { background-position: -40% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-text { animation: none; }
+}
+
+/* 셋업 — STEP 상태별 글로우 */
+/* active = 지금 해야 하는 STEP (노란 펄스 — 반짝임) */
+@keyframes step-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(251,191,36,0.5),
+      0 0 18px 3px rgba(251,191,36,0.55),
+      0 2px 0 0 #0F0C0A;
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(251,191,36,0.85),
+      0 0 36px 8px rgba(251,191,36,0.85),
+      0 2px 0 0 #0F0C0A;
+  }
+}
+.step-glow { animation: step-glow 1.8s ease-in-out infinite; }
+
+/* 턴 종료 — 빨간 펄스 (게임 결, 액션 강조) */
+@keyframes turn-end-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(211,47,47,0.55),
+      0 0 18px 3px rgba(211,47,47,0.6),
+      0 5px 0 0 #0F0C0A,
+      0 10px 18px -4px rgba(0,0,0,0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(211,47,47,0.85),
+      0 0 36px 10px rgba(211,47,47,0.85),
+      0 5px 0 0 #0F0C0A,
+      0 10px 18px -4px rgba(0,0,0,0.5);
+  }
+}
+.turn-end-glow { animation: turn-end-glow 1.6s ease-in-out infinite; }
+
+/* done = 입력 완료 (빨강, 정적 — 반짝임 X) */
+.step-glow-done {
+  box-shadow:
+    0 0 0 2px rgba(211,47,47,0.45),
+    0 0 14px 2px rgba(211,47,47,0.30),
+    0 2px 0 0 #0F0C0A;
+}
+
+/* idle = 미입력 (파랑, 정적) */
+.step-glow-idle {
+  box-shadow:
+    0 0 0 2px rgba(25,118,210,0.45),
+    0 0 14px 2px rgba(25,118,210,0.30),
+    0 2px 0 0 #0F0C0A;
+}
+
+/* 스크롤바 숨김 (모달 본문) — 가로 스크롤바 떠있는 문제 방지 */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

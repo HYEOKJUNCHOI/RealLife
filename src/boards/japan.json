@@ -1,0 +1,734 @@
+{
+  "boardId": "japan",
+  "name": "モノポリー 江戸版",
+  "nameLocale": {
+    "ja": {
+      "kanji": "モノポリー 江戸版",
+      "furigana": "ものぽりー えどばん"
+    },
+    "ko": "모노폴리 에도판"
+  },
+  "currency": "₩",
+  "language": "ja",
+  "tiles": [
+    {
+      "pos": 0,
+      "type": "go",
+      "names": {
+        "kanji": "スタート",
+        "furigana": "すたーと",
+        "ko": "출발"
+      },
+      "effect": {
+        "passReward": 200
+      }
+    },
+    {
+      "pos": 1,
+      "type": "property",
+      "color": "brown",
+      "price": 60,
+      "houseCost": 50,
+      "rent": [
+        2,
+        4,
+        10,
+        30,
+        90,
+        160,
+        250
+      ],
+      "names": {
+        "kanji": "新橋通り",
+        "furigana": "しんばしどおり",
+        "ko": "신바시길"
+      },
+      "loanAmount": 40,
+      "loanInterestPerTurn": 5
+    },
+    {
+      "pos": 2,
+      "type": "community_chest",
+      "names": {
+        "kanji": "皇帝の宝物",
+        "furigana": "こうていのたからもの",
+        "ko": "황제의 보물"
+      }
+    },
+    {
+      "pos": 3,
+      "type": "property",
+      "color": "brown",
+      "price": 60,
+      "houseCost": 50,
+      "rent": [
+        4,
+        8,
+        20,
+        60,
+        180,
+        320,
+        450
+      ],
+      "names": {
+        "kanji": "港通り",
+        "furigana": "みなとどおり",
+        "ko": "미나토 도로"
+      },
+      "loanAmount": 40,
+      "loanInterestPerTurn": 5
+    },
+    {
+      "pos": 4,
+      "type": "tax",
+      "amount": 200,
+      "names": {
+        "kanji": "米税",
+        "furigana": "こめぜい",
+        "ko": "쌀 세금"
+      }
+    },
+    {
+      "pos": 5,
+      "type": "railroad",
+      "price": 200,
+      "rent": [
+        25,
+        50,
+        100,
+        200
+      ],
+      "mortgage": 100,
+      "names": {
+        "kanji": "神田川",
+        "furigana": "かんだがわ",
+        "ko": "칸다 강"
+      }
+    },
+    {
+      "pos": 6,
+      "type": "property",
+      "color": "lightblue",
+      "price": 100,
+      "houseCost": 50,
+      "rent": [
+        6,
+        12,
+        30,
+        90,
+        270,
+        400,
+        550
+      ],
+      "names": {
+        "kanji": "平川通り",
+        "furigana": "ひらかわどおり",
+        "ko": "히라카와 길"
+      },
+      "loanAmount": 70,
+      "loanInterestPerTurn": 7
+    },
+    {
+      "pos": 7,
+      "type": "chance",
+      "names": {
+        "kanji": "招き猫",
+        "furigana": "まねきねこ",
+        "ko": "행운의 고양이"
+      }
+    },
+    {
+      "pos": 8,
+      "type": "property",
+      "color": "lightblue",
+      "price": 100,
+      "houseCost": 50,
+      "rent": [
+        6,
+        12,
+        30,
+        90,
+        270,
+        400,
+        550
+      ],
+      "names": {
+        "kanji": "町会所通り",
+        "furigana": "まちかいしょどおり",
+        "ko": "마치카이쇼 도로"
+      },
+      "loanAmount": 70,
+      "loanInterestPerTurn": 7
+    },
+    {
+      "pos": 9,
+      "type": "property",
+      "color": "lightblue",
+      "price": 120,
+      "houseCost": 50,
+      "rent": [
+        8,
+        16,
+        40,
+        100,
+        300,
+        450,
+        600
+      ],
+      "names": {
+        "kanji": "赤坂",
+        "furigana": "あかさか",
+        "ko": "아카사카"
+      },
+      "loanAmount": 80,
+      "loanInterestPerTurn": 7
+    },
+    {
+      "pos": 10,
+      "type": "jail",
+      "names": {
+        "kanji": "牢屋",
+        "furigana": "ろうや",
+        "ko": "감옥"
+      }
+    },
+    {
+      "pos": 11,
+      "type": "property",
+      "color": "pink",
+      "price": 140,
+      "houseCost": 100,
+      "rent": [
+        10,
+        20,
+        50,
+        150,
+        450,
+        625,
+        750
+      ],
+      "names": {
+        "kanji": "牛込",
+        "furigana": "うしごめ",
+        "ko": "우시고메"
+      },
+      "loanAmount": 100,
+      "loanInterestPerTurn": 10
+    },
+    {
+      "pos": 12,
+      "type": "utility",
+      "price": 150,
+      "mortgage": 75,
+      "rentMultiplier": [
+        4,
+        10
+      ],
+      "utilityKind": "electric",
+      "names": {
+        "kanji": "提灯屋",
+        "furigana": "ちょうちんや",
+        "ko": "등 제작자"
+      }
+    },
+    {
+      "pos": 13,
+      "type": "property",
+      "color": "pink",
+      "price": 140,
+      "houseCost": 100,
+      "rent": [
+        10,
+        20,
+        50,
+        150,
+        450,
+        625,
+        750
+      ],
+      "names": {
+        "kanji": "小石川",
+        "furigana": "こいしかわ",
+        "ko": "고이시카와"
+      },
+      "loanAmount": 100,
+      "loanInterestPerTurn": 10
+    },
+    {
+      "pos": 14,
+      "type": "property",
+      "color": "pink",
+      "price": 160,
+      "houseCost": 100,
+      "rent": [
+        12,
+        24,
+        60,
+        180,
+        500,
+        700,
+        900
+      ],
+      "names": {
+        "kanji": "本郷",
+        "furigana": "ほんごう",
+        "ko": "혼고"
+      },
+      "loanAmount": 110,
+      "loanInterestPerTurn": 10
+    },
+    {
+      "pos": 15,
+      "type": "railroad",
+      "price": 200,
+      "rent": [
+        25,
+        50,
+        100,
+        200
+      ],
+      "mortgage": 100,
+      "names": {
+        "kanji": "大川",
+        "furigana": "おおかわ",
+        "ko": "오카와 강"
+      }
+    },
+    {
+      "pos": 16,
+      "type": "property",
+      "color": "orange",
+      "price": 180,
+      "houseCost": 100,
+      "rent": [
+        14,
+        28,
+        70,
+        200,
+        550,
+        750,
+        950
+      ],
+      "names": {
+        "kanji": "埼玉道",
+        "furigana": "さいたまみち",
+        "ko": "사이타마 도로"
+      },
+      "loanAmount": 130,
+      "loanInterestPerTurn": 12
+    },
+    {
+      "pos": 17,
+      "type": "community_chest",
+      "names": {
+        "kanji": "皇帝の宝物",
+        "furigana": "こうていのたからもの",
+        "ko": "황제의 보물"
+      }
+    },
+    {
+      "pos": 18,
+      "type": "property",
+      "color": "orange",
+      "price": 180,
+      "houseCost": 100,
+      "rent": [
+        14,
+        28,
+        70,
+        200,
+        550,
+        750,
+        950
+      ],
+      "names": {
+        "kanji": "隅田通り",
+        "furigana": "すみだどおり",
+        "ko": "스미다 길"
+      },
+      "loanAmount": 130,
+      "loanInterestPerTurn": 12
+    },
+    {
+      "pos": 19,
+      "type": "property",
+      "color": "orange",
+      "price": 200,
+      "houseCost": 100,
+      "rent": [
+        16,
+        32,
+        80,
+        220,
+        600,
+        800,
+        1000
+      ],
+      "names": {
+        "kanji": "下町",
+        "furigana": "したまち",
+        "ko": "시타마치"
+      },
+      "loanAmount": 140,
+      "loanInterestPerTurn": 12
+    },
+    {
+      "pos": 20,
+      "type": "free_parking",
+      "names": {
+        "kanji": "無料駐車場",
+        "furigana": "むりょうちゅうしゃじょう",
+        "ko": "무료 주차장"
+      }
+    },
+    {
+      "pos": 21,
+      "type": "property",
+      "color": "red",
+      "price": 220,
+      "houseCost": 150,
+      "rent": [
+        18,
+        36,
+        90,
+        250,
+        700,
+        875,
+        1050
+      ],
+      "names": {
+        "kanji": "大川通り",
+        "furigana": "おおかわどおり",
+        "ko": "오카와 길"
+      },
+      "loanAmount": 150,
+      "loanInterestPerTurn": 14
+    },
+    {
+      "pos": 22,
+      "type": "chance",
+      "names": {
+        "kanji": "招き猫",
+        "furigana": "まねきねこ",
+        "ko": "행운의 고양이"
+      }
+    },
+    {
+      "pos": 23,
+      "type": "property",
+      "color": "red",
+      "price": 220,
+      "houseCost": 150,
+      "rent": [
+        18,
+        36,
+        90,
+        250,
+        700,
+        875,
+        1050
+      ],
+      "names": {
+        "kanji": "浅草",
+        "furigana": "あさくさ",
+        "ko": "아사쿠사"
+      },
+      "loanAmount": 150,
+      "loanInterestPerTurn": 14
+    },
+    {
+      "pos": 24,
+      "type": "property",
+      "color": "red",
+      "price": 240,
+      "houseCost": 150,
+      "rent": [
+        20,
+        40,
+        100,
+        300,
+        750,
+        925,
+        1100
+      ],
+      "names": {
+        "kanji": "江戸城道",
+        "furigana": "えどじょうみち",
+        "ko": "에도성 도로"
+      },
+      "loanAmount": 170,
+      "loanInterestPerTurn": 14
+    },
+    {
+      "pos": 25,
+      "type": "railroad",
+      "price": 200,
+      "rent": [
+        25,
+        50,
+        100,
+        200
+      ],
+      "mortgage": 100,
+      "names": {
+        "kanji": "日本橋川",
+        "furigana": "にほんばしがわ",
+        "ko": "니혼바시 강"
+      }
+    },
+    {
+      "pos": 26,
+      "type": "property",
+      "color": "yellow",
+      "price": 260,
+      "houseCost": 150,
+      "rent": [
+        22,
+        44,
+        110,
+        330,
+        800,
+        975,
+        1150
+      ],
+      "names": {
+        "kanji": "青山",
+        "furigana": "あおやま",
+        "ko": "아오야마"
+      },
+      "loanAmount": 180,
+      "loanInterestPerTurn": 16
+    },
+    {
+      "pos": 27,
+      "type": "property",
+      "color": "yellow",
+      "price": 260,
+      "houseCost": 150,
+      "rent": [
+        22,
+        44,
+        110,
+        330,
+        800,
+        975,
+        1150
+      ],
+      "names": {
+        "kanji": "公会堂",
+        "furigana": "こうかいどう",
+        "ko": "고카이도"
+      },
+      "loanAmount": 180,
+      "loanInterestPerTurn": 16
+    },
+    {
+      "pos": 28,
+      "type": "utility",
+      "price": 150,
+      "mortgage": 75,
+      "rentMultiplier": [
+        4,
+        10
+      ],
+      "utilityKind": "water",
+      "names": {
+        "kanji": "水車",
+        "furigana": "すいしゃ",
+        "ko": "물레방아"
+      }
+    },
+    {
+      "pos": 29,
+      "type": "property",
+      "color": "yellow",
+      "price": 280,
+      "houseCost": 150,
+      "rent": [
+        24,
+        48,
+        120,
+        360,
+        850,
+        1025,
+        1200
+      ],
+      "names": {
+        "kanji": "深川",
+        "furigana": "ふかがわ",
+        "ko": "후카가와"
+      },
+      "loanAmount": 200,
+      "loanInterestPerTurn": 16
+    },
+    {
+      "pos": 30,
+      "type": "go_to_jail",
+      "names": {
+        "kanji": "牢屋へ行け",
+        "furigana": "ろうやへいけ",
+        "ko": "감옥으로!"
+      }
+    },
+    {
+      "pos": 31,
+      "type": "property",
+      "color": "green",
+      "price": 300,
+      "houseCost": 200,
+      "rent": [
+        26,
+        52,
+        130,
+        390,
+        900,
+        1100,
+        1275
+      ],
+      "names": {
+        "kanji": "長屋通り",
+        "furigana": "ながやどおり",
+        "ko": "나가야 도로"
+      },
+      "loanAmount": 210,
+      "loanInterestPerTurn": 18
+    },
+    {
+      "pos": 32,
+      "type": "property",
+      "color": "green",
+      "price": 300,
+      "houseCost": 200,
+      "rent": [
+        26,
+        52,
+        130,
+        390,
+        900,
+        1100,
+        1275
+      ],
+      "names": {
+        "kanji": "築地市場",
+        "furigana": "つきじしじょう",
+        "ko": "쓰키지 시장"
+      },
+      "loanAmount": 210,
+      "loanInterestPerTurn": 18
+    },
+    {
+      "pos": 33,
+      "type": "community_chest",
+      "names": {
+        "kanji": "皇帝の宝物",
+        "furigana": "こうていのたからもの",
+        "ko": "황제의 보물"
+      }
+    },
+    {
+      "pos": 34,
+      "type": "property",
+      "color": "green",
+      "price": 320,
+      "houseCost": 200,
+      "rent": [
+        28,
+        56,
+        150,
+        450,
+        1000,
+        1200,
+        1400
+      ],
+      "names": {
+        "kanji": "武蔵野市道",
+        "furigana": "むさしのしどう",
+        "ko": "무사시노시 도로"
+      },
+      "loanAmount": 220,
+      "loanInterestPerTurn": 18
+    },
+    {
+      "pos": 35,
+      "type": "railroad",
+      "price": 200,
+      "rent": [
+        25,
+        50,
+        100,
+        200
+      ],
+      "mortgage": 100,
+      "names": {
+        "kanji": "江戸湾",
+        "furigana": "えどわん",
+        "ko": "에도 만"
+      }
+    },
+    {
+      "pos": 36,
+      "type": "chance",
+      "names": {
+        "kanji": "招き猫",
+        "furigana": "まねきねこ",
+        "ko": "행운의 고양이"
+      }
+    },
+    {
+      "pos": 37,
+      "type": "property",
+      "color": "darkblue",
+      "price": 350,
+      "houseCost": 200,
+      "rent": [
+        35,
+        70,
+        175,
+        500,
+        1100,
+        1300,
+        1500
+      ],
+      "names": {
+        "kanji": "日本橋",
+        "furigana": "にほんばし",
+        "ko": "니혼바시"
+      },
+      "loanAmount": 240,
+      "loanInterestPerTurn": 20
+    },
+    {
+      "pos": 38,
+      "type": "tax",
+      "amount": 100,
+      "names": {
+        "kanji": "将軍の貢物",
+        "furigana": "しょうぐんのみつぎもの",
+        "ko": "쇼군의 공물"
+      }
+    },
+    {
+      "pos": 39,
+      "type": "property",
+      "color": "darkblue",
+      "price": 400,
+      "houseCost": 200,
+      "rent": [
+        50,
+        100,
+        200,
+        600,
+        1400,
+        1700,
+        2000
+      ],
+      "names": {
+        "kanji": "東海路通り",
+        "furigana": "とうかいろどおり",
+        "ko": "도카이로 도로"
+      },
+      "loanAmount": 280,
+      "loanInterestPerTurn": 20
+    }
+  ]
+}
