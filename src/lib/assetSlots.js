@@ -8,9 +8,17 @@ export const ASSET_SLOTS = [
   { id: 'character.farmer', label: '농부', category: 'character', defaultPath: '/characters/farmer.png', ratio: 'aspect-square', fallback: '🌾' },
   { id: 'character.magistrate', label: '임금', category: 'character', defaultPath: '/characters/magistrate.png', ratio: 'aspect-square', fallback: '👑' },
   { id: 'character.general', label: '장군', category: 'character', defaultPath: '/characters/general.png', ratio: 'aspect-square', fallback: '⚔️' },
+  { id: 'character.chunDooHwan', label: '전두환', category: 'character', defaultPath: '/characters/chun-doo-hwan.png', ratio: 'aspect-square', fallback: '🪖' },
+  { id: 'character.genghisKhan', label: '징기스칸', category: 'character', defaultPath: '/characters/genghis-khan.png', ratio: 'aspect-square', fallback: '🐎' },
+  { id: 'character.steveJobs', label: '스티브 잡스', category: 'character', defaultPath: '/characters/steve-jobs.png', ratio: 'aspect-square', fallback: '📱' },
+  { id: 'character.billGates', label: '빌 게이츠', category: 'character', defaultPath: '/characters/bill-gates.png', ratio: 'aspect-square', fallback: '💻' },
+  { id: 'character.donaldTrump', label: '트럼프', category: 'character', defaultPath: '/characters/donald-trump.png', ratio: 'aspect-square', fallback: '🏢' },
+  { id: 'character.leeJaeMyung', label: '이재명', category: 'character', defaultPath: '/characters/lee-jae-myung.png', ratio: 'aspect-square', fallback: '🗳️' },
+  { id: 'character.wakizakaYasuharu', label: '와키자카', category: 'character', defaultPath: '/characters/wakizaka-yasuharu.png', ratio: 'aspect-square', fallback: '🗡️' },
+  { id: 'character.toyotomiHideyoshi', label: '도요토미', category: 'character', defaultPath: '/characters/toyotomi-hideyoshi.png', ratio: 'aspect-square', fallback: '🏯' },
 
   // ===== NPC 2종 =====
-  { id: 'npc.realtor', label: '중계인 (객주)', category: 'npc', defaultPath: '/npc/realtor.png', ratio: 'aspect-square', fallback: '👨‍💼' },
+  { id: 'npc.realtor', label: '사회자', category: 'npc', defaultPath: '/npc/realtor.png', ratio: 'aspect-square', fallback: '👨‍💼' },
   { id: 'npc.loanShark', label: '사채업자', category: 'npc', defaultPath: '/npc/loan_shark.png', ratio: 'aspect-square', fallback: '🕴️' },
 
   // ===== 컬러셋 스카이라인 8종 =====

@@ -1,4 +1,4 @@
-// NPC 멘트 영역 — 객주 액자 + 말풍선 결
+// NPC 멘트 영역 — 사회자 액자 + 말풍선 결
 // AssetFrame npc.realtor (classic 액자) + 최근 5건 로그를 정리한 멘트
 import voicelines from '@/data/voicelines.json';
 import AssetFrame from '@/components/AssetFrame.jsx';
@@ -16,12 +16,12 @@ export default function NPCArea({ log = [] }) {
       className="flex items-stretch gap-3 rounded-md border-2 border-ink-line bg-parchment-50 p-2.5 shadow-deed-flat"
       data-component="NPCArea"
     >
-      {/* 객주 액자 (classic frame) */}
+      {/* 사회자 액자 (classic frame) */}
       <div className="shrink-0">
         <AssetFrame
           slot="npc.realtor"
-          framed="classic"
-          className="w-14"
+          transparent
+          className="w-14 drop-shadow-[0_4px_6px_rgba(15,12,10,0.18)]"
           rounded="rounded-sm"
         />
       </div>
@@ -31,7 +31,7 @@ export default function NPCArea({ log = [] }) {
         <div className="flex items-baseline justify-between">
           <div className="flex items-baseline gap-2">
             <span className="rounded-sm border-2 border-ink-line bg-monopoly-red px-1.5 py-0.5 font-display text-[9px] font-bold uppercase tracking-widest text-white">
-              조선 객주
+              사회자
             </span>
             <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-ink/50">
               Banker · Host

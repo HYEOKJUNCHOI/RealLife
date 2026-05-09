@@ -9,6 +9,7 @@ import { useGameStore } from '@/stores/gameStore.js';
 import { currentPrice } from '@/engine/inflation.js';
 import { cn } from '@/lib/cn.js';
 import ModalBase from './ModalBase.jsx';
+import { useGameDialog } from '@/components/GameDialog.jsx';
 
 export default function RecoveryModal({ open, onClose, playerId, needAmount }) {
   const state = useGameStore((s) => s.state);
@@ -17,6 +18,7 @@ export default function RecoveryModal({ open, onClose, playerId, needAmount }) {
   const handleCreditLoan = useGameStore((s) => s.takeCreditLoan);
   const handleBankrupt = useGameStore((s) => s.declareBankruptcy);
   const handleTradeOpen = useGameStore((s) => s.openTradeModal);
+  const dialog = useGameDialog();
 
   if (!state || playerId == null) return null;
   const player = state.players[playerId];
@@ -153,11 +155,17 @@ export default function RecoveryModal({ open, onClose, playerId, needAmount }) {
           <button
             type="button"
             className="w-full text-xs py-1 px-2 bg-red-200 hover:bg-red-300 rounded text-red-900"
-            onClick={() => {
-              if (confirm('정말 파산하시겠습니까? 게임에서 빠지게 됩니다.')) {
-                handleBankrupt?.(playerId);
-                onClose?.();
-              }
+            onClick={async () => {
+              const ok = await dialog.confirm({
+                title: '파산 선언',
+                message: '정말 파산하시겠습니까? 이 플레이어는 게임에서 빠지게 됩니다.',
+                okText: '파산 선언',
+                cancelText: '취소',
+                tone: 'danger',
+              });
+              if (!ok) return;
+              handleBankrupt?.(playerId);
+              onClose?.();
             }}
           >
             ⚰️ 파산 선언

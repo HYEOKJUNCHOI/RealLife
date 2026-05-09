@@ -18,7 +18,7 @@ export default function CharacterAvatar({ id, size = 'md', showName = false, cla
     <div className={cn('flex flex-col items-center', className)}>
       <div
         className={cn(
-          'rounded-xl bg-card-default flex items-center justify-center overflow-hidden',
+          'relative rounded-xl bg-card-default flex items-center justify-center overflow-hidden',
           'ring-1 ring-white/10',
           sizeClasses[size],
         )}

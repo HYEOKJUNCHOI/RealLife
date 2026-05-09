@@ -46,6 +46,58 @@ function PropertyChip({ pos, state, selected, onToggle }) {
   );
 }
 
+const cleanMoney = (value, max = 999999) => {
+  const numeric = String(value ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  const amount = Math.min(Number.parseInt(numeric || '0', 10) || 0, Math.max(0, max ?? 0));
+  return String(amount);
+};
+
+function MoneyKeypad({ value, max = 0, onChange, disabled = false }) {
+  const setAmount = (next) => onChange?.(cleanMoney(next, max));
+  const append = (digit) => {
+    if (disabled) return;
+    setAmount(`${Number.parseInt(value || '0', 10) || 0}${digit}`);
+  };
+  const quickAdd = (amount) => {
+    if (disabled) return;
+    const current = Number.parseInt(value || '0', 10) || 0;
+    setAmount(current + amount);
+  };
+
+  return (
+    <div className={cn('mt-1.5 grid gap-1', disabled && 'pointer-events-none opacity-45')}>
+      <div className="grid grid-cols-3 gap-1">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => append(num)}
+            className="h-8 rounded border border-ink-line/40 bg-white font-display text-[15px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
+          >
+            {num}
+          </button>
+        ))}
+        <button type="button" onClick={() => setAmount('0')} className="h-8 rounded border border-ink-line/40 bg-red-50 font-board text-[12px] text-red-700 shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">C</button>
+        <button type="button" onClick={() => append(0)} className="h-8 rounded border border-ink-line/40 bg-white font-display text-[15px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">0</button>
+        <button type="button" onClick={() => setAmount(String(value ?? '0').slice(0, -1) || '0')} className="h-8 rounded border border-ink-line/40 bg-slate-50 font-board text-[13px] text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">⌫</button>
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+        {[100, 500].map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => quickAdd(amount)}
+            className="h-7 rounded border border-ink-line/35 bg-amber-50 font-board text-[11px] text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
+          >
+            +{amount}
+          </button>
+        ))}
+        <button type="button" onClick={() => setAmount(max)} className="h-7 rounded border border-ink-line/35 bg-emerald-50 font-board text-[11px] text-emerald-800 shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">최대</button>
+      </div>
+    </div>
+  );
+}
+
 export default function TradeModal({ open, onClose, fromId, toId: initialToId, initialGetPos }) {
   const state = useGameStore((s) => s.state);
   const handleSubmit = useGameStore((s) => s.submitTrade);
@@ -166,13 +218,16 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
             <div>
               <label className="text-xs text-gray-500">현금 (만원)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min="0"
                 max={fromPlayer.cash}
                 value={giveCash}
-                onChange={(e) => setGiveCash(e.target.value)}
+                onChange={(e) => setGiveCash(cleanMoney(e.target.value, fromPlayer.cash))}
                 className="w-full px-2 py-1 border rounded text-sm font-mono"
               />
+              <MoneyKeypad value={giveCash} max={fromPlayer.cash} onChange={setGiveCash} />
               <div className="text-[10px] text-gray-400">잔액 {fromPlayer.cash}만</div>
             </div>
           </div>
@@ -198,14 +253,17 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
             <div>
               <label className="text-xs text-gray-500">현금 (만원)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min="0"
                 max={toPlayer?.cash ?? 0}
                 value={getCash}
-                onChange={(e) => setGetCash(e.target.value)}
+                onChange={(e) => setGetCash(cleanMoney(e.target.value, toPlayer?.cash ?? 0))}
                 className="w-full px-2 py-1 border rounded text-sm font-mono"
                 disabled={!toPlayer}
               />
+              <MoneyKeypad value={getCash} max={toPlayer?.cash ?? 0} onChange={setGetCash} disabled={!toPlayer} />
               <div className="text-[10px] text-gray-400">상대 잔액 {toPlayer?.cash ?? '-'}만</div>
             </div>
           </div>

@@ -11,6 +11,7 @@ export default function ModalBase({
   className,
   style,
   hideClose = false,
+  surface = true,
   size = 'md', // 'sm' | 'md' | 'lg'
 }) {
   if (!open) return null;
@@ -28,7 +29,8 @@ export default function ModalBase({
     >
       <div
         className={cn(
-          'deed-surface relative max-h-[88vh] overflow-y-auto overflow-x-hidden no-scrollbar',
+          surface && 'deed-surface',
+          'relative max-h-[88vh] overflow-y-auto overflow-x-hidden no-scrollbar',
           'animate-[deed-drop_0.42s_cubic-bezier(0.2,0.9,0.3,1.2)_forwards]',
           widthCls,
           className,

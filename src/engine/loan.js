@@ -62,6 +62,7 @@ export const mortgage = (state, pos) => {
   const loanAmount = round10(currentPrice(state, pos) * LTV_RATIO);
   ts.mortgaged = true;
   ts.mortgageAmount = loanAmount;
+  ts.mortgageYear = state.year ?? 0;
   player.cash += loanAmount;
   return loanAmount;
 };
@@ -76,19 +77,25 @@ export const repayMortgage = (state, pos) => {
   player.cash -= amt;
   ts.mortgaged = false;
   ts.mortgageAmount = 0;
+  ts.mortgageYear = null;
   return amt;
 };
 
-// 자기 턴 부동산 대출 이자 차감 (해당 플레이어 모든 대출 합산)
-export const chargeMortgageInterest = (state, playerId) => {
-  const rate = state.loanRate;
+export const calculateMortgageInterest = (state, playerId) => {
+  const rate = state.loanRate ?? 0;
   let totalInterest = 0;
   for (const pos in state.tileState) {
     const ts = state.tileState[pos];
     if (ts.owner === playerId && ts.mortgaged) {
-      totalInterest += round10(ts.mortgageAmount * rate);
+      totalInterest += round10((ts.mortgageAmount ?? 0) * rate);
     }
   }
+  return totalInterest;
+};
+
+// 자기 턴 부동산 대출 이자 차감 (해당 플레이어 모든 대출 합산)
+export const chargeMortgageInterest = (state, playerId) => {
+  const totalInterest = calculateMortgageInterest(state, playerId);
   if (totalInterest > 0) {
     state.players[playerId].cash -= totalInterest;
   }

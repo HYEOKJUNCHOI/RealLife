@@ -202,7 +202,7 @@ export default function CityBackground({ className }) {
         style={{
           left: 0,
           bottom: 0,
-          width: 'clamp(180px, 22vw, 300px)', // radial 페이드 위해 살짝 넉넉
+          width: '210px',
           height: '24%',
           background:
             'radial-gradient(ellipse 100% 130% at 0% 100%, #14122a 28%, rgba(20,18,42,0.78) 55%, rgba(22,20,44,0.35) 78%, transparent 96%)',
@@ -215,10 +215,10 @@ export default function CityBackground({ className }) {
         className="absolute"
         style={{
           left: 0,
-          bottom: '-4%', // 화면 하단보다 살짝 더 내려감 — 포탈 밑단이 도로 아래로 잠긴 결
-          width: 'clamp(230px, 30vw, 400px)', // 더 키움
+          bottom: '-22px', // 화면 하단보다 살짝 더 내려감 — 포탈 밑단이 도로 아래로 잠긴 결
+          width: '230px',
           aspectRatio: '1 / 1',
-          transform: 'translateX(-30%)', // 가로의 30% 가 화면 밖 → 70% 만 보임
+          transform: 'translateX(-34%)', // 가로의 34% 가 화면 밖 → 세계관 장치로만 보임
           zIndex: 30, // 차들 위로 → 차들이 포탈을 가리거나 지나치지 못함
         }}
       >
@@ -258,10 +258,10 @@ export default function CityBackground({ className }) {
         className="absolute pointer-events-none"
         style={{
           left: 0,
-          bottom: '-4%',
-          width: 'clamp(230px, 30vw, 400px)',
+          bottom: '-22px',
+          width: '230px',
           aspectRatio: '1 / 1',
-          transform: 'translateX(-30%)',
+          transform: 'translateX(-34%)',
           zIndex: 32,
         }}
       >

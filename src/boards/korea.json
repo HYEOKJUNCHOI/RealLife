@@ -131,7 +131,7 @@
       ],
       "utilityKind": "electric",
       "names": {
-        "ko": "전매공사"
+        "ko": "전기공사"
       }
     },
     {
@@ -209,7 +209,7 @@
       "pos": 20,
       "type": "free_parking",
       "names": {
-        "ko": "무료주차장"
+        "ko": "휴게소"
       }
     },
     {
@@ -312,7 +312,7 @@
       "pos": 30,
       "type": "go_to_jail",
       "names": {
-        "ko": "감옥으로 가시오!"
+        "ko": "경찰서"
       }
     },
     {

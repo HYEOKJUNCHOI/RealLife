@@ -6,7 +6,7 @@ import { tryRecover, sellPropertyToBank, sellOneHouse } from '../recovery.js';
 
 test('회생 1단계: 부동산 대출로 cash 회복', () => {
   const rng = createRng(1);
-  const state = createGameState({ numPlayers: 4, options: { predistribute: false }, rng });
+  const state = createGameState({ numPlayers: 4, options: { predistributeCount: 0 }, rng });
   state.tileState[1] = { owner: 0, stage: 0, premium: 0 };
   state.tileState[3] = { owner: 0, stage: 0, premium: 0 };
   state.tileState[6] = { owner: 0, stage: 0, premium: 0 };
@@ -49,7 +49,7 @@ test('빌라 매각: 건설가 50%', () => {
 
 test('회생: 신용대출 자격 활성화 (cash ≤ 300만)', () => {
   const rng = createRng(1);
-  const state = createGameState({ numPlayers: 4, options: { predistribute: false }, rng });
+  const state = createGameState({ numPlayers: 4, options: { predistributeCount: 0 }, rng });
   // 부동산 없음 → 1/3단계 스킵 → 4단계 신용대출
   state.players[0].cash = -100;
   const r = tryRecover(state, 0, false);

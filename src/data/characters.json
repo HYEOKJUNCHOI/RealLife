@@ -2,10 +2,11 @@
   "_meta": {
     "description": "보드별 플레이어 캐릭터 풀",
     "mvpBoard": "korea",
-    "v2Boards": ["japan"],
+    "v2Boards": [
+      "japan"
+    ],
     "illustrationNote": "일러스트는 Claude Design (https://claude.ai/design)에서 생성. 등 돌린 실루엣 + 정면 모습 둘 다 필요. MVP에서는 이모지로 임시 대체 가능."
   },
-
   "korea": [
     {
       "id": "yangban",
@@ -46,9 +47,88 @@
       "slot": "character.farmer",
       "color": "#388E3C",
       "_promptHint": "조선 농부, 패랭이+호미, 친근한 만화 스타일"
+    },
+    {
+      "id": "chunDooHwan",
+      "name": "전두환",
+      "role": "군복",
+      "description": "군복 차림의 현대사 인물 토큰",
+      "emoji": "🪖",
+      "slot": "character.chunDooHwan",
+      "color": "#5F6F3A",
+      "_promptHint": "1980년대 한국 군복, 대머리 윗부분과 짧은 옆머리, 금테 안경, 귀여운 3D 보드게임 토큰"
+    },
+    {
+      "id": "genghisKhan",
+      "name": "징기스칸",
+      "role": "초원 군주",
+      "description": "몽골 초원에서 온 13세기 정복자 토큰",
+      "emoji": "🐎",
+      "slot": "character.genghisKhan",
+      "color": "#8B5A2B",
+      "_promptHint": "13세기 몽골 군주, 털모자와 델, 콧수염과 짧은 수염, 귀여운 3D 보드게임 토큰"
+    },
+    {
+      "id": "steveJobs",
+      "name": "스티브 잡스",
+      "role": "혁신가",
+      "description": "검은 터틀넥을 입은 기술 혁신가 토큰",
+      "emoji": "📱",
+      "slot": "character.steveJobs",
+      "color": "#111827",
+      "_promptHint": "스티브 잡스풍 검은 터틀넥, 청바지, 둥근 안경, 귀여운 3D 보드게임 토큰"
+    },
+    {
+      "id": "billGates",
+      "name": "빌 게이츠",
+      "role": "소프트웨어 거물",
+      "description": "안경과 노트북을 든 기술 사업가 토큰",
+      "emoji": "💻",
+      "slot": "character.billGates",
+      "color": "#2563EB",
+      "_promptHint": "빌 게이츠풍 안경, 스웨터와 셔츠, 작은 노트북, 귀여운 3D 보드게임 토큰"
+    },
+    {
+      "id": "donaldTrump",
+      "name": "트럼프",
+      "role": "사업가 정치인",
+      "description": "금발과 정장을 한 사업가 정치인 토큰",
+      "emoji": "🏢",
+      "slot": "character.donaldTrump",
+      "color": "#F59E0B",
+      "_promptHint": "도널드 트럼프풍 금발, 남색 정장과 빨간 넥타이, 풍자형 3D 보드게임 토큰"
+    },
+    {
+      "id": "leeJaeMyung",
+      "name": "이재명",
+      "role": "정치인",
+      "description": "파란 넥타이를 맨 현대 정치인 캐릭터",
+      "emoji": "🗳️",
+      "slot": "character.leeJaeMyung",
+      "color": "#2563EB",
+      "_promptHint": "이재명풍 현대 정치인, 남색 정장과 파란 넥타이, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일"
+    },
+    {
+      "id": "wakizakaYasuharu",
+      "name": "와키자카",
+      "role": "일본 장수",
+      "description": "전국시대 사무라이 장수 캐릭터",
+      "emoji": "🗡️",
+      "slot": "character.wakizakaYasuharu",
+      "color": "#334155",
+      "_promptHint": "와키자카 야스하루풍 일본 사무라이 장수, 갑옷과 투구, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일"
+    },
+    {
+      "id": "toyotomiHideyoshi",
+      "name": "도요토미",
+      "role": "일본 장수",
+      "description": "화려한 갑옷을 입은 전국시대 권력자 캐릭터",
+      "emoji": "🏯",
+      "slot": "character.toyotomiHideyoshi",
+      "color": "#B45309",
+      "_promptHint": "도요토미 히데요시풍 일본 전국시대 장수, 금색 갑옷, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일"
     }
   ],
-
   "japan": [
     {
       "id": "samurai",

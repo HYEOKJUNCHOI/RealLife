@@ -8,7 +8,6 @@
 //   - 상단 (좌→우): pos 20 → 21 → ... → 29 → 30
 //   - 우측 (상→하): pos 30 → 31 → ... → 39 → 0
 import { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useGameStore } from '@/stores/gameStore.js';
 import { currentPrice } from '@/engine/inflation.js';
 import { cn } from '@/lib/cn.js';
@@ -112,77 +111,6 @@ export default function TradeSelectModal({ open, onClose, fromId }) {
   return (
     <>
     {/* ══ 좌측 플레이어 프로필 패널 — Portal (모달 overflow 우회) ══ */}
-    {open && createPortal(
-      <div
-        className="pointer-events-none fixed top-1/2 z-[55] flex w-[180px] -translate-y-1/2 flex-col gap-2"
-        style={{
-          // 모달 max-w 720px → 좌측 끝 = 50vw - 360px → 패널 우측 끝 = 그보다 16px 왼쪽
-          right: 'calc(50vw + 376px)',
-        }}
-      >
-        <div className="pointer-events-auto rounded-md border-2 border-ink-line bg-parchment-50 px-3 py-2.5 shadow-[0_3px_0_0_#0F0C0A,0_6px_12px_-2px_rgba(0,0,0,0.4)]">
-          <div className="mb-1.5 text-center font-display text-[9px] font-bold uppercase tracking-[0.22em] text-ink/70">
-            플레이어 컬러
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {state.players.map((p, i) => {
-              const m = playerMeta(state, i);
-              const isSelf = i === fromId;
-              const isLocked = lockedOwner === i;
-              const isBankrupt = p.bankrupt;
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    'relative flex items-center gap-2 rounded-sm border-2 px-1.5 py-1',
-                    isLocked
-                      ? 'border-monopoly-red bg-monopoly-red/15 shadow-[0_2px_0_0_#0F0C0A]'
-                      : isSelf
-                        ? 'border-emerald-700 bg-emerald-50'
-                        : 'border-ink-line/40 bg-white',
-                    isBankrupt && 'opacity-40 saturate-50',
-                  )}
-                >
-                  {/* 컬러 점 */}
-                  <span
-                    className="h-3 w-3 shrink-0 rounded-full border border-white/80 shadow-sm"
-                    style={{ backgroundColor: m.color }}
-                    aria-hidden="true"
-                  />
-                  {/* P# + 이름 */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-1">
-                      <span
-                        className="font-display text-[8px] font-extrabold uppercase tracking-[0.2em]"
-                        style={{ color: m.color }}
-                      >
-                        {i + 1}P
-                      </span>
-                      <span className="truncate font-board font-extrabold text-[12px] leading-none text-ink">
-                        {m.name}
-                      </span>
-                    </div>
-                  </div>
-                  {/* 자기/락 배지 */}
-                  {isSelf && (
-                    <span className="rounded-sm border border-emerald-700 bg-emerald-100 px-1 font-display text-[7px] font-bold uppercase tracking-wider text-emerald-900">
-                      나
-                    </span>
-                  )}
-                  {isLocked && !isSelf && (
-                    <span className="rounded-sm border border-monopoly-deep bg-monopoly-red px-1 font-display text-[7px] font-bold uppercase tracking-wider text-white shadow-[0_1px_0_0_#0F0C0A]">
-                      거래
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>,
-      document.body
-    )}
-
     <ModalBase open={open} onClose={onClose} className="w-[min(95vw,720px)]">
       {/* 헤더 */}
       <div className="rounded-t-2xl bg-monopoly-red px-5 py-3 text-center text-white">
@@ -200,6 +128,48 @@ export default function TradeSelectModal({ open, onClose, fromId }) {
       </div>
 
       {/* 미니 보드판 11×11 */}
+
+      <div className="border-b-2 border-ink-line bg-parchment-50 px-3 py-2">
+        <div className="grid grid-cols-4 gap-1.5">
+          {state.players.map((p, i) => {
+            const m = playerMeta(state, i);
+            const isSelf = i === fromId;
+            const isLocked = lockedOwner === i;
+            const isBankrupt = p.bankrupt;
+            return (
+              <div
+                key={i}
+                className={cn(
+                  'flex min-w-0 items-center gap-1.5 rounded-sm border-2 px-2 py-1.5',
+                  isLocked
+                    ? 'border-monopoly-red bg-monopoly-red/15 shadow-[0_2px_0_0_#0F0C0A]'
+                    : isSelf
+                      ? 'border-emerald-700 bg-emerald-50'
+                      : 'border-ink-line/40 bg-white',
+                  isBankrupt && 'opacity-40 saturate-50',
+                )}
+              >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full border border-white/80 shadow-sm"
+                  style={{ backgroundColor: m.color }}
+                  aria-hidden="true"
+                />
+                <span className="shrink-0 font-display text-[8px] font-extrabold uppercase tracking-[0.16em]" style={{ color: m.color }}>
+                  {i + 1}P
+                </span>
+                <span className="min-w-0 truncate font-board text-[11px] font-extrabold leading-none text-ink">
+                  {m.name}
+                </span>
+                {isSelf && (
+                  <span className="ml-auto rounded-sm border border-emerald-700 bg-emerald-100 px-1 font-display text-[7px] font-bold uppercase tracking-wider text-emerald-900">
+                    {'\uB098'}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
       <div className="bg-parchment-100 p-3">
         <div className="mx-auto aspect-square w-full max-w-[640px]">
           <div className="grid h-full w-full grid-cols-[repeat(11,1fr)] grid-rows-[repeat(11,1fr)] gap-[2px] rounded-md border-2 border-ink-line bg-ink-line/20 p-[2px]">

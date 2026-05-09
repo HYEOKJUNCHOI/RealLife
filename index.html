@@ -1,20 +1,41 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />
-    <title>THE REALLIFE — 리얼라이프</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RealLife" />
+    <meta name="application-name" content="RealLife" />
+    <title>RealLife</title>
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preload" as="image" href="/cityscape/reallife-lobby-concept.webp" fetchpriority="high" />
+    <link rel="preload" as="image" href="/effects/portal-gold-blue-cut.webp" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/pwa/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/pwa/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/pwa/apple-touch-icon-167.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/pwa/apple-touch-icon-152.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/pwa/apple-touch-icon-120.png" />
+    <link rel="apple-touch-startup-image" href="/pwa/splash-iphone17-portrait.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/pwa/splash-iphone17-landscape.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" />
+    <link rel="apple-touch-startup-image" href="/pwa/splash-ipad-10-2-portrait.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/pwa/splash-ipad-10-2-landscape.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- 모노폴리 결: Oswald(헤드라인) / Black Han Sans(굵은 한글) / Noto Sans KR(본문) -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <!-- 紐⑤끂?대━ 寃? Oswald(?ㅻ뱶?쇱씤) / Black Han Sans(援듭? ?쒓?) / Noto Sans KR(蹂몃Ц) -->
     <link
       href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body class="bg-parchment-100 text-ink">
+  <body class="text-ink" style="background:#050505">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

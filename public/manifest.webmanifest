@@ -1,10 +1,31 @@
 {
-  "name": "THE REALLIFE — 리얼라이프",
-  "short_name": "리얼라이프",
+  "name": "RealLife",
+  "short_name": "RealLife",
+  "description": "RealLife property board game",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#0a0a0a",
+  "background_color": "#050505",
   "theme_color": "#D32F2F",
-  "icons": []
+  "icons": [
+    {
+      "src": "/pwa/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa/app-icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
 }

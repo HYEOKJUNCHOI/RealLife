@@ -3,6 +3,47 @@
 
 import { cn } from '@/lib/cn.js';
 
+const DIRECT_IMAGES = {
+  chance: {
+    marriage: '/cards/chance/marriage.png',
+    job_change: '/cards/chance/job_change.png',
+    promotion: '/cards/chance/promotion.png',
+    startup: '/cards/chance/startup.png',
+    childbirth: '/cards/chance/childbirth.png',
+    honor_retire: '/cards/chance/honor_retire.png',
+    military: '/cards/chance/military.png',
+    holiday_bonus: '/cards/chance/holiday_bonus.png',
+    accident: '/cards/chance/accident.png',
+    lotto: '/cards/chance/lotto.png',
+    subscription_win: '/cards/chance/subscription_win.png',
+    teleport: '/cards/chance/teleport.png',
+  },
+  welfare: {
+    1: '/cards/welfare/covid.png',
+    2: '/cards/welfare/work_incentive.png',
+    3: '/cards/welfare/basic_pension.png',
+    4: '/cards/welfare/health_check.png',
+    5: '/cards/welfare/national_pension.png',
+    6: '/cards/welfare/community_fee.png',
+    7: '/cards/welfare/relative_wedding.png',
+    8: '/cards/welfare/housing_subscription.png',
+    9: '/cards/welfare/childbirth_grant.png',
+    10: '/cards/welfare/fraud_caught.png',
+  },
+  event: {
+    war: '/cards/event/war.png',
+    multihouse: '/cards/event/regulation.png',
+    regulation: '/cards/event/regulation.png',
+    fire: '/cards/event/fire.png',
+    bubble: '/cards/event/bubble.png',
+    redev: '/cards/event/redevelopment.png',
+    redevelopment: '/cards/event/redevelopment.png',
+    gtx: '/cards/event/gtx.png',
+    lottery_estate: '/cards/event/subscription.png',
+    subscription: '/cards/event/subscription.png',
+  },
+};
+
 // Sprite sheet 매핑
 // public/cards/_sheet/{type}.png 에 콜라주 저장
 const SHEET_INFO = {
@@ -105,6 +146,22 @@ const SHEET_INFO = {
  * @param {boolean} framed - 액자틀 여부 (true 시 흰 배경 가림)
  */
 export default function CardArtwork({ type, id, className, framed = true }) {
+  const directSrc = DIRECT_IMAGES[type]?.[id];
+  if (directSrc) {
+    return (
+      <div
+        className={cn(
+          'relative w-full h-full overflow-hidden bg-white',
+          framed && 'rounded-lg ring-2 ring-monopoly-red/30 shadow-inner',
+          className,
+        )}
+      >
+        <img src={directSrc} alt="" className="h-full w-full object-cover" draggable={false} />
+        {framed && <div className="pointer-events-none absolute inset-0 rounded-lg shadow-[inset_0_0_8px_rgba(0,0,0,0.18)]" />}
+      </div>
+    );
+  }
+
   const sheet = SHEET_INFO[type];
   if (!sheet) return null;
 

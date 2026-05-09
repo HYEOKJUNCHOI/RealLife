@@ -1,7 +1,6 @@
-// 부동산 도착 모달 — 정통 모노폴리 권리증 결 + 참고 이미지 화려함 결합
+﻿// 부동산 도착 모달 — 정통 모노폴리 권리증 결 + 참고 이미지 화려함 결합
 // 리디자인: 진한 단색 헤더 + PREMIUM 별 + 다크 캡슐 가격 + 이모티콘 임대료 표 + 단계 progress
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useGameStore } from '@/stores/gameStore.js';
 import { currentPrice, rentFromStage, hasColorMonopoly } from '@/engine/inflation.js';
 import { computeRent } from '@/engine/rent.js';
@@ -77,14 +76,14 @@ const playerMeta = (state, playerId) => {
 };
 
 // 이모티콘으로 단계 표현 — 텍스트 라벨 대체
-const STAGE_EMOJI  = ['🌱', '🏠', '🏠🏠', '🏠🏠🏠', '🏠🏠🏠🏠', '🏢'];
-const STAGE_LABEL  = ['빈 땅', '빌라 1', '빌라 2', '빌라 3', '빌라 4', '아파트'];
+const STAGE_EMOJI  = ['□', '🏠', '🏠🏠', '🏠🏠🏠', '🏢', '🏢'];
+const STAGE_LABEL  = ['빈 땅', '빌라×1', '빌라×2', '빌라×3', '아파트', '아파트'];
 
 // BRAINSTORM 7-2: 시세 × RENT_RATIO[stage] 비율 통행료
 // 정보성 표라 owner 없어도 projection 보이게 가짜 owner=0 주입 (실제 게임 로직엔 영향 X)
 const stageRents = (state, pos) => {
   const ts = state.tileState[pos] ?? {};
-  return [0, 1, 2, 3, 4, 5].map((key) => {
+  return [0, 1, 2, 3, 5].map((key) => {
     const fakeState = {
       ...state,
       tileState: {
@@ -96,6 +95,23 @@ const stageRents = (state, pos) => {
   });
 };
 
+function VillaMarks({ count = 0, active = false }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-0.5">
+      {[1, 2, 3].map((n) => (
+        <span
+          key={n}
+          className={cn(
+            'inline-block text-[13px] leading-none drop-shadow-[0_1px_0_rgba(15,12,10,0.45)]',
+            active && n <= count ? 'opacity-100' : 'opacity-20 grayscale',
+          )}
+        >
+          🏠
+        </span>
+      ))}
+    </span>
+  );
+}
 // PREMIUM 골드별 컴포넌트
 function PremiumBadge({ premium }) {
   if (!premium || premium <= 0) return null;
@@ -123,9 +139,9 @@ function PremiumBadge({ premium }) {
   );
 }
 
-// 단계 progress 도장 (빌라 4 + 아파트)
+// 단계 progress 도장 (빌라 3 + 아파트)
 function StageProgress({ currentStage, color }) {
-  const PROGRESS_STAGES = [0, 1, 2, 3, 4]; // 빌라 단계
+  const PROGRESS_STAGES = [1, 2, 3]; // 빌라 단계
   if (currentStage === 5) {
     const glow = COLOR_HEX[color] ?? '#C9A24B';
     return (
@@ -169,6 +185,183 @@ function StageProgress({ currentStage, color }) {
         )}
       />
     </div>
+  );
+}
+
+function RailButton({ children, tone = 'paper', className, ...props }) {
+  const toneClass = {
+    paper: 'bg-white text-ink hover:bg-parchment-50',
+    red: 'bg-monopoly-red text-white hover:bg-monopoly-deep',
+    gold: 'bg-monopoly-gold text-ink hover:bg-[#ffe38a]',
+    green: 'bg-white text-[#008f32] hover:bg-[#f4fff6]',
+    ghost: 'bg-neutral-200 text-ink hover:bg-neutral-100',
+  }[tone] ?? 'bg-white text-ink hover:bg-parchment-50';
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'rail-button min-h-[42px] rounded-md border-2 border-ink-line px-2 py-2 font-display text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em]',
+        'shadow-[0_3px_0_0_#0F0C0A,0_8px_12px_-10px_rgba(0,0,0,0.7)] transition',
+        'active:translate-y-px active:shadow-[0_2px_0_0_#0F0C0A]',
+        'disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-ink/30 disabled:shadow-[0_2px_0_0_#0F0C0A]',
+        toneClass,
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PropertyActionRail({
+  isEmpty,
+  isOpponentOwned,
+  isOwn,
+  canBuy,
+  canPay,
+  canBuild,
+  currentStage,
+  hasStageChange,
+  price,
+  rent,
+  visitor,
+  visitorId,
+  owner,
+  pos,
+  initialStage,
+  buildBlockReason,
+  onClose,
+  onBuy,
+  onPayRent,
+  onTradeOpen,
+  onTradeSelectOpen,
+  onRecoveryOpen,
+  onDevelop,
+  onConfirmStage,
+  onCancelStage,
+}) {
+  return (
+    <aside className="property-action-rail order-2 flex w-[min(92vw,336px)] shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)] sm:order-1 sm:w-[112px] sm:flex-col sm:self-start">
+      <div className="hidden rounded-md border-2 border-ink-line bg-ink px-2 py-1 text-center font-display text-[9px] font-extrabold uppercase tracking-[0.14em] text-white sm:block">
+        메뉴
+      </div>
+
+      {isEmpty && (
+        <>
+          <RailButton
+            tone="red"
+            className="flex-1 sm:flex-none"
+            disabled={!canBuy}
+            onClick={() => {
+              onBuy?.(visitorId, pos);
+              onClose?.();
+            }}
+          >
+            매입<br />{fmt(price)}만
+          </RailButton>
+          <RailButton tone="ghost" className="flex-1 sm:flex-none" onClick={onClose}>
+            패스
+          </RailButton>
+          {!canBuy && (
+            <div className="basis-full rounded-md border border-monopoly-deep/40 bg-white px-2 py-1.5 text-center font-display text-[9px] font-bold uppercase leading-tight text-monopoly-deep sm:basis-auto">
+              잔액 {fmt(visitor?.cash)}만
+            </div>
+          )}
+        </>
+      )}
+
+      {isOpponentOwned && (
+        <>
+          <RailButton
+            tone="red"
+            className="flex-1 sm:flex-none"
+            disabled={!canPay}
+            onClick={() => {
+              onPayRent?.(visitorId, pos);
+              onClose?.();
+            }}
+          >
+            통행료<br />{fmt(rent)}만
+          </RailButton>
+          <RailButton
+            tone="gold"
+            className="flex-1 sm:flex-none"
+            onClick={() => onTradeOpen?.(visitorId, owner, pos)}
+          >
+            거래<br />제안
+          </RailButton>
+          <RailButton
+            tone={canPay ? 'paper' : 'red'}
+            className="flex-1 sm:flex-none"
+            onClick={() => onRecoveryOpen?.(visitorId, rent)}
+          >
+            {canPay ? '회생' : '회생 시도'}
+          </RailButton>
+        </>
+      )}
+
+      {isOwn && (
+        <>
+          <RailButton
+            tone="gold"
+            className="flex-1 sm:flex-none"
+            onClick={() => onTradeSelectOpen?.(visitorId)}
+          >
+            거래<br />제의
+          </RailButton>
+          <RailButton
+            tone="red"
+            className="flex-1 sm:flex-none"
+            disabled={!canBuild || currentStage >= 5}
+            title={buildBlockReason ?? '집짓기'}
+            onClick={() => onDevelop?.(visitorId, pos, +1, initialStage)}
+          >
+            집짓기<br />+
+          </RailButton>
+          <div className="grid flex-1 grid-cols-[32px_1fr_32px] overflow-hidden rounded-md border-2 border-ink-line bg-neutral-200 shadow-[0_3px_0_0_#0F0C0A] sm:flex-none sm:grid-cols-1">
+            <button
+              type="button"
+              disabled={currentStage <= 0}
+              onClick={() => onDevelop?.(visitorId, pos, -1, initialStage)}
+              className="font-display text-[12px] font-extrabold text-ink transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-ink/25 sm:py-1"
+              aria-label="철거"
+            >
+              -
+            </button>
+            <span className="grid min-h-[30px] place-items-center border-x-2 border-ink-line bg-white font-display text-[15px] font-extrabold tabular-nums text-ink sm:border-x-0 sm:border-y-2">
+              {currentStage}
+            </span>
+            <button
+              type="button"
+              disabled={!canBuild || currentStage >= 5}
+              onClick={() => onDevelop?.(visitorId, pos, +1, initialStage)}
+              className="font-display text-[12px] font-extrabold text-ink transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-ink/25 sm:py-1"
+              aria-label="건설"
+            >
+              +
+            </button>
+          </div>
+          <RailButton
+            tone="green"
+            className="flex-1 sm:flex-none"
+            disabled={!hasStageChange}
+            onClick={onConfirmStage}
+          >
+            변경<br />확정
+          </RailButton>
+          <RailButton
+            tone="ghost"
+            className="flex-1 sm:flex-none"
+            disabled={!hasStageChange}
+            onClick={onCancelStage}
+          >
+            취소
+          </RailButton>
+        </>
+      )}
+    </aside>
   );
 }
 
@@ -216,7 +409,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
   const buildBlockReason = !isOwn
     ? '본인 부동산만 건설 가능'
     : ts.mortgaged
-      ? '저당 상태에선 건설 불가'
+      ? '담보대출 상태에선 건설 불가'
       : !canBuild
         ? `${tile.color} 그룹 독점 시 건설 가능`
         : null;
@@ -244,179 +437,59 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
     onClose?.();
   };
 
+  const cardShadow = `0 4px 0 0 #0F0C0A, 0 0 0 4px ${(COLOR_HEX[tile.color] ?? '#955436')}cc, 0 0 0 9px ${(COLOR_HEX[tile.color] ?? '#955436')}55, 0 0 28px 6px ${(COLOR_HEX[tile.color] ?? '#955436')}99, 0 0 60px 14px ${(COLOR_HEX[tile.color] ?? '#955436')}55, 0 14px 32px -4px rgba(0,0,0,0.55)`;
+
   return (
-    <>
-    {/* ══ 좌측 액션 사이드 패널 — Portal 로 body 직접 렌더 (모달 overflow 우회) ══ */}
-    {open && createPortal(
-      <div
-        className="pointer-events-none fixed top-1/2 z-[55] flex w-[200px] -translate-y-1/2 flex-col gap-2"
-        style={{
-          // 모달 max-w 480px → 모달 좌측 끝 = 50vw - 240px → 패널 우측 끝 = 그보다 60px 왼쪽
-          right: 'calc(50vw + 300px)',
-        }}
-      >
-        {/* 잔고 카드 — CurrentPlayerStage 의 잔고 카드와 동일한 결 (실시간 반영) */}
-        <div className="pointer-events-auto inline-flex w-full items-baseline justify-center gap-1.5 rounded-md border-2 border-emerald-700 bg-emerald-100 px-3 py-1.5 shadow-[0_3px_0_0_#0F0C0A]">
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-900/75">
-            잔고
-          </span>
-          <span className="text-[18px] leading-none">💰</span>
-          <span
-            className="font-display text-[24px] font-extrabold leading-none text-emerald-800 tabular-nums"
-            style={{ letterSpacing: '-0.01em' }}
-          >
-            {fmt(visitor?.cash ?? 0)}
-          </span>
-          <span className="font-display text-[11px] font-bold uppercase tracking-widest text-emerald-900/70">
-            만
-          </span>
-        </div>
-
-        {/* 거래 제의 — 미니맵 모달 열기 (상대 부동산 선택 → TradeModal) */}
-        <button
-          type="button"
-          onClick={() => handleTradeSelectOpen?.(visitorId)}
-          className="pointer-events-auto inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-2 border-ink-line bg-neutral-300 px-3 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.18em] text-ink shadow-[0_3px_0_0_#0F0C0A,0_6px_12px_-2px_rgba(0,0,0,0.4)] transition hover:bg-neutral-200 active:translate-y-px active:shadow-[0_1px_0_0_#0F0C0A]"
-          title="다른 플레이어와 부동산/현금 거래"
-        >
-          <span className="text-[16px] leading-none">🤝</span>
-          거래 제의
-        </button>
-
-        {/* 집짓기 — 라벨(헤더) + (− 단계 +) + 비용/환급 미리보기 */}
-        <div
-          className={cn(
-            'pointer-events-auto flex w-full flex-col items-stretch overflow-hidden rounded-md border-2 border-ink-line bg-neutral-300 shadow-[0_3px_0_0_#0F0C0A,0_6px_12px_-2px_rgba(0,0,0,0.4)]',
-            !isOwn && 'opacity-50',
-          )}
-        >
-          <span className="flex items-center justify-center gap-1 border-b-2 border-ink-line/60 bg-neutral-400/60 px-2 py-1 font-display text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink">
-            <span className="text-[13px] leading-none">🏠</span>
-            집짓기
-          </span>
-          <div className="flex items-stretch">
-            <button
-              type="button"
-              aria-label="집 철거"
-              disabled={!isOwn || currentStage <= 0}
-              onClick={() => handleDevelop?.(visitorId, pos, -1, initialStage)}
-              title="집 철거"
-              className="inline-flex flex-1 flex-col items-center justify-center gap-0.5 border-r-2 border-ink-line/60 py-1.5 font-display text-ink transition hover:bg-neutral-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <span className="text-[18px] font-extrabold leading-none">−</span>
-              <span className="text-[8px] font-extrabold leading-none tracking-[0.12em]">
-                집 철거
-              </span>
-            </button>
-            <span className="inline-flex min-w-[40px] items-center justify-center bg-parchment-50 px-1 py-2 font-display text-[18px] font-extrabold tabular-nums leading-none text-ink">
-              {isOwn ? currentStage : '—'}
-            </span>
-            <button
-              type="button"
-              aria-label="집짓기"
-              disabled={!canBuild || currentStage >= 5}
-              onClick={() => handleDevelop?.(visitorId, pos, +1, initialStage)}
-              title={buildBlockReason ?? (currentStage >= 5 ? '아파트까지 풀업' : '집짓기')}
-              className="inline-flex flex-1 flex-col items-center justify-center gap-0.5 border-l-2 border-ink-line/60 py-1.5 font-display text-ink transition hover:bg-neutral-200 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <span className="text-[18px] font-extrabold leading-none">+</span>
-              <span className="text-[8px] font-extrabold leading-none tracking-[0.12em]">
-                집짓기
-              </span>
-            </button>
-          </div>
-          {/* 차단 사유 (+ disabled 일 때) */}
-          {isOwn && !canBuild && (
-            <div className="border-t-2 border-ink-line/60 bg-amber-50 px-2 py-1 text-center font-display text-[8.5px] font-bold uppercase tracking-wider text-monopoly-deep">
-              {buildBlockReason}
-            </div>
-          )}
-          {/* 비용/환급 미리보기 — 룰 §6: houseCost (그룹별 빌라값) */}
-          {isOwn && (() => {
-            const buildCost = tile.houseCost ?? 0;
-            // 다음 − 클릭 시 next stage = currentStage - 1
-            // currentStage > initialStage → 세션 내 빌드 취소 → 100% 환급
-            // currentStage <= initialStage → 기존 빌딩 판매 → 50% 환급 (룰 §10)
-            const isCancelMode = currentStage > initialStage;
-            const refundAmount = isCancelMode ? buildCost : Math.round(buildCost * 0.5 / 10) * 10;
-            return (
-              <div className="flex items-center justify-between border-t-2 border-ink-line/60 bg-neutral-200 px-2 py-1 font-display text-[9px] font-bold uppercase tracking-wider text-ink/70">
-                <span className="flex items-baseline gap-0.5">
-                  <span className="opacity-60">−</span>
-                  <span className="text-emerald-700 tabular-nums">{refundAmount}</span>
-                  <span className="opacity-60">만 {isCancelMode ? '취소' : '판매'}</span>
-                </span>
-                <span className="flex items-baseline gap-0.5">
-                  <span className="opacity-60">+</span>
-                  <span className="text-monopoly-deep tabular-nums">{buildCost}</span>
-                  <span className="opacity-60">만 비용</span>
-                </span>
-              </div>
-            );
-          })()}
-          {/* 변경 완료 — 집짓기/철거 방향에 맞춰 세션 기준 단계를 확정 */}
-          {isOwn && (() => {
-            const stageDelta = currentStage - initialStage;
-            const isBuild = stageDelta > 0;
-            const isDemolish = stageDelta < 0;
-            const changed = stageDelta !== 0;
-            return (
-              <>
-              <button
-                type="button"
-                disabled={!changed}
-                onClick={() => setInitialStage(currentStage)}
-                title={
-                  isBuild
-                    ? '현재 단계로 건설 확정 (이후 − 는 판매 50% 환급)'
-                    : isDemolish
-                      ? '현재 단계로 철거 확정'
-                      : '확정할 변경 없음'
-                }
-                className={cn(
-                  'border-t-2 border-ink-line/60 px-2 py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.18em] transition active:translate-y-px',
-                  isBuild && 'bg-monopoly-red text-white hover:bg-monopoly-deep',
-                  isDemolish && 'bg-ink text-white hover:bg-ink/85',
-                  !changed && 'cursor-not-allowed bg-neutral-200/60 text-ink/30',
-                )}
-              >
-                {isBuild
-                  ? `✓ 건설 완료 (${stageDelta}단계 확정)`
-                  : isDemolish
-                    ? `✓ 철거 완료 (${Math.abs(stageDelta)}단계 확정)`
-                    : '건설 완료'}
-              </button>
-              <button
-                type="button"
-                disabled={!changed}
-                onClick={handleCancelDevelopment}
-                className={cn(
-                  'border-t-2 border-ink-line/60 px-2 py-1.5 font-display text-[10px] font-extrabold uppercase tracking-[0.18em] transition active:translate-y-px',
-                  changed
-                    ? 'bg-neutral-200 text-ink/75 hover:bg-neutral-300'
-                    : 'cursor-not-allowed bg-neutral-200/45 text-ink/25',
-                )}
-                title={changed ? '이번 집짓기/철거 변경만 되돌리기' : '취소할 집짓기/철거 변경 없음'}
-              >
-                취소하기
-              </button>
-              </>
-            );
-          })()}
-        </div>
-      </div>,
-      document.body
-    )}
-
     <ModalBase
       open={open}
       onClose={handleModalClose}
-      className="w-[min(92vw,480px)]"
-      style={{
-        // 컬러셋 시그니처 글로우 띠 — deed-surface 의 갈색 박스섀도를 override
-        boxShadow: `0 4px 0 0 #0F0C0A, 0 0 0 4px ${(COLOR_HEX[tile.color] ?? '#955436')}cc, 0 0 0 9px ${(COLOR_HEX[tile.color] ?? '#955436')}55, 0 0 28px 6px ${(COLOR_HEX[tile.color] ?? '#955436')}99, 0 0 60px 14px ${(COLOR_HEX[tile.color] ?? '#955436')}55, 0 14px 32px -4px rgba(0,0,0,0.55)`,
-      }}
+      hideClose
+      surface={false}
+      className="w-auto max-w-[calc(100vw-24px)]"
     >
+      <div className="property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar sm:flex-row sm:items-start">
+        <PropertyActionRail
+          isEmpty={isEmpty}
+          isOpponentOwned={isOpponentOwned}
+          isOwn={isOwn}
+          canBuy={canBuy}
+          canPay={canPay}
+          canBuild={canBuild}
+          currentStage={currentStage}
+          hasStageChange={hasStageChange}
+          price={price}
+          rent={rent}
+          visitor={visitor}
+          visitorId={visitorId}
+          owner={owner}
+          pos={pos}
+          initialStage={initialStage}
+          buildBlockReason={buildBlockReason}
+          onClose={onClose}
+          onBuy={handleBuy}
+          onPayRent={handlePayRent}
+          onTradeOpen={handleTradeOpen}
+          onTradeSelectOpen={handleTradeSelectOpen}
+          onRecoveryOpen={handleRecoveryOpen}
+          onDevelop={handleDevelop}
+          onConfirmStage={() => setInitialStage(currentStage)}
+          onCancelStage={handleCancelDevelopment}
+        />
+        <div
+          className="property-deed-card deed-surface relative order-1 w-[min(92vw,336px)] shrink-0 overflow-hidden sm:order-2"
+          style={{ boxShadow: cardShadow }}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleModalClose();
+            }}
+            className="absolute right-2 top-2 z-[10000] grid h-9 w-9 place-items-center rounded-full border-2 border-ink-line bg-ink text-lg font-extrabold leading-none text-white shadow-[0_2px_0_0_#0F0C0A,0_0_0_3px_rgba(255,255,255,0.25),0_6px_12px_rgba(0,0,0,0.5)] transition-colors hover:bg-monopoly-red"
+            aria-label="닫기"
+          >
+            ✕
+          </button>
 
       {/* ══ 1. 헤더 — 진한 단색 + 스카이라인 + TITLE DEED + PREMIUM 별 ══ */}
       <div
@@ -424,7 +497,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
           'relative overflow-hidden border-b-2 border-ink-line',
           COLOR_HEADER_BG[tile.color] || 'bg-neutral-600',
         )}
-        style={{ aspectRatio: '5 / 2' }}
+        style={{ aspectRatio: '5 / 1.65' }}
       >
         {/* 스카이라인 — 투명도 낮게 겹쳐서 헤더 색감 살림 */}
         {skylineSlot && (
@@ -447,16 +520,16 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
         />
 
         {/* TITLE DEED · 권리증 라벨 */}
-        <div className="absolute inset-x-0 top-0 px-4 pt-2.5 text-center">
+        <div className="absolute inset-x-0 top-0 px-3 pt-2 text-center">
           <div
             className={cn(
-              'font-display text-[11px] font-bold uppercase leading-none',
+              'font-display text-[8px] font-bold uppercase leading-none',
               'tracking-[0.28em]',
               COLOR_HEADER_TEXT[tile.color] || 'text-white',
               'drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]',
             )}
           >
-            Title Deed · 권리증
+            Title Deed - {'\uAD8C\uB9AC\uC99D'}
           </div>
         </div>
 
@@ -467,60 +540,58 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
           </div>
         )}
 
-        {/* 저당 표시 — 헤더 우상단 */}
+        {/* 담보대출 표시 — 헤더 우상단 */}
         {ts.mortgaged && (
           <div className="absolute right-3 top-2 rotate-[8deg]">
             <div className="border-2 border-monopoly-deep bg-monopoly-red/30 px-2 py-0.5 font-display text-[10px] font-bold tracking-widest text-white backdrop-blur-sm">
-              저당
+              담보대출
             </div>
           </div>
         )}
       </div>
 
       {/* ══ 2. 도시명 헤드라인 ══ */}
-      <div className="border-b-2 border-ink-line bg-parchment-50 px-5 py-3 text-center">
-        <h2 className="font-board font-extrabold text-[30px] leading-none text-ink tracking-tight">
+      <div className="border-b-2 border-ink-line bg-parchment-50 px-3 py-2 text-center">
+        <h2 className="font-board font-extrabold text-[23px] leading-none text-ink tracking-tight">
           {tile.names.ko}
         </h2>
         {tile.names.region && (
           <div className="mt-1 font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-ink/55">
             {tile.names.region}
             {tile.names.en && (
-              <span className="ml-1 opacity-70">· {tile.names.en}</span>
+              <span className="ml-1 opacity-70">- {tile.names.en}</span>
             )}
           </div>
         )}
       </div>
 
       {/* ══ 3. 매입가 / 현시세 — 다크 캡슐 한 줄 ══ */}
-      <div className="border-b-2 border-ink-line bg-parchment-100 px-4 py-2.5">
+      <div className="border-b-2 border-ink-line bg-parchment-100 px-3 py-2">
         <div
-          className="flex items-center justify-around rounded-xl px-4 py-2.5"
+          className="flex items-center justify-around rounded-lg px-3 py-2"
           style={{ backgroundColor: '#1A1612' }}
         >
           {/* 매입가 — basePrice (정규화된 실제 매입 가격) */}
           <div className="text-center">
-            <div className="font-display text-[10px] font-semibold uppercase tracking-widest text-white/55">
-              매입가
+            <div className="font-display text-[8.5px] font-bold uppercase tracking-widest text-white">{'\uB9E4\uC785\uAC00'}
             </div>
             <div className="mt-1 flex items-baseline gap-1">
-              <span className="font-display text-[30px] font-bold leading-none tabular-nums text-white">
+              <span className="font-display text-[22px] font-bold leading-none tabular-nums text-white">
                 {tile.basePrice ?? '-'}
               </span>
-              <span className="font-display text-[14px] font-semibold text-white/55">만</span>
+              <span className="font-display text-[10px] font-semibold text-white/55">{'\uB9CC'}</span>
             </div>
           </div>
           {/* 구분선 */}
-          <div className="h-10 w-px bg-white/20" />
+          <div className="h-8 w-px bg-white/20" />
           {/* 현시세 */}
           <div className="text-center">
-            <div className="font-display text-[10px] font-semibold uppercase tracking-widest text-white/55">
-              현시세
+            <div className="font-display text-[8.5px] font-bold uppercase tracking-widest text-[#FFD700]">{'\uD604\uC2DC\uC138'}
             </div>
             <div className="mt-1 flex items-baseline gap-1">
               <span
                 className={cn(
-                  'font-display text-[30px] font-bold leading-none tabular-nums',
+                  'font-display text-[22px] font-bold leading-none tabular-nums',
                   price < (tile.basePrice ?? 0)
                     ? 'text-monopoly-red drop-shadow-[0_0_8px_rgba(211,47,47,0.5)]'
                     : 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]',
@@ -528,7 +599,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
               >
                 {price}
               </span>
-              <span className="font-display text-[14px] font-semibold text-white/55">만</span>
+              <span className="font-display text-[10px] font-semibold text-white/55">{'\uB9CC'}</span>
             </div>
           </div>
         </div>
@@ -538,7 +609,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
       <div className="bg-parchment-50 px-4 py-3">
         {/* 섹션 라벨 */}
         <div className="mb-2 text-center font-display text-[9px] font-semibold uppercase tracking-[0.22em] text-ink/50">
-          Rent · 단계별 통행료
+          Rent - {'\uB2E8\uACC4\uBCC4 \uD1B5\uD589\uB8CC'}
         </div>
         <div className="overflow-hidden rounded-md border-2 border-ink-line">
           {rents.map((r, i) => {
@@ -554,22 +625,23 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
                   !isCurrent && !isApt && (i % 2 === 0 ? 'bg-parchment-50' : 'bg-parchment-100'),
                 )}
               >
-                {/* 이모티콘 단계 표시 */}
-                <div className="flex items-center gap-2">
-                  <span className={cn('leading-none', isApt ? 'text-[16px]' : 'text-[13px]')}>
-                    {STAGE_EMOJI[r.key]}
-                  </span>
-                  {/* 아파트만 라벨 유지, 나머지는 이모티콘이 충분 */}
-                  {isApt && (
-                    <span
-                      className={cn(
-                        'font-display text-[10px] font-bold uppercase tracking-wider',
-                        isCurrent ? 'text-white' : 'text-ink/70',
-                      )}
-                    >
-                      아파트
-                    </span>
+                {/* 단계 표시 */}
+                <div className="flex items-center gap-3">
+                  {isApt ? (
+                    <span className="text-[18px] leading-none">🏢</span>
+                  ) : r.key === 0 ? (
+                    <span className="font-board text-[12px] leading-none text-inherit/70">빈 땅</span>
+                  ) : (
+                    <VillaMarks count={r.key} active />
                   )}
+                  <span
+                    className={cn(
+                      'font-board text-[13px] leading-none',
+                      isCurrent ? 'text-white' : 'text-ink/70',
+                    )}
+                  >
+                    {STAGE_LABEL[r.key]}
+                  </span>
                 </div>
                 {/* 임대료 */}
                 <div className="flex items-baseline gap-0.5">
@@ -637,94 +709,18 @@ export default function PropertyModal({ open, onClose, pos, visitorId }) {
         ) : (
           <div className="mt-1 flex justify-between px-0.5">
             <span className="font-display text-[8px] text-ink/40">빈 땅</span>
-            <span className="font-display text-[8px] text-ink/40">빌라 ×4</span>
-            <span className="font-display text-[8px] text-monopoly-gold/70">🏢</span>
+            <span className="font-display text-[8px] text-ink/40">빌라 ×3</span>
+            <span className="font-display text-[8px] text-monopoly-gold/70">아파트</span>
           </div>
         )}
       </div>
 
-      {/* ══ 6. 액션 영역 ══ */}
-      <div
-        className={cn(
-          'space-y-2 border-t-2 border-ink-line bg-parchment-100 px-4 py-3',
-          isOwn && 'py-2',
-        )}
-      >
-        {isEmpty && (
-          <>
-            <div className="text-center font-display text-[11px] font-semibold uppercase tracking-widest text-ink/65">
-              매입하시겠습니까?
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn-chip-red flex-1 py-2.5 text-sm"
-                disabled={!canBuy}
-                onClick={() => {
-                  handleBuy?.(visitorId, pos);
-                  onClose?.();
-                }}
-              >
-                매입 · {price}만
-              </button>
-              <button
-                type="button"
-                className="btn-chip-ghost flex-1 py-2.5 text-sm"
-                onClick={onClose}
-              >
-                패스
-              </button>
-            </div>
-            {!canBuy && (
-              <div className="text-center font-display text-[10px] font-semibold uppercase tracking-wider text-monopoly-deep">
-                잔액 부족 · 보유 {visitor?.cash}만
-              </div>
-            )}
-          </>
-        )}
-
-        {isOpponentOwned && (
-          <>
-            <div className="text-center font-display text-[12px] font-semibold text-ink">
-              {playerMeta(state, owner).name}님 소유 ·{' '}
-              <span className="font-bold text-monopoly-red">통행료 {rent}만</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                className="btn-chip-red py-2.5 text-sm"
-                disabled={!canPay}
-                onClick={() => {
-                  handlePayRent?.(visitorId, pos);
-                  onClose?.();
-                }}
-              >
-                통행료 지불 · {rent}만
-              </button>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="btn-chip-gold py-2 text-xs"
-                  onClick={() => handleTradeOpen?.(visitorId, owner, pos)}
-                >
-                  거래 제안
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'btn-chip py-2 text-xs',
-                    !canPay && 'bg-monopoly-red text-white',
-                  )}
-                  onClick={() => handleRecoveryOpen?.(visitorId, rent)}
-                >
-                  {canPay ? '회생' : '회생 시도'}
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+        </div>
       </div>
     </ModalBase>
-    </>
   );
 }
+
+
+
+

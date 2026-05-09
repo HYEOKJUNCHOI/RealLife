@@ -65,9 +65,10 @@ export const handleLuxuryTax = (state, playerId, rng) => {
 };
 
 // 소득세 도착 → 주차장 누적
-export const handleIncomeTax = (state, playerId) => {
+// 보드 칸에 amount가 있으면 고정 금액을 우선 사용한다.
+export const handleIncomeTax = (state, playerId, fixedAmount = null) => {
   const worth = computeNetWorth(state, playerId);
-  const tax = round10(worth * INCOME_TAX_RATE);
+  const tax = fixedAmount != null && Number.isFinite(Number(fixedAmount)) ? Number(fixedAmount) : round10(worth * INCOME_TAX_RATE);
   state.players[playerId].cash -= tax;
   state.parkingPot += tax;
   return tax;

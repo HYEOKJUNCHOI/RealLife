@@ -18,6 +18,16 @@ export const INFLATION_PER_YEAR = 0.04; // 4% 복리
 // 부동산 대출
 export const LTV_RATIO = 0.7; // 시세 ×70%
 export const LOAN_RATES = [0.01, 0.02, 0.03, 0.04]; // 1~4% 균등 추첨
+export const MORTGAGE_INTEREST_BY_COLOR = {
+  brown: 5,
+  lightblue: 7,
+  pink: 10,
+  orange: 12,
+  red: 14,
+  yellow: 16,
+  green: 18,
+  darkblue: 20,
+}; // 룰북: 색깔 그룹별 매턴 고정 이자
 
 // 신용대출
 export const CREDIT_LIMIT = 1000; // 1,000만
@@ -32,8 +42,8 @@ export const LOANSHARK_INTEREST_PER_TURN = 30;
 export const LOANSHARK_PREPAY_FEE = 0.1; // 중도상환 수수료 10%
 
 // 감옥
-export const JAIL_TURNS = 3;
-export const JAIL_BAIL = 50;
+export const JAIL_TURNS = 2;
+export const JAIL_BAIL = 200;
 
 // GO
 export const GO_SALARY = 200; // 월급 (통과)
@@ -91,9 +101,9 @@ export const APT_LIMIT = 12;
 export const DEATHMATCH_TRIGGER_MIN = 30; // 30분 경과
 export const GAME_DURATION_MIN = 60; // 60분 종료
 
-// 이벤트 카드 발동 주기 (라운드 단위)
-// 1년 = 모두 GO 1바퀴 = 4명 게임에서 평균 ~4 라운드 가정
-export const EVENT_TRIGGER_YEARS = 2;
+// 이벤트 카드 발동 주기 (연 단위)
+// 1년 결산마다 이벤트 카드 발동
+export const EVENT_TRIGGER_YEARS = 1;
 
 // 카드 풀 사이즈
 export const CHANCE_CARD_COUNT = 12;

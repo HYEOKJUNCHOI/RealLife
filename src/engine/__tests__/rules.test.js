@@ -6,7 +6,7 @@ import { playTurn } from '../rules.js';
 
 test('자기 턴 실행: 주사위 + 이동 + 도착 처리 (오류 없이 완주)', () => {
   const rng = createRng(1);
-  const state = createGameState({ numPlayers: 4, options: { predistribute: true }, rng });
+  const state = createGameState({ numPlayers: 4, options: { predistribute: true, realTimeMode: false }, rng });
   for (let i = 0; i < 50; i++) {
     playTurn(state, rng);
     if (state.finished) break;
@@ -27,7 +27,7 @@ test('GO 통과: 월급 200만 입금', () => {
 
 test('60분 종료: deathmatch + finish', () => {
   const rng = createRng(1);
-  const state = createGameState({ numPlayers: 4, options: { predistribute: true }, rng });
+  const state = createGameState({ numPlayers: 4, options: { predistribute: true, realTimeMode: false }, rng });
   // 강제로 60분까지 돌림
   for (let i = 0; i < 200; i++) {
     playTurn(state, rng);
@@ -40,7 +40,7 @@ test('60분 종료: deathmatch + finish', () => {
 test('시뮬 재현성: 같은 시드 → 같은 결과', () => {
   const run = (seed) => {
     const rng = createRng(seed);
-    const state = createGameState({ numPlayers: 4, options: { predistribute: true }, rng });
+    const state = createGameState({ numPlayers: 4, options: { predistribute: true, realTimeMode: false }, rng });
     for (let i = 0; i < 100; i++) {
       playTurn(state, rng);
       if (state.finished) break;

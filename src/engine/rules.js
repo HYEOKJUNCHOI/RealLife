@@ -38,7 +38,7 @@ import {
   computeNetWorth,
 } from './tax.js';
 import { handlePropertyArrival } from './rent.js';
-import { drawWelfareCard, triggerEventCard } from './cards.js';
+import { drawChanceCard, drawWelfareCard, triggerEventCard } from './cards.js';
 import { sendToJail, handleJailTurn } from './jail.js';
 import { tryRecover } from './recovery.js';
 import {
@@ -152,17 +152,7 @@ const handleTileArrival = (state, playerId, pos, rng, log) => {
     case 'property': {
       const r = handlePropertyArrival(state, playerId, pos);
       log.push({ kind: 'arrive_property', ...r });
-      // 시뮬 AI: 미보유 시 cash 충분하면 매입
-      if (r.type === 'unowned') {
-        const player = state.players[playerId];
-        if (player.cash >= r.buyPrice + 100) {
-          player.cash -= r.buyPrice;
-          state.tileState[pos] ??= {};
-          state.tileState[pos].owner = playerId;
-          state.tileState[pos].stage = 0;
-          log.push({ kind: 'buy_property', pos, price: r.buyPrice });
-        }
-      }
+      // 실제 플레이 모드: 자동 매입 금지. 매입 여부는 UI 모달에서 플레이어가 직접 선택.
       break;
     }
     case 'railroad': {
@@ -185,14 +175,14 @@ const handleTileArrival = (state, playerId, pos, rng, log) => {
         const amt = handleLuxuryTax(state, playerId, rng);
         log.push({ kind: 'luxury_tax', amt });
       } else {
-        const amt = handleIncomeTax(state, playerId);
+        const amt = handleIncomeTax(state, playerId, tile.amount);
         log.push({ kind: 'income_tax', amt });
       }
       break;
     }
     case 'chance': {
-      // BRAINSTORM §9: MVP에서 찬스 카드 시스템 제외 (V2 이벤트와 결 중복)
-      // 보드의 'chance' 칸은 그대로 두되 효과 없음 (도착 시 패스)
+      const r = drawChanceCard(state, playerId, rng);
+      log.push({ kind: 'chance_draw', ...r });
       break;
     }
     case 'community_chest': {
@@ -220,7 +210,7 @@ const handleTileArrival = (state, playerId, pos, rng, log) => {
 // 자기 턴 1회 실행 (시뮬 자동 모드)
 // 반환: { events: [...], finished, winner }
 // agentHook: (state, playerId, rng, log) => void — 주사위 굴리기 직전 자동 의사결정
-export const playTurn = (state, rng, agentHook = null) => {
+export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
   if (state.finished) return { events: [], finished: true, winner: state.winner };
   const playerId = state.turnIndex;
   const player = state.players[playerId];
@@ -239,16 +229,17 @@ export const playTurn = (state, rng, agentHook = null) => {
     return { events: log };
   }
 
-  // 감옥 처리: 보석금 우선 (시뮬 단순화: cash ≥ 200만이면 보석금)
+  // 감옥 처리: UI 선택값에 따라 보석금 또는 주사위 출소 시도
   if (player.inJail) {
+    const jailChoice = turnOptions.jailChoice ?? 'roll';
     const dice = rng.rollDice();
     const out = handleJailTurn(state, playerId, {
-      payBail: player.cash >= 200,
+      payBail: jailChoice === 'bail',
       rolledDouble: dice.isDouble,
     });
-    log.push({ kind: 'jail_turn', ...out });
+    log.push({ kind: 'jail_turn', d1: dice.d1, d2: dice.d2, sum: dice.sum, isDouble: dice.isDouble, choice: jailChoice, ...out });
     if (!out.released) {
-      advanceTurn(state, rng, log);
+      if (!turnOptions.deferAdvance) advanceTurn(state, rng, log);
       return { events: log };
     }
     // 탈출 후 그 주사위로 이동
@@ -268,7 +259,7 @@ export const playTurn = (state, rng, agentHook = null) => {
         log.push({ kind: 'recover', ...rec });
       }
     }
-    advanceTurn(state, rng, log);
+    if (!turnOptions.deferAdvance) advanceTurn(state, rng, log);
     return { events: log };
   }
 
@@ -293,6 +284,29 @@ export const playTurn = (state, rng, agentHook = null) => {
   }
 
   // 주사위 — 더블 시 한 번 더 (3연속 감옥)
+  const manualSteps = Number(turnOptions.manualSteps);
+  if (Number.isFinite(manualSteps) && manualSteps >= 1) {
+    const steps = Math.max(1, Math.min(12, Math.trunc(manualSteps)));
+    log.push({
+      kind: 'roll',
+      d1: null,
+      d2: null,
+      sum: steps,
+      isDouble: false,
+      extraTurn: false,
+      doublesCount: 0,
+      manual: true,
+    });
+    const newPos = movePlayer(state, playerId, steps, log);
+    handleTileArrival(state, playerId, newPos, rng, log);
+    if (player.cash < 0) {
+      const rec = tryRecover(state, playerId, state.options.loanshark);
+      log.push({ kind: 'recover_arrival', ...rec });
+    }
+    if (!turnOptions.deferAdvance) advanceTurn(state, rng, log);
+    return { events: log };
+  }
+
   let doublesCount = 0;
   while (true) {
     const dice = rollTurnDice(rng, doublesCount);
@@ -319,7 +333,7 @@ export const playTurn = (state, rng, agentHook = null) => {
 };
 
 // 자기 턴 종료 → 다음 턴
-const advanceTurn = (state, rng, log) => {
+export const advanceTurn = (state, rng, log) => {
   // 매턴 (누구턴이든) 역장 적립
   accrueStationFunds(state);
 
@@ -327,7 +341,7 @@ const advanceTurn = (state, rng, log) => {
   // 한 라운드 끝 = 모든 플레이어 1턴씩
   if (state.turnIndex === 0) {
     state.round += 1;
-    if (!state._ignoreTimeCap) state.elapsedMin += MIN_PER_ROUND;
+    if (!state._ignoreTimeCap && !state.realTimeMode) state.elapsedMin += MIN_PER_ROUND;
 
     // 1년 결산 = 모두 GO 1바퀴 — passedGoCount 합 / players 수 ≥ year+1
     const minPassed = Math.min(...state.players.map((p) => p.passedGoCount ?? 0));
@@ -348,7 +362,8 @@ const advanceTurn = (state, rng, log) => {
     }
 
     // 게임 종료 체크
-    if (state.elapsedMin >= GAME_DURATION_MIN) {
+    const gameDurationMin = state.options?.totalGameMinutes ?? GAME_DURATION_MIN;
+    if (state.elapsedMin >= gameDurationMin) {
       finishGame(state, log);
     }
   }
@@ -384,9 +399,16 @@ const yearEndSettlement = (state, rng, log) => {
     const r = triggerEventCard(state, rng);
     log.push({ kind: 'event_card', ...r });
   }
+
+  // 연말 세금/이벤트 후 음수 현금이 남으면 즉시 회생/파산 처리
+  for (let i = 0; i < state.players.length; i++) {
+    if (state.players[i].bankrupt || state.players[i].cash >= 0) continue;
+    const rec = tryRecover(state, i, state.options.loanshark);
+    log.push({ kind: 'recover_year_end', playerId: i, ...rec });
+  }
 };
 
-const finishGame = (state, log) => {
+export const finishGame = (state, log) => {
   state.finished = true;
   // 자산 1위 승리
   const ranking = state.players
@@ -395,8 +417,24 @@ const finishGame = (state, log) => {
       if (a.bankrupt !== b.bankrupt) return a.bankrupt ? 1 : -1;
       return b.worth - a.worth;
     });
+  if (state.options?.teamMode) {
+    const teamRanking = ['human', 'ai']
+      .map((team) => {
+        const members = state.players
+          .map((p, i) => ({ p, i, worth: quickWorth(state, i) }))
+          .filter(({ p }) => (p.team ?? p.controller) === team);
+        const worth = members.reduce((sum, member) => sum + member.worth, 0);
+        const liveCount = members.filter(({ p }) => !p.bankrupt).length;
+        return { team, worth, liveCount, members: members.map(({ i, worth, p }) => ({ i, worth, bankrupt: p.bankrupt })) };
+      })
+      .sort((a, b) => {
+        if (a.liveCount !== b.liveCount) return b.liveCount - a.liveCount;
+        return b.worth - a.worth;
+      });
+    state.winnerTeam = teamRanking[0]?.team ?? null;
+    state.teamRanking = teamRanking;
+  }
   state.winner = ranking[0].i;
   state.ranking = ranking;
-  log.push({ kind: 'game_end', winner: ranking[0].i, ranking });
+  log.push({ kind: 'game_end', winner: ranking[0].i, winnerTeam: state.winnerTeam ?? null, ranking, teamRanking: state.teamRanking ?? null });
 };
-

@@ -1,7 +1,7 @@
 // 이벤트 / 찬스 / 복지 카드 인게임 모달
 // - 세로형 카드 비율 (3:5 결) + 상단 색띠 + 중앙 일러스트 + 하단 본문
-// - 7초 auto-dismiss: setInterval 로 1초마다 카운트다운 + progress bar
 // - 클릭 즉시 닫힘 (확인 버튼 / 배경 / X 버튼 모두)
+// - 자동 닫힘 없음
 // - Props 시그니처 유지: { open, onClose, eventId, description, affected }
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -200,11 +200,11 @@ const EVENT_META = {
     category: 'welfare',
     cardLabel: 'WORK INCENTIVE',
     ko: '근로장려금',
-    icon: '💰',
+    icon: '₩',
     imageSrc: '/cards/welfare/work_incentive.png',
     headline: '근로장려금 지급',
     subtext: '저소득 근로자 정부 지원 +100만',
-    chip: { icon: '💰', text: '+100만원 수령' },
+    chip: { icon: '₩', text: '+100만원 수령' },
   },
   welfare_pension: {
     category: 'welfare',
@@ -238,8 +238,7 @@ const EVENT_META = {
   },
 };
 
-// AUTO_DISMISS 시간 (초)
-const AUTO_DISMISS_SECONDS = 7;
+// 이벤트 카드는 유저가 클릭해야 닫힌다.
 
 // ===== 카테고리 라벨 =====
 const CATEGORY_LABEL = {
@@ -299,8 +298,8 @@ function CardIllustration({ imageSrc, icon, illoBg, category }) {
           src={imageSrc}
           alt=""
           onError={() => setImgError(true)}
-          className="relative z-10 h-full w-full object-contain"
-          style={{ padding: '8px' }}
+          className="relative z-10 h-full w-full object-cover"
+          style={{ padding: 0 }}
           draggable={false}
         />
       ) : (
@@ -363,7 +362,6 @@ function CountdownBar({ secondsLeft, total = AUTO_DISMISS_SECONDS, progressColor
 // ===== 메인 이벤트 카드 모달 =====
 export default function EventModal({ open, onClose, eventId, description, affected }) {
   const handleConfirm = useGameStore((s) => s.confirmEvent);
-  const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SECONDS);
 
   // 닫힘 핸들러 — confirmEvent + onClose 순서 보존
   const handleClose = useCallback(() => {
@@ -371,25 +369,7 @@ export default function EventModal({ open, onClose, eventId, description, affect
     onClose?.();
   }, [handleConfirm, onClose]);
 
-  // 7초 auto-dismiss + cleanup
-  useEffect(() => {
-    if (!open) return;
-    // 모달 열릴 때마다 카운트 리셋
-    setSecondsLeft(AUTO_DISMISS_SECONDS);
-
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleClose();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [open, handleClose]);
+  // 자동 닫힘 없음: 유저가 클릭해야 닫힌다.
 
   // 메타 해석
   const resolvedId = resolveEventId(eventId);
@@ -527,10 +507,6 @@ export default function EventModal({ open, onClose, eventId, description, affect
 
         {/* 카운트다운 영역 */}
         <div className="space-y-1.5 pt-1">
-          <CountdownBar
-            secondsLeft={secondsLeft}
-            progressColor={style.progressColor}
-          />
           <div className="flex items-center justify-between">
             {/* 확인 버튼 */}
             <button
@@ -549,12 +525,7 @@ export default function EventModal({ open, onClose, eventId, description, affect
               확인
             </button>
             {/* 카운트다운 숫자 */}
-            <span
-              className="ml-3 shrink-0 font-display text-[22px] font-bold leading-none tabular-nums"
-              style={{ color: style.progressColor, minWidth: '2ch', textAlign: 'right' }}
-            >
-              {secondsLeft}
-            </span>
+
           </div>
         </div>
       </div>

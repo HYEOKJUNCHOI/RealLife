@@ -27,6 +27,7 @@ export const DEFAULT_OPTIONS = {
   loanshark: true,
   totalGameMinutes: 60, // 60분룰
   deathmatchStartMinutes: 30, // 데스매치 시작 시점 (분, 0 = 비활성)
+  realTimeMode: true, // 실제 시계 기준으로 시간 진행
 };
 
 export const createGameState = ({
@@ -35,6 +36,7 @@ export const createGameState = ({
   rng,
   characters = ['yangban', 'general', 'magistrate', 'farmer'],
   playerNames = [],
+  playerTypes = [],
 } = {}) => {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const board = loadBoard('korea');
@@ -43,6 +45,8 @@ export const createGameState = ({
     id: i,
     name: playerNames[i]?.trim() || CHARACTER_NAME[characters[i]] || `${i + 1}p`,
     character: characters[i] ?? 'yangban',
+    controller: playerTypes[i] === 'ai' ? 'ai' : 'human',
+    team: opts.teamMode ? (playerTypes[i] === 'ai' ? 'ai' : 'human') : null,
     position: 0,
     cash: opts.startingCash,
     salaryBonus: 0,
@@ -90,7 +94,9 @@ export const createGameState = ({
     loanRate: rng ? rollNewLoanRate(rng) : 0.02,
     options: opts,
     log: [],
-    elapsedMin: 0, // 가상 시간 (1라운드 = ~2.5분 가정)
+    elapsedMin: 0, // 실제 경과 시간(분). 구버전은 라운드 가상 시간
+    realTimeMode: opts.realTimeMode !== false,
+    realTimeStartedAt: Date.now(),
     deathmatch: false,
     finished: false,
     winner: null,

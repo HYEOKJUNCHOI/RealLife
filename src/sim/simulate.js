@@ -46,7 +46,7 @@ export const runSimulation = ({ years = 5, seed = 1, loanshark = true, ignoreTim
   const rng = createRng(seed);
   const state = createGameState({
     numPlayers: 4,
-    options: { loanshark },
+    options: { loanshark, realTimeMode: false },
     rng,
   });
   if (ignoreTimeCap) {

@@ -4,9 +4,10 @@
 import { create } from 'zustand';
 import { createGameState } from '@/engine/gameState.js';
 import { createRng } from '@/engine/rng.js';
-import { playTurn } from '@/engine/rules.js';
+import { advanceTurn, finishGame, playTurn } from '@/engine/rules.js';
 import { currentPrice, hasColorMonopoly, rentFromStage } from '@/engine/inflation.js';
-import { round10 } from '@/engine/constants.js';
+import { CREDIT_ELIGIBILITY_CASH, CREDIT_LIMIT, LOANSHARK_LIMIT, round10 } from '@/engine/constants.js';
+import { canTakeCredit, canTakeLoanshark, takeCredit, takeLoanshark } from '@/engine/loan.js';
 
 const SAVE_KEY = 'reallife-save';
 
@@ -15,6 +16,7 @@ export const useGameStore = create((set, get) => ({
   state: null,
   rng: null,
   log: [],
+  lastTurn: null,
 
   // 모달 상태
   modal: {
@@ -25,6 +27,7 @@ export const useGameStore = create((set, get) => ({
     yearEnd: null,     // { year, summary }
     deathmatch: false,
     recovery: null,    // { playerId, needAmount }
+    loan: null,         // { playerId }
   },
 
   // 매트릭스 토스트 (인컴/지출 페이드아웃)
@@ -37,40 +40,124 @@ export const useGameStore = create((set, get) => ({
     options = {},
     characters,
     playerNames,
+    playerTypes,
     seed = Date.now(),
+    showInitialDeal = false,
   } = {}) => {
     const rng = createRng(seed);
-    const state = createGameState({ numPlayers, options, rng, characters });
+    const state = createGameState({ numPlayers, options, rng, characters, playerTypes });
     // 사용자 입력 이름이 있으면 덮어쓰기
     if (Array.isArray(playerNames)) {
       state.players.forEach((p, i) => {
         if (playerNames[i] && playerNames[i].trim()) p.name = playerNames[i].trim();
       });
     }
+    state._gameStartNonce = seed;
+    state._forceInitialDeal = !!showInitialDeal;
+    state._initialDealShown = false;
     set({
       state,
       rng,
       log: [],
-      modal: { property: null, trade: null, tradeSelect: null, event: null, yearEnd: null, deathmatch: false, recovery: null },
+      lastTurn: null,
+      modal: { property: null, trade: null, tradeSelect: null, event: null, yearEnd: null, deathmatch: false, recovery: null, loan: null },
       toasts: [],
     });
-  },
-
-  // 자기 턴 1회 실행
-  step: () => {
-    const { state, rng, log } = get();
-    if (!state || state.finished) return;
-    const { events } = playTurn(state, rng);
-    set({ state: { ...state }, log: [...log, ...events] });
-    // 자동 저장
     get().save();
   },
 
+  tickClock: () => {
+    const { state, rng, log } = get();
+    if (!state || state.finished || state.realTimeMode === false) return false;
+    const startedAt = state.realTimeStartedAt ?? Date.now();
+    if (!state.realTimeStartedAt) state.realTimeStartedAt = startedAt;
+    const elapsedMin = Math.max(0, (Date.now() - startedAt) / 60000);
+    const prevElapsed = state.elapsedMin ?? 0;
+    state.elapsedMin = elapsedMin;
+    const events = [];
+
+    const dmStart = state.options?.deathmatchStartMinutes ?? 0;
+    if (dmStart > 0 && !state.deathmatch && elapsedMin >= dmStart) {
+      state.deathmatch = true;
+      events.push({ kind: 'deathmatch_start' });
+    }
+
+    const gameDurationMin = state.options?.totalGameMinutes ?? 60;
+    if (elapsedMin >= gameDurationMin && !state.finished) {
+      finishGame(state, events);
+    }
+
+    if (events.length || Math.floor(prevElapsed * 60) !== Math.floor(elapsedMin * 60)) {
+      set({ state: { ...state }, log: events.length ? [...log, ...events] : log });
+      if (events.length || state.finished) get().save();
+      return true;
+    }
+    return false;
+  },
+
+  // 자기 턴 1회 실행
+  step: (turnOptions = {}) => {
+    const { state, rng, log } = get();
+    if (!state || state.finished) return [];
+    const playerId = state.turnIndex;
+    const cashBefore = state.players[playerId]?.cash ?? 0;
+    const { events } = playTurn(state, rng, null, turnOptions);
+    const cashAfter = state.players[playerId]?.cash ?? cashBefore;
+    const eventKinds = new Set(['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate']);
+    const eventCard = events.find((event) => event.card && eventKinds.has(event.kind));
+    const arrivedUnownedProperty = events.find((event) => event.kind === 'arrive_property' && event.type === 'unowned');
+    const nextModal = {
+      ...get().modal,
+      ...(eventCard ? { event: { eventId: eventCard.kind, description: `${eventCard.card} · ${eventCard.effectText ?? eventCard.description ?? ''}`, affected: eventCard } } : {}),
+      ...(arrivedUnownedProperty && !turnOptions.deferPropertyModal ? { property: { pos: arrivedUnownedProperty.pos, visitorId: playerId } } : {}),
+    };
+    set({
+      state: { ...state },
+      log: [...log, ...events],
+      lastTurn: { playerId, cashBefore, cashAfter, events },
+      modal: nextModal,
+    });
+    // 자동 저장
+    get().save();
+    return events;
+  },
+  endTurn: () => {
+    const { state, rng, log } = get();
+    if (!state || state.finished) return false;
+    const events = [];
+    advanceTurn(state, rng, events);
+    set({
+      state: { ...state },
+      log: [...log, ...events],
+    });
+    get().save();
+    return true;
+  },
+  restoreSnapshot: (snapshot) => {
+    if (!snapshot?.state) return false;
+    set({
+      state: snapshot.state,
+      log: snapshot.log ?? get().log,
+      lastTurn: snapshot.lastTurn ?? get().lastTurn,
+      modal: snapshot.modal ?? get().modal,
+    });
+    get().save();
+    return true;
+  },
+
   // ===== 토스트 (매트릭스 페이드아웃) =====
-  addToast: ({ type, amount, x, y, size }) => {
+  addToast: ({ type, amount, x, y, size, message, tone }) => {
     const id = get().toastSeq + 1;
-    const toast = { id, type, amount, x, y, size };
-    set((s) => ({ toasts: [...s.toasts, toast], toastSeq: id }));
+    if (message) {
+      const text = String(message ?? '').trim();
+      if (!text || /nan/i.test(text)) return;
+      set((s) => ({ toasts: [...s.toasts.filter((t) => !/nan/i.test(String(t.message ?? t.amount ?? ''))), { id, message: text, tone }], toastSeq: id }));
+      return;
+    }
+    const safeAmount = Number(amount);
+    if (!Number.isFinite(safeAmount) || safeAmount === 0) return;
+    const toast = { id, type, amount: safeAmount, x, y, size };
+    set((s) => ({ toasts: [...s.toasts.filter((t) => Number.isFinite(Number(t.amount)) || t.message), toast], toastSeq: id }));
   },
   removeToast: (id) => {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
@@ -87,11 +174,26 @@ export const useGameStore = create((set, get) => ({
     const ts = state.tileState[pos];
     if (!ts || ts.owner != null) return;
     // 차감 + 등록
+    const cashBefore = player.cash ?? 0;
     player.cash -= price;
     ts.owner = playerId;
     if (!player.properties) player.properties = [];
     player.properties.push(pos);
-    set({ state: { ...state }, modal: { ...get().modal, property: null } });
+    state._lastDeedAdded = { playerId, pos, nonce: Date.now() };
+    const event = { kind: 'buy_property', playerId, pos, price };
+    const prevLastTurn = get().lastTurn;
+    const nextEvents = prevLastTurn?.playerId === playerId ? [...(prevLastTurn.events ?? []), event] : [event];
+    set({
+      state: { ...state },
+      modal: { ...get().modal, property: null },
+      log: [...get().log, event],
+      lastTurn: {
+        playerId,
+        cashBefore: prevLastTurn?.playerId === playerId ? prevLastTurn.cashBefore : cashBefore,
+        cashAfter: player.cash ?? 0,
+        events: nextEvents,
+      },
+    });
     get().addToast({ type: 'expense', amount: price });
     get().save();
   },
@@ -114,6 +216,34 @@ export const useGameStore = create((set, get) => ({
     get().save();
   },
 
+  hubTeleport: (playerId, destPos, fee = 0) => {
+    const { state, log, lastTurn } = get();
+    if (!state || state.finished) return false;
+    const player = state.players[playerId];
+    const target = state.board?.tiles?.[destPos];
+    const safeFee = Math.max(0, Number(fee) || 0);
+    if (!player || !target) return false;
+    if (safeFee > 0 && (player.cash ?? 0) < safeFee) return false;
+    const fromPos = player.position ?? 0;
+    if (safeFee > 0) player.cash -= safeFee;
+    player.position = destPos;
+    const event = { kind: 'hub_teleport', playerId, fromPos, destPos, fee: safeFee };
+    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), event] : [event];
+    set({
+      state: { ...state },
+      log: [...log, event],
+      lastTurn: {
+        playerId,
+        cashBefore: lastTurn?.playerId === playerId ? lastTurn.cashBefore : (player.cash ?? 0) + safeFee,
+        cashAfter: player.cash ?? 0,
+        events: nextEvents,
+      },
+    });
+    if (safeFee > 0) get().addToast({ type: 'expense', amount: safeFee });
+    get().save();
+    return true;
+  },
+
   // ===== 부동산 단계 변경 (집짓기 +/-) — 룰 §6 =====
   // 비용 = tile.houseCost (그룹별 빌라값 50/100/150/200)
   //   - 짓기 (+): houseCost 차감 (아파트도 동일 — 빌라 4동 → 아파트는 houseCost 추가)
@@ -130,7 +260,12 @@ export const useGameStore = create((set, get) => ({
     const tile = state.board.tiles[pos];
     if (!tile) return;
     const cur = ts.stage ?? 0;
-    const next = Math.max(0, Math.min(5, cur + delta));
+    const rawNext = cur + delta;
+    const next = delta > 0 && cur === 3
+      ? 5
+      : delta < 0 && cur === 5
+        ? 3
+        : Math.max(0, Math.min(5, rawNext));
     if (next === cur) return;
     const player = state.players[playerId];
     if (!player) return;
@@ -143,6 +278,8 @@ export const useGameStore = create((set, get) => ({
     }
 
     const houseCost = tile.houseCost ?? 0;
+    const cashBefore = player.cash ?? 0;
+    let amount = 0;
     if (delta > 0) {
       // 짓기 — 철거된 거 복구하는 거면 50% (전에 50% 받았으니 50% 만 내면 원상),
       // 새로 짓는 거면 100% 비용
@@ -150,14 +287,29 @@ export const useGameStore = create((set, get) => ({
       const cost = round10(houseCost * (isRestore ? 0.5 : 1.0));
       if (player.cash < cost) return;
       player.cash -= cost;
+      amount = -cost;
     } else {
       // 부수기 — 세션 내 빌드 취소(100%) / 기존 빌딩 판매(50%)
       const isSelling = initialStage != null && next < initialStage;
       const refundRate = isSelling ? 0.5 : 1.0;
-      player.cash += round10(houseCost * refundRate);
+      const refund = round10(houseCost * refundRate);
+      player.cash += refund;
+      amount = refund;
     }
     ts.stage = next;
-    set({ state: { ...state } });
+    const event = { kind: 'develop_property', playerId, pos, fromStage: cur, toStage: next, amount };
+    const prevLastTurn = get().lastTurn;
+    const nextEvents = prevLastTurn?.playerId === playerId ? [...(prevLastTurn.events ?? []), event] : [event];
+    set({
+      state: { ...state },
+      log: [...get().log, event],
+      lastTurn: {
+        playerId,
+        cashBefore: prevLastTurn?.playerId === playerId ? prevLastTurn.cashBefore : cashBefore,
+        cashAfter: player.cash ?? 0,
+        events: nextEvents,
+      },
+    });
     get().save();
   },
 
@@ -229,8 +381,10 @@ export const useGameStore = create((set, get) => ({
     const loanAmount = round10(currentPrice(state, pos) * 0.7);
     player.cash += loanAmount;
     ts.mortgaged = true;
+    ts.mortgageAmount = loanAmount;
+    ts.mortgageYear = state.year ?? 0;
     if (!player.propertyLoans) player.propertyLoans = [];
-    player.propertyLoans.push({ pos, amount: loanAmount });
+    player.propertyLoans.push({ pos, amount: loanAmount, year: state.year ?? 0 });
     set({ state: { ...state } });
     get().addToast({ type: 'income', amount: loanAmount });
     get().save();
@@ -254,17 +408,139 @@ export const useGameStore = create((set, get) => ({
     get().save();
   },
 
-  // 회생 4단계: 신용대출
+  openLoanModal: (playerId) => {
+    set({ modal: { ...get().modal, loan: { playerId } } });
+  },
+  closeLoanModal: () => {
+    set({ modal: { ...get().modal, loan: null } });
+  },
+
+  // 회생/대출: 신용대출 (1,000만, 현금 300만 이하, 게임 중 1회)
   takeCreditLoan: (playerId) => {
     const { state } = get();
-    if (!state) return;
+    if (!state) return false;
     const player = state.players[playerId];
-    if (!player || player.cash > 300 || player.creditLoan?.active) return;
-    player.cash += 1000;
-    player.creditLoan = { active: true, missedCount: 0 };
-    set({ state: { ...state } });
-    get().addToast({ type: 'income', amount: 1000 });
+    if (!player || !canTakeCredit(player)) return false;
+    const amount = takeCredit(player, CREDIT_LIMIT);
+    player.creditLoanYear = state.year ?? 0;
+    set({ state: { ...state }, modal: { ...get().modal, loan: null } });
+    get().addToast({ type: 'income', amount });
     get().save();
+    return true;
+  },
+
+  // 대출: 사채 (2,000만, 언제든 가능, 게임 중 1회)
+  takeLoanSharkLoan: (playerId) => {
+    const { state } = get();
+    if (!state) return false;
+    const player = state.players[playerId];
+    if (!player || !canTakeLoanshark(player)) return false;
+    const amount = takeLoanshark(player, LOANSHARK_LIMIT);
+    player.loansharkYear = state.year ?? 0;
+    set({ state: { ...state }, modal: { ...get().modal, loan: null } });
+    get().addToast({ type: 'income', amount });
+    get().save();
+    return true;
+  },
+
+  canTakeCreditLoan: (playerId) => {
+    const player = get().state?.players?.[playerId];
+    return !!player && canTakeCredit(player);
+  },
+  canTakeLoanSharkLoan: (playerId) => {
+    const player = get().state?.players?.[playerId];
+    return !!player && canTakeLoanshark(player);
+  },
+  creditLoanReason: (playerId) => {
+    const player = get().state?.players?.[playerId];
+    if (!player) return '';
+    if (player.creditUsed) return '이미 신용대출을 사용했습니다.';
+    if ((player.cash ?? 0) > CREDIT_ELIGIBILITY_CASH) return `예금이 ${CREDIT_ELIGIBILITY_CASH}만 이하일 때만 가능합니다.`;
+    return '';
+  },
+
+  getLoanRepaymentInfo: (playerId) => {
+    const state = get().state;
+    const player = state?.players?.[playerId];
+    if (!state || !player) return { principal: 0, fee: 0, total: 0, withinYear: false };
+    const currentYear = state.year ?? 0;
+    const debts = [];
+    for (const pos in state.tileState ?? {}) {
+      const ts = state.tileState[pos];
+      if (ts?.owner === playerId && ts?.mortgaged && (ts.mortgageAmount ?? 0) > 0) {
+        debts.push({ amount: ts.mortgageAmount ?? 0, year: ts.mortgageYear ?? currentYear });
+      }
+    }
+    if ((player.creditDebt ?? 0) > 0) debts.push({ amount: player.creditDebt, year: player.creditLoanYear ?? currentYear });
+    if ((player.loansharkDebt ?? 0) > 0) debts.push({ amount: player.loansharkDebt, year: player.loansharkYear ?? currentYear });
+    const principal = debts.reduce((sum, debt) => sum + debt.amount, 0);
+    const feeBase = debts.filter((debt) => currentYear - (debt.year ?? currentYear) < 1).reduce((sum, debt) => sum + debt.amount, 0);
+    const fee = round10(feeBase * 0.01);
+    return { principal, fee, total: principal + fee, withinYear: feeBase > 0 };
+  },
+
+  repayLoans: (playerId, principalAmount) => {
+    const { state } = get();
+    const player = state?.players?.[playerId];
+    if (!state || !player) return false;
+    const info = get().getLoanRepaymentInfo(playerId);
+    const principalToPay = Math.min(Math.max(0, round10(principalAmount)), info.principal);
+    if (principalToPay <= 0) return false;
+
+    const currentYear = state.year ?? 0;
+    let remain = principalToPay;
+    let feeBase = 0;
+    const markFee = (amount, year) => {
+      if (currentYear - (year ?? currentYear) < 1) feeBase += amount;
+    };
+
+    if ((player.loansharkDebt ?? 0) > 0 && remain > 0) {
+      const pay = Math.min(player.loansharkDebt, remain);
+      markFee(pay, player.loansharkYear ?? currentYear);
+      player.loansharkDebt -= pay;
+      remain -= pay;
+    }
+    if ((player.creditDebt ?? 0) > 0 && remain > 0) {
+      const pay = Math.min(player.creditDebt, remain);
+      markFee(pay, player.creditLoanYear ?? currentYear);
+      player.creditDebt -= pay;
+      if (player.creditDebt <= 0) player.creditMisses = 0;
+      remain -= pay;
+    }
+    for (const pos in state.tileState ?? {}) {
+      if (remain <= 0) break;
+      const ts = state.tileState[pos];
+      if (ts?.owner === playerId && ts?.mortgaged && (ts.mortgageAmount ?? 0) > 0) {
+        const pay = Math.min(ts.mortgageAmount, remain);
+        markFee(pay, ts.mortgageYear ?? currentYear);
+        ts.mortgageAmount -= pay;
+        remain -= pay;
+        if (ts.mortgageAmount <= 0) {
+          ts.mortgaged = false;
+          ts.mortgageAmount = 0;
+          ts.mortgageYear = null;
+        }
+      }
+    }
+    player.propertyLoans = (player.propertyLoans ?? []).filter((loan) => {
+      const ts = state.tileState?.[loan.pos];
+      return ts?.mortgaged && (ts.mortgageAmount ?? 0) > 0;
+    });
+    const fee = round10(feeBase * 0.01);
+    const total = principalToPay + fee;
+    if ((player.cash ?? 0) < total) return false;
+    player.cash -= total;
+    set({ state: { ...state } });
+    get().addToast({ type: 'expense', amount: total });
+    get().save();
+    return true;
+  },
+
+  repayAllLoans: (playerId) => {
+    const info = get().getLoanRepaymentInfo(playerId);
+    const ok = get().repayLoans(playerId, info.principal);
+    if (ok) set({ modal: { ...get().modal, loan: null } });
+    return ok;
   },
 
   // 회생 5단계: 파산
@@ -333,6 +609,7 @@ export const useGameStore = create((set, get) => ({
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const state = JSON.parse(raw);
+        if (state.realTimeMode !== false && !state.realTimeStartedAt) state.realTimeStartedAt = Date.now() - Math.max(0, state.elapsedMin ?? 0) * 60000;
         const rng = createRng(state.rngSeed ?? Date.now());
         set({ state, rng });
         return true;
@@ -352,14 +629,35 @@ export const useGameStore = create((set, get) => ({
   clearSave: () => {
     localStorage.removeItem(SAVE_KEY);
   },
+  restartSameGame: () => {
+    const { state } = get();
+    if (!state) return false;
+    const characters = state.players.map((player) => player.character);
+    const playerNames = state.players.map((player) => player.name);
+    const playerTypes = state.players.map((player) => player.controller === 'ai' ? 'ai' : 'human');
+    const options = { ...state.options };
+    localStorage.removeItem(SAVE_KEY);
+    get().initGame({
+      numPlayers: state.players.length,
+      options,
+      characters,
+      playerNames,
+      playerTypes,
+      seed: Date.now(),
+      showInitialDeal: true,
+    });
+    return true;
+  },
   resetGame: () => {
     localStorage.removeItem(SAVE_KEY);
     set({
       state: null,
       rng: null,
       log: [],
-      modal: { property: null, trade: null, tradeSelect: null, event: null, yearEnd: null, deathmatch: false, recovery: null },
+      lastTurn: null,
+      modal: { property: null, trade: null, tradeSelect: null, event: null, yearEnd: null, deathmatch: false, recovery: null, loan: null },
       toasts: [],
     });
+    get().save();
   },
 }));

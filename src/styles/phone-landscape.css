@@ -1,0 +1,629 @@
+/* iPhone / small-phone landscape: use the whole 17-class wide screen instead of scaling the iPad board down. */
+.phone-landscape .setup-main {
+  padding: max(5px, env(safe-area-inset-top)) max(4px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left)) !important;
+  gap: 4px !important;
+}
+
+.phone-landscape .setup-header p { display: none !important; }
+.phone-landscape .setup-logo {
+  font-size: clamp(24px, 6vh, 30px) !important;
+  line-height: 0.78 !important;
+  text-shadow: 0 2px 0 rgba(35, 10, 8, 0.72) !important;
+}
+.phone-landscape .setup-body { gap: 7px !important; }
+.phone-landscape .setup-body > section { width: 66% !important; gap: 5px !important; }
+.phone-landscape .setup-rules { width: 34% !important; gap: 5px !important; }
+.phone-landscape .setup-body > section > div,
+.phone-landscape .setup-rules > div {
+  padding: 5px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 0 #17120c, 0 10px 18px -16px rgba(7, 28, 44, 0.62) !important;
+}
+.phone-landscape .setup-rules > div { flex: 0 1 auto !important; }
+.phone-landscape .setup-body > section > div:first-child p,
+.phone-landscape .setup-rules p,
+.phone-landscape .number-option-row .font-display,
+.phone-landscape .toggle-pill .font-sans,
+.phone-landscape .setup-rules span.font-display { display: none !important; }
+.phone-landscape .setup-body > section > div:first-child > div { align-items: center !important; }
+.phone-landscape .setup-character-grid { gap: 4px !important; padding: 1px 2px !important; }
+.phone-landscape .character-card,
+.phone-landscape .locked-character-slot {
+  height: clamp(86px, 24vh, 100px) !important;
+  max-width: 84px !important;
+  gap: 3px !important;
+  padding: 4px !important;
+  border-radius: 9px !important;
+}
+.phone-landscape .character-avatar-wrap {
+  width: clamp(52px, 14vh, 64px) !important;
+  height: clamp(52px, 14vh, 64px) !important;
+}
+.phone-landscape .character-name-plate {
+  height: 19px !important;
+  max-width: 78px !important;
+  padding: 2px 6px !important;
+  font-size: 10px !important;
+}
+.phone-landscape .number-option-row {
+  height: 28px !important;
+  gap: 5px !important;
+  padding: 3px 6px !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 1px 0 #17120c !important;
+}
+.phone-landscape .number-option-row .font-board { font-size: 12px !important; }
+.phone-landscape .number-option-row button {
+  height: 22px !important;
+  min-width: 74px !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  border-width: 1px !important;
+}
+.phone-landscape .number-option-row [class*="top-[38px]"] { top: 30px !important; }
+.phone-landscape .toggle-pill {
+  height: 28px !important;
+  padding: 3px 6px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+}
+.phone-landscape .toggle-pill > span:first-child { gap: 5px !important; }
+.phone-landscape .toggle-pill > span:first-child > span:first-child { font-size: 14px !important; }
+.phone-landscape .setup-rules button[disabled],
+.phone-landscape .setup-rules > button:last-child {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 9px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 0 #17120c !important;
+}
+.phone-landscape .setup-rules > button:last-child .font-board { font-size: 17px !important; }
+.phone-landscape .setup-rules > button:last-child .font-display { display: none !important; }
+.phone-landscape .setup-rules > button:last-child > span:last-child {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 15px !important;
+}
+.phone-landscape .setup-screen h2 { font-size: 14px !important; }
+.phone-landscape .setup-screen h2 + * { display: none !important; }
+.phone-landscape .setup-screen .flex.h-8.w-8,
+.phone-landscape .setup-screen .flex.h-7.w-7 {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 12px !important;
+  border-width: 1px !important;
+}
+.phone-landscape .setup-screen .h-11.min-w-16,
+.phone-landscape .setup-screen .h-10.min-w-14 {
+  height: 30px !important;
+  min-width: 44px !important;
+  padding: 0 8px !important;
+  font-size: 16px !important;
+}
+.phone-landscape .setup-screen .mt-2.flex.h-9 {
+  height: 20px !important;
+  margin-top: 3px !important;
+  font-size: 11px !important;
+}
+.phone-landscape .setup-rules .my-2\.5,
+.phone-landscape .setup-rules .my-3,
+.phone-landscape .setup-rules .my-3\.5 { margin-top: 5px !important; margin-bottom: 5px !important; }
+.phone-landscape .setup-rules .mb-2,
+.phone-landscape .setup-rules .mb-2\.5,
+.phone-landscape .setup-rules .mb-3 { margin-bottom: 4px !important; }
+.phone-landscape .setup-rules .grid { gap: 5px !important; }
+.phone-landscape .setup-screen .rounded-2xl { border-radius: 10px !important; }
+
+/* ================= iPhone game screen ================= */
+.phone-landscape > .relative.h-dvh,
+.phone-landscape > .relative.min-h-dvh,
+.phone-landscape > div:not(.setup-screen) {
+  height: 100dvh !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] {
+  grid-template-columns: minmax(0, 1fr) 164px !important;
+  border-radius: 7px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] > div:first-of-type > div:first-child {
+  height: 62px !important;
+  grid-template-columns: 42px 1fr !important;
+  gap: 5px !important;
+  padding: 4px 68px 4px 5px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] [aria-label],
+.phone-landscape [data-component="CurrentPlayerStage"] .h-\[62px\].w-\[62px\] {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] h2 {
+  font-size: 14px !important;
+  width: 4.6em !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .inline-flex.h-\[29px\] {
+  height: 20px !important;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+  border-radius: 6px !important;
+  font-size: 9px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .grid.min-w-0.grid-cols-\[auto_1fr\] {
+  gap: 3px 5px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .col-span-2 {
+  gap: 4px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .col-span-2 > span:not(:first-child) {
+  display: none !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .inline-flex.h-\[34px\].min-w-\[316px\] {
+  height: 24px !important;
+  min-width: 218px !important;
+  gap: 5px !important;
+  padding: 0 6px !important;
+  font-size: 8px !important;
+  border-width: 1px !important;
+  border-radius: 7px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .inline-flex.h-\[34px\].min-w-\[316px\] .text-\[14px\] {
+  font-size: 10px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .flex.shrink-0.items-center.gap-1 {
+  gap: 3px !important;
+  transform: scale(0.78);
+  transform-origin: left center;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .flex.flex-1.min-h-0.flex-col.px-3 {
+  padding: 5px 6px 5px 6px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .mb-2\.5.flex.items-center.justify-between {
+  margin-bottom: 4px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .mb-2\.5.flex.items-center.justify-between span:last-child {
+  display: none !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .grid.flex-1.min-h-\[120px\] {
+  min-height: 0 !important;
+  gap: 4px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside {
+  padding: 5px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside > div {
+  padding: 5px !important;
+  border-radius: 7px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .h-\[32px\] {
+  height: 24px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .w-10 {
+  width: 30px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .text-\[17px\] {
+  font-size: 13px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .relative.z-10.mt-2 {
+  margin-top: 5px !important;
+  padding: 6px !important;
+  border-radius: 9px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .relative.z-10.mt-2 .font-board,
+.phone-landscape [data-component="CurrentPlayerStage"] aside .relative.z-10.mt-2 .text-\[14px\],
+.phone-landscape [data-component="CurrentPlayerStage"] aside .relative.z-10.mt-2 .text-\[15px\],
+.phone-landscape [data-component="CurrentPlayerStage"] aside .relative.z-10.mt-2 .text-\[17px\] {
+  font-size: 11px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .relative.mt-auto.flex.h-\[238px\] {
+  height: 102px !important;
+  margin-top: auto !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .host-figure-live {
+  width: 112px !important;
+  height: 218px !important;
+  transform: translateY(-48px) !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside .absolute.left-1\/2.top-\[-82px\] {
+  top: -36px !important;
+  width: 138px !important;
+  padding: 4px 6px !important;
+  border-radius: 10px !important;
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] {
+  min-height: 44px !important;
+  padding: 3px 4px !important;
+  gap: 4px !important;
+  border-width: 1px !important;
+  border-radius: 6px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] > div:first-child {
+  gap: 4px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] [style*="min-width: 188"] {
+  min-width: 122px !important;
+  gap: 4px !important;
+  padding: 3px 4px !important;
+  border-width: 1px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] .h-9.w-9 {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] button {
+  width: 72px !important;
+  padding: 3px 5px !important;
+  border-width: 2px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] button span:first-child {
+  font-size: 15px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] button .font-display {
+  font-size: 9px !important;
+}
+
+/* iPhone property modal: wide/short deed card so it does not crop in landscape. */
+.phone-landscape .fixed.inset-0.z-50 {
+  padding: max(4px, env(safe-area-inset-top)) max(3px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(3px, env(safe-area-inset-left)) !important;
+  align-items: center !important;
+}
+
+.phone-landscape .property-modal-shell {
+  width: min(99vw, 850px) !important;
+  max-height: calc(100dvh - 10px) !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 7px !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+.phone-landscape .property-action-rail {
+  order: 2 !important;
+  width: 120px !important;
+  max-height: calc(100dvh - 12px) !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  gap: 5px !important;
+  padding: 6px !important;
+  align-self: stretch !important;
+  border-width: 1px !important;
+  border-radius: 9px !important;
+  box-shadow: 0 2px 0 #0F0C0A !important;
+}
+
+.phone-landscape .property-action-rail > div:first-child {
+  display: none !important;
+}
+
+.phone-landscape .property-action-rail .rail-button {
+  min-height: 34px !important;
+  flex: 0 0 auto !important;
+  padding: 5px 6px !important;
+  border-width: 1px !important;
+  border-radius: 7px !important;
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+  box-shadow: 0 2px 0 #0F0C0A !important;
+}
+
+.phone-landscape .property-action-rail .grid {
+  flex: 0 0 auto !important;
+  grid-template-columns: 28px 1fr 28px !important;
+  border-width: 1px !important;
+  box-shadow: 0 2px 0 #0F0C0A !important;
+}
+
+.phone-landscape .property-action-rail .grid span {
+  min-height: 26px !important;
+  font-size: 12px !important;
+}
+
+.phone-landscape .property-deed-card {
+  order: 1 !important;
+  width: min(80vw, 610px) !important;
+  max-height: calc(100dvh - 12px) !important;
+  overflow: hidden !important;
+  border-radius: 10px !important;
+}
+
+.phone-landscape .property-deed-card > button[aria-label="�ݱ�"] {
+  width: 27px !important;
+  height: 27px !important;
+  right: 5px !important;
+  top: 5px !important;
+  font-size: 13px !important;
+  border-width: 1px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(1) {
+  aspect-ratio: 5 / 1.05 !important;
+  border-bottom-width: 1px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(1) .absolute.inset-x-0.top-0 {
+  padding-top: 5px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(2) {
+  padding: 5px 8px !important;
+  border-bottom-width: 1px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(2) h2 {
+  font-size: 18px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(2) .mt-1 {
+  display: none !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(3) {
+  padding: 5px 8px !important;
+  border-bottom-width: 1px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(3) > div {
+  padding: 5px 9px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(3) .text-\[22px\] {
+  font-size: 17px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(4) {
+  padding: 6px 9px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(4) > div:first-child {
+  display: none !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(4) .rounded-md {
+  border-width: 1px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(4) .flex.items-center.justify-between {
+  padding: 4px 8px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(4) .text-\[16px\],
+.phone-landscape .property-deed-card > div:nth-of-type(4) .text-\[14px\] {
+  font-size: 12px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(5) {
+  padding: 6px 9px !important;
+  border-top-width: 1px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(5) .mb-2 {
+  margin-bottom: 4px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(5) .font-display.text-\[11px\] {
+  font-size: 9px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(5) .mt-1 {
+  display: none !important;
+}
+
+/* iPhone 17 max-usable-width pass: landscape CSS viewport is about 874x402 @3x. */
+.phone-landscape {
+  width: 100vw !important;
+  height: 100dvh !important;
+}
+
+.phone-landscape > .relative.flex.h-full,
+.phone-landscape > .relative.flex.h-dvh,
+.phone-landscape > .relative.flex.min-h-dvh,
+.phone-landscape > div.relative.flex {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  gap: 2px !important;
+}
+
+.phone-landscape .setup-main {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.phone-landscape .setup-body {
+  gap: 4px !important;
+}
+
+.phone-landscape .setup-body > section {
+  width: 68% !important;
+}
+
+.phone-landscape .setup-rules {
+  width: 32% !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] {
+  grid-template-columns: minmax(0, 1fr) 170px !important;
+  border-radius: 5px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] aside {
+  padding-right: 2px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] > div:first-of-type > div:first-child {
+  padding-left: 3px !important;
+  padding-right: 64px !important;
+}
+
+.phone-landscape [data-component="CurrentPlayerStage"] .grid.flex-1.min-h-\[120px\] {
+  gap: 3px !important;
+}
+
+.phone-landscape [data-component="OtherPlayersStrip"] {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 4px !important;
+}
+
+.phone-landscape .fixed.inset-0.z-50 {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.phone-landscape .property-modal-shell {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  gap: 4px !important;
+}
+
+.phone-landscape .property-action-rail {
+  width: 112px !important;
+  border-radius: 7px !important;
+}
+
+.phone-landscape .property-deed-card {
+  width: calc(100vw - 118px) !important;
+  max-width: 760px !important;
+  border-radius: 7px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(2) h2 {
+  font-size: 20px !important;
+}
+
+.phone-landscape .property-deed-card > div:nth-of-type(3) .text-\[22px\] {
+  font-size: 18px !important;
+}
+
+/* iPhone 17 safe-area correction: use maximum usable display, not the notch island area. */
+.phone-landscape > .relative.flex.h-full,
+.phone-landscape > .relative.flex.h-dvh,
+.phone-landscape > .relative.flex.min-h-dvh,
+.phone-landscape > div.relative.flex {
+  padding-left: max(2px, env(safe-area-inset-left)) !important;
+  padding-right: max(2px, env(safe-area-inset-right)) !important;
+}
+
+.phone-landscape .setup-main {
+  padding-left: max(2px, env(safe-area-inset-left)) !important;
+  padding-right: max(2px, env(safe-area-inset-right)) !important;
+}
+
+.phone-landscape .fixed.inset-0.z-50 {
+  padding-left: max(2px, env(safe-area-inset-left)) !important;
+  padding-right: max(2px, env(safe-area-inset-right)) !important;
+}
+
+.phone-landscape .property-modal-shell {
+  width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 4px) !important;
+  max-width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 4px) !important;
+}
+
+.phone-landscape .property-deed-card {
+  width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - 122px) !important;
+}
+
+/* iPhone 17 balanced notch crop: cut both sides by the larger safe/notch edge. */
+.phone-landscape {
+  --phone-safe-x: max(34px, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.phone-landscape > .relative.flex.h-full,
+.phone-landscape > .relative.flex.h-dvh,
+.phone-landscape > .relative.flex.min-h-dvh,
+.phone-landscape > div.relative.flex {
+  padding-left: var(--phone-safe-x) !important;
+  padding-right: var(--phone-safe-x) !important;
+}
+
+.phone-landscape .setup-main {
+  padding-left: var(--phone-safe-x) !important;
+  padding-right: var(--phone-safe-x) !important;
+}
+
+.phone-landscape .fixed.inset-0.z-50 {
+  padding-left: var(--phone-safe-x) !important;
+  padding-right: var(--phone-safe-x) !important;
+}
+
+.phone-landscape .property-modal-shell {
+  width: calc(100vw - (var(--phone-safe-x) * 2)) !important;
+  max-width: calc(100vw - (var(--phone-safe-x) * 2)) !important;
+}
+
+.phone-landscape .property-deed-card {
+  width: calc(100vw - (var(--phone-safe-x) * 2) - 122px) !important;
+}
+
+/* iPhone 17 screenshot correction: stronger symmetric side crop + stop setup logo top clipping. */
+.phone-landscape {
+  --phone-safe-x: max(48px, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.phone-landscape .setup-main {
+  padding-top: max(7px, env(safe-area-inset-top)) !important;
+}
+
+.phone-landscape .setup-header {
+  padding-top: 2px !important;
+}
+
+.phone-landscape .setup-logo {
+  font-size: clamp(22px, 5.4vh, 28px) !important;
+  line-height: 0.92 !important;
+}
+
+/* iPhone 17 final crop target: visible play area starts at character-select left rail and ends at right panel rail. */
+.phone-landscape {
+  --phone-safe-x: max(64px, env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+.phone-landscape .setup-main {
+  padding-left: var(--phone-safe-x) !important;
+  padding-right: var(--phone-safe-x) !important;
+}
+
+.phone-landscape .setup-body {
+  gap: 3px !important;
+}
+
+.phone-landscape .setup-body > section {
+  width: 67% !important;
+}
+
+.phone-landscape .setup-rules {
+  width: 33% !important;
+}

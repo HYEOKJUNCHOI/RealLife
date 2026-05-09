@@ -1,7 +1,7 @@
 // 매트릭스 초록/빨강 페이드아웃 — 인컴/지출 시각 트리거
 // 인컴 = #00FF41 (매트릭스 초록), 지출 = #FF0040 (빨강)
 // 1.5초 떠올랐다 사라짐
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore.js';
 
@@ -22,20 +22,25 @@ export default function MatrixToast() {
 
 function ToastItem({ toast, onDone }) {
   const [visible, setVisible] = useState(false);
+  const onDoneRef = useRef(onDone);
+
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
   useEffect(() => {
     // 마운트 직후 페이드 인
     const t1 = setTimeout(() => setVisible(true), 10);
-    // 1.5초 후 페이드 아웃 + 제거
+    // 리렌더/시계 tick 때문에 타이머가 리셋되지 않도록 toast.id 기준으로만 제거
     const t2 = setTimeout(() => {
       setVisible(false);
-      setTimeout(onDone, 400);
-    }, 1500);
+      setTimeout(() => onDoneRef.current?.(), 360);
+    }, toast.message ? 1850 : 1500);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [onDone]);
+  }, [toast.id, toast.message]);
 
   if (toast.message) {
     const tone = {
@@ -58,33 +63,36 @@ function ToastItem({ toast, onDone }) {
 
     return (
       <motion.div
-        initial={{ y: -18, opacity: 0, scale: 0.94 }}
+        initial={{ y: 18, opacity: 0, scale: 0.88 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        exit={{ y: -10, opacity: 0, scale: 0.96 }}
+        exit={{ y: 10, opacity: 0, scale: 0.94 }}
         transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-        className="absolute left-1/2 top-5 flex min-w-[280px] -translate-x-1/2 items-center gap-3 rounded-md border-2 bg-parchment-50 px-4 py-3 font-display shadow-[0_4px_0_0_#0F0C0A,0_10px_24px_-8px_rgba(0,0,0,0.55)]"
+        className="absolute left-1/2 top-1/2 flex min-w-[360px] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-4 rounded-xl border-[3px] bg-parchment-50 px-6 py-5 font-display shadow-[0_5px_0_0_#0F0C0A,0_18px_38px_-12px_rgba(0,0,0,0.68)]"
         style={{
           borderColor: tone.border,
           boxShadow: `0 4px 0 0 #0F0C0A, 0 0 0 3px ${tone.glow}, 0 12px 26px -10px rgba(0,0,0,0.65)`,
         }}
       >
         <span
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full border-2 text-[14px] font-extrabold"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-[3px] text-[20px] font-extrabold"
           style={{ borderColor: tone.border, color: tone.border }}
         >
           {tone.icon}
         </span>
-        <span className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-ink">
+        <span className="text-center text-[18px] font-extrabold uppercase tracking-[0.12em] text-ink">
           {toast.message}
         </span>
       </motion.div>
     );
   }
 
+  const amount = Number(toast.amount);
+  if (!Number.isFinite(amount) || amount === 0) return null;
+
   const isIncome = toast.type === 'income';
   const color = isIncome ? '#00FF41' : '#FF0040';
   const sign = isIncome ? '+' : '-';
-  const value = Math.abs(toast.amount);
+  const value = Math.abs(amount).toLocaleString('ko-KR');
 
   return (
     <motion.div

@@ -1,11 +1,9 @@
 // 메인 헤더 — 큰 현금 + 글로벌 게임 상태(년차/인플레/이자율)
 //   - 좌: ₩ 큰 현금 (현재 차례 플레이어)
 //   - 우: 글로벌 정보 칩 (년차 / 인플레 / 이자율) + 셋업 ⚙
-// 사회자(객주 NPC) 멘트는 CurrentPlayerStage 로 이동 (사용자 명시)
-import { motion, AnimatePresence } from 'framer-motion';
+// 사회자 NPC 멘트는 CurrentPlayerStage 로 이동 (사용자 명시)
 import { cn } from '@/lib/cn.js';
-
-const fmt = (n) => (n ?? 0).toLocaleString('ko-KR');
+import AnimatedCash from '@/components/AnimatedCash.jsx';
 const INFLATION_RATE = 4; // % per year (constant per spec)
 
 export default function GameHeader({
@@ -34,36 +32,21 @@ export default function GameHeader({
           <span className="font-display text-[9px] font-semibold uppercase tracking-[0.3em] text-ink/55">
             {turnIndex + 1}p · {turnMeta?.name ?? '-'} · 현금
           </span>
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              key={cash}
-              initial={{ y: -6, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 6, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-              className="flex items-baseline gap-1"
-            >
-              <span className="text-2xl leading-none drop-shadow-[0_0_10px_rgba(255,193,7,0.7)]">
-                💰
-              </span>
-              <span
-                className={cn(
-                  'font-display font-extrabold leading-none text-monopoly-red tabular-nums',
-                  compact ? 'text-[26px]' : 'text-[40px] md:text-[44px]',
-                )}
-                style={{
-                  textShadow:
-                    '0 0 14px rgba(255,193,7,0.45), 0 0 28px rgba(211,47,47,0.3), 0 2px 0 rgba(15,12,10,0.25)',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {fmt(cash)}
-              </span>
-              <span className="font-display text-[12px] font-bold uppercase tracking-widest text-ink/55">
-                만
-              </span>
-            </motion.div>
-          </AnimatePresence>
+          <div className="flex items-baseline gap-1">
+            <span className="grid h-8 w-8 place-items-center rounded-full border-2 border-[#00a83b]/60 bg-white font-display text-[16px] font-extrabold leading-none text-[#00a83b] shadow-[inset_0_2px_0_rgba(255,255,255,0.9),0_0_8px_rgba(0,168,59,0.22)]">
+              ₩
+            </span>
+            <AnimatedCash
+              value={cash}
+              className={cn(
+                'font-display font-extrabold leading-none',
+                compact ? 'text-[26px]' : 'text-[40px] md:text-[44px]',
+              )}
+            />
+            <span className="font-display text-[12px] font-bold uppercase tracking-widest text-ink/55">
+              만
+            </span>
+          </div>
         </div>
       </div>
 
