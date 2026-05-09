@@ -294,7 +294,7 @@
     "startup": "창업! 초기 투자 -300만, 월급 영구 +70만",
     "newborn": "자녀 출생! 양육비 -100만, 월급 영구 +20만",
     "early_retirement_penalty": "조기 명예퇴직! 퇴직금 -200만 (영구 효과 없음)",
-    "military_service": "군 복무! 2턴 멈춤 (한국 정서)",
+    "military_service": "군 입대! 입대 지원금 200만 지급, 3턴 휴식",
     "holiday_bonus": "명절 보너스! +200만 즉시",
     "accident_hospital": "사고/병원비! -200만 (의료비)",
     "lottery_gamble": "로또 도박! -100만 참가비, 주사위 2개 → 당첨 시 +500만, 실패 시 0원",

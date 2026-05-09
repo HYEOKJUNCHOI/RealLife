@@ -39,6 +39,7 @@ export default function GameMain({ onExit }) {
   const step = useGameStore((s) => s.step);
   const dialog = useGameDialog();
   const [jailDialogOpen, setJailDialogOpen] = useState(false);
+  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
   // modal 키별 개별 구독 — 객체 전체 구독 시 shallow 비교 오판 방지
   const modalProperty  = useGameStore((s) => s.modal.property);
   const modalTrade     = useGameStore((s) => s.modal.trade);
@@ -69,6 +70,7 @@ export default function GameMain({ onExit }) {
   const initialDealPlayedRef = useRef(false);
   const prevTurnIndexRef = useRef(null);
   const jailPromptKeyRef = useRef(null);
+  const skipPromptKeyRef = useRef(null);
   const [showInitialDeal, setShowInitialDeal] = useState(false);
   const [showTurnCardTouch, setShowTurnCardTouch] = useState(false);
   const [boardTurn, setBoardTurn] = useState(null);
@@ -353,6 +355,39 @@ export default function GameMain({ onExit }) {
     return () => window.clearTimeout(timer);
   }, [turnPlayer?.inJail, turnPlayer?.jailTurns, turnPlayer?.cash, state?.turnIndex, state?.round, showInitialDeal, state?.finished]);
 
+  const promptSkipTurn = async () => {
+    if (!turnPlayer || (turnPlayer.skipTurns ?? 0) <= 0 || skipDialogOpen || state?.finished) return;
+    setSkipDialogOpen(true);
+    try {
+      const turns = turnPlayer.skipTurns ?? 0;
+      await dialog.alert({
+        title: '군 복무 중',
+        badgeText: `남은 ${turns}턴`,
+        message: `${turnPlayer.name ?? `${turnIndex + 1}P`}님은 군 복무 중이라 이번 차례를 쉽니다.\n\n확인을 누르면 이번 차례가 넘어갑니다.`,
+        okText: '차례 넘기기',
+        tone: 'warn',
+      });
+      step({ deferAdvance: false });
+    } finally {
+      setSkipDialogOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if ((turnPlayer?.skipTurns ?? 0) <= 0 || turnPlayer?.inJail || showInitialDeal || state?.finished) return;
+    if (turnPlayer?.controller === 'ai') {
+      const timer = window.setTimeout(() => step({ deferAdvance: false }), 220);
+      return () => window.clearTimeout(timer);
+    }
+    const key = `${state.round ?? 0}-${state.turnIndex ?? 0}-${turnPlayer?.skipTurns ?? 0}`;
+    if (skipPromptKeyRef.current === key) return;
+    skipPromptKeyRef.current = key;
+    const timer = window.setTimeout(() => {
+      promptSkipTurn();
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [turnPlayer?.skipTurns, turnPlayer?.inJail, turnPlayer?.controller, state?.turnIndex, state?.round, showInitialDeal, state?.finished]);
+
   const finishAiTurnSummary = () => {
     setAiTurnSummary(null);
     setBoardTurn(null);
@@ -388,6 +423,10 @@ export default function GameMain({ onExit }) {
     if (state) state._initialDealShown = true;
     if (turnPlayer?.inJail) {
       await promptJailTurn();
+      return;
+    }
+    if ((turnPlayer?.skipTurns ?? 0) > 0) {
+      await promptSkipTurn();
     }
   };
 
@@ -567,7 +606,7 @@ export default function GameMain({ onExit }) {
             onExit={onExit}
             onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             pendingPurchase={pendingPurchase}
-            hideSkipOverlay={jailDialogOpen || turnPlayer?.controller === 'ai'}
+            hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
@@ -592,7 +631,7 @@ export default function GameMain({ onExit }) {
             onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             pendingPurchase={pendingPurchase}
             compact
-            hideSkipOverlay={jailDialogOpen || turnPlayer?.controller === 'ai'}
+            hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
           />
         </div>
 
@@ -1552,5 +1591,6 @@ function summarizeEvent(e) {
       return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
   }
 }
+
 
 
