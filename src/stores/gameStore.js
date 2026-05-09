@@ -166,13 +166,13 @@ export const useGameStore = create((set, get) => ({
   // ===== 부동산 매입 =====
   buyProperty: (playerId, pos) => {
     const { state } = get();
-    if (!state) return;
+    if (!state) return false;
     const tile = state.board.tiles[pos];
     const price = currentPrice(state, pos);
     const player = state.players[playerId];
-    if (!player || player.cash < price) return;
+    if (!tile || !player || player.cash < price) return false;
     const ts = state.tileState[pos];
-    if (!ts || ts.owner != null) return;
+    if (!ts || ts.owner != null) return false;
     // 차감 + 등록
     const cashBefore = player.cash ?? 0;
     player.cash -= price;
@@ -195,7 +195,9 @@ export const useGameStore = create((set, get) => ({
       },
     });
     get().addToast({ type: 'expense', amount: price });
+    get().addToast({ message: `${tile.names?.ko ?? tile.name ?? '부동산'} 매입 완료 · ${price}만 지출`, tone: 'success' });
     get().save();
+    return true;
   },
 
   // ===== 통행료 지불 — BRAINSTORM 7-2: rentFromStage 통일 호출 =====

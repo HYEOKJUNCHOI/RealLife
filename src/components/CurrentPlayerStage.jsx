@@ -624,7 +624,7 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
               {resultText}
             </div>
           </div>
-          {diceLocked && (
+          {diceLocked && onUnlockDice && (
             <button
               type="button"
               onClick={onUnlockDice}
@@ -656,7 +656,7 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
             <div className="text-[20px]">💸</div>
             <div className="rounded-lg border-2 border-ink-line bg-[#eefaf1] px-2 py-1.5 text-center text-emerald-800">소유자 수금 완료</div>
           </div>
-          {diceLocked && (
+          {diceLocked && onUnlockDice && (
             <button
               type="button"
               onClick={onUnlockDice}
@@ -681,7 +681,7 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
               </button>
             ))}
           </div>
-          {diceLocked && (
+          {diceLocked && onUnlockDice && (
             <button
               type="button"
               onClick={onUnlockDice}
@@ -746,7 +746,7 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
           >
             {cardFlipped ? '카드 확인 · 정산 공개' : '먼저 카드를 뒤집어주세요'}
           </button>
-          {diceLocked && (
+          {diceLocked && onUnlockDice && (
             <button
               type="button"
               onClick={onUnlockDice}
@@ -1197,5 +1197,8 @@ function EmptyDeed({ previewPos = null, state = null, onClick } = {}) {
   if (!onClick) return body;
   return <button type="button" onClick={onClick} className="h-full w-full text-left">{body}</button>;
 }
+
+
+
 
 

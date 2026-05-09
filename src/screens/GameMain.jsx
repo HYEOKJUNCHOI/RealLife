@@ -1,4 +1,4 @@
-// 메인 게임 화면 — 실제 보드 + 실제 주사위 입력 흐름
+﻿// 메인 게임 화면 — 실제 보드 + 실제 주사위 입력 흐름
 // 중앙 스테이지, 우측 정산/카드 패널, 하단 플레이어 스트립으로 구성
 // 카드/정산/환승/감옥 UX는 실제 플레이 진행을 방해하지 않도록 작게 제어한다.
 
@@ -202,6 +202,29 @@ export default function GameMain({ onExit }) {
     }
   };
 
+  const handleBuyProperty = (playerId, pos) => {
+    const tile = state?.board?.tiles?.[pos];
+    const price = tile ? (state.tileState?.[pos]?.price ?? undefined) : undefined;
+    const ok = buyProperty?.(playerId, pos);
+    if (!ok) {
+      addToast?.({ message: '매입에 실패했습니다. 잔액 또는 소유 상태를 확인해주세요.', tone: 'warn' });
+      return false;
+    }
+    const tileName = tile?.names?.ko ?? tile?.name ?? '부동산';
+    setPendingPurchase(null);
+    setDiceLocked(true);
+    setTurnResult({
+      kind: 'bought',
+      title: '매입 완료',
+      text: `${tileName} 매입 완료`,
+      icon: '🏠',
+      pos,
+      visitorId: playerId,
+      amount: price,
+    });
+    return true;
+  };
+
   const hostLine = useMemo(() => {
     const last = log.length > 0 ? log[log.length - 1] : null;
     if (!last) {
@@ -397,7 +420,9 @@ export default function GameMain({ onExit }) {
       const payer = state.players?.[playerId];
       const tile = rentEvent.pos != null ? state.board?.tiles?.[rentEvent.pos] : null;
       const tileName = tile?.names?.ko ?? tile?.name ?? '도착한 땅';
-      return { kind: 'rent', title: '통행료 탄식', text: `${tileName} 통행료 ${amount}만 지불`, icon: '💸', amount, ownerName: owner?.name ?? (ownerId != null ? `${ownerId + 1}P` : '소유자'), payerName: payer?.name ?? `${playerId + 1}P`, tileName };
+      const ownerName = owner?.name ?? (ownerId != null ? `${ownerId + 1}P` : '소유자');
+      const payerName = payer?.name ?? `${playerId + 1}P`;
+      return { kind: 'rent', title: '정산 발생', text: `${payerName}님이 ${ownerName}님의 ${tileName}을 밟고 ${amount}만 지출했습니다.`, icon: '💸', amount, ownerName, payerName, tileName };
     }
     const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'parking_jackpot', 'go_to_jail'].includes(event.kind));
     if (arrival) return { kind: 'arrival', title: '도착', text: arrival.tileName ?? arrival.name ?? '도착 처리 완료', icon: arrival.kind === 'go_to_jail' ? '🚓' : '📍' };
@@ -440,6 +465,8 @@ export default function GameMain({ onExit }) {
     }, 260);
     window.setTimeout(() => {
       setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', roll, arrival, card, endPos, displayPos: endPos } : prev);
+      const toastMessage = buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos });
+      if (toastMessage) addToast?.({ message: toastMessage, tone: pendingBuy ? 'success' : 'info' });
     }, 980);
     window.setTimeout(() => {
       setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
@@ -534,7 +561,7 @@ export default function GameMain({ onExit }) {
             onStep={handleStep}
             onDiceRoll={runManualDiceMove}
             diceLocked={diceInputLocked}
-            onUnlockDice={unlockDiceInput}
+            onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             turnResult={turnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
@@ -557,7 +584,7 @@ export default function GameMain({ onExit }) {
             onStep={handleStep}
             onDiceRoll={runManualDiceMove}
             diceLocked={diceInputLocked}
-            onUnlockDice={unlockDiceInput}
+            onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             turnResult={turnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
@@ -588,7 +615,7 @@ export default function GameMain({ onExit }) {
             turnResult={turnResult}
             diceLocked={diceInputLocked}
             onDiceRoll={runManualDiceMove}
-            onUnlockDice={unlockDiceInput}
+            onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             onOpenResultCard={handleOpenResultCard}
             onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             onBack={() => setViewPlayerIndex(null)}
@@ -633,6 +660,7 @@ export default function GameMain({ onExit }) {
             onClose={closePropertyModal}
             pos={modalProperty.pos}
             visitorId={modalProperty.visitorId}
+            onBuy={handleBuyProperty}
           />
         )}
         {modalTrade && (
@@ -702,6 +730,25 @@ export default function GameMain({ onExit }) {
 }
 
 
+
+function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos }) {
+  const tile = state?.board?.tiles?.[endPos ?? arrival?.pos];
+  const tileName = tile?.names?.ko ?? tile?.name ?? '도착칸';
+  const playerName = state?.players?.[playerId]?.name ?? `${playerId + 1}P`;
+  if (pendingBuy) return `${playerName}님이 ${tileName}에 도착했습니다. 매입 가능!`;
+  const rentEvent = events?.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || (event.kind === 'arrive_hub' && event.type === 'rent_forced') || event.kind === 'rent');
+  if (rentEvent) {
+    const amount = rentEvent.rent ?? rentEvent.fee ?? rentEvent.amount ?? 0;
+    const ownerName = state?.players?.[rentEvent.ownerId]?.name ?? `${(rentEvent.ownerId ?? 0) + 1}P`;
+    return `${playerName}님이 ${ownerName}님의 ${tileName}을 밟고 ${amount}만 지출했습니다.`;
+  }
+  if (arrival?.kind === 'arrive_station') return `${tileName} 적립금 ${arrival.collected ?? 0}만 수령 · 새 역장 부임`;
+  if (arrival?.kind === 'parking_jackpot') return `무료주차 적립금 ${arrival.amt ?? 0}만 수령`;
+  if (arrival?.kind === 'go_to_jail') return `${playerName}님 감옥 이동 · ${JAIL_TURNS}턴 출소 시도`;
+  if (arrival?.kind === 'income_tax' || arrival?.kind === 'luxury_tax') return `${tileName} ${arrival.amt ?? 0}만 납부`;
+  if (arrival?.card) return `${tileName} 카드 도착 · ${arrival.card}`;
+  return `${playerName}님 ${tileName} 도착`;
+}
 
 function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore }) {
   const player = state.players?.[playerId];
@@ -1027,8 +1074,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                 {replay.phase === 'arrived' && (
                   <div className="rounded-2xl border-2 border-[#17120c] bg-white/92 px-4 py-3 font-board text-lg leading-snug text-ink shadow-[0_3px_0_#17120c]">
                     <div className="text-[21px] text-monopoly-red">{endName} 도착</div>
-                    <div>{describeArrival(replay.arrival, endTile)}</div>
-                    <span className="text-base text-ink/55">실제 말을 옮긴 뒤 터치하면 닫기</span>
+                    <span className="text-base text-ink/55">상세 결과는 토스트와 스테이지 정산에 표시됩니다.</span>
                   </div>
                 )}
 
@@ -1346,9 +1392,11 @@ const signedMoney = (amount) => {
 function buildTurnBriefing(turn, state) {
   const rows = [];
   let rowOrder = 0;
-  const push = (label, amount, { showZero = false } = {}) => {
+  const push = (label, amount, { showZero = false, priority = null } = {}) => {
     if (!amount && !showZero) return;
-    rows.push({ label, amount: Number(amount) || 0, order: rowOrder++ });
+    const safeAmount = Number(amount) || 0;
+    const computedPriority = priority ?? (safeAmount > 0 ? 20 : safeAmount < 0 ? 40 : 60);
+    rows.push({ label, amount: safeAmount, priority: computedPriority, order: rowOrder++ });
   };
   const tileName = (pos) => state?.board?.tiles?.[pos]?.names?.ko ?? state?.board?.tiles?.[pos]?.name ?? '부동산';
   const playerName = (id) => state?.players?.[id]?.name || `${(id ?? 0) + 1}P`;
@@ -1360,13 +1408,13 @@ function buildTurnBriefing(turn, state) {
         push('월급', event.amt);
         break;
       case 'institution_pay':
-        push('기관 월급', event.amt);
+        push('기관 월급', event.amt, { priority: 10 });
         break;
       case 'apartment_income':
-        push('아파트 월세', event.amt);
+        push('아파트 월세', event.amt, { priority: 11 });
         break;
       case 'living':
-        push('생활비', -event.amt);
+        push('생활비', -event.amt, { priority: 0 });
         break;
       case 'mortgage_interest':
         push('담보 이자', -event.amt);
@@ -1449,9 +1497,8 @@ function buildTurnBriefing(turn, state) {
   if (hiddenDelta !== 0) push('표시 외 현금 변동', hiddenDelta);
   const sortedRows = [...rows]
     .sort((a, b) => {
-      const group = (row) => (row.amount > 0 ? 0 : row.amount < 0 ? 1 : 2);
-      const groupDiff = group(a) - group(b);
-      if (groupDiff) return groupDiff;
+      const priorityDiff = (a.priority ?? 50) - (b.priority ?? 50);
+      if (priorityDiff) return priorityDiff;
       const amountDiff = Math.abs(b.amount) - Math.abs(a.amount);
       return amountDiff || a.order - b.order;
     })
@@ -1505,4 +1552,5 @@ function summarizeEvent(e) {
       return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
   }
 }
+
 

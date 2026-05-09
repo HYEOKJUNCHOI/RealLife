@@ -255,8 +255,8 @@ function PropertyActionRail({
             className="flex-1 sm:flex-none"
             disabled={!canBuy}
             onClick={() => {
-              onBuy?.(visitorId, pos);
-              onClose?.();
+              const ok = onBuy?.(visitorId, pos);
+              if (ok !== false) onClose?.();
             }}
           >
             매입<br />{fmt(price)}만
@@ -365,9 +365,10 @@ function PropertyActionRail({
   );
 }
 
-export default function PropertyModal({ open, onClose, pos, visitorId }) {
+export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) {
   const state       = useGameStore((s) => s.state);
-  const handleBuy   = useGameStore((s) => s.buyProperty);
+  const storeBuy    = useGameStore((s) => s.buyProperty);
+  const handleBuy   = onBuy ?? storeBuy;
   const handlePayRent  = useGameStore((s) => s.payRent);
   const handleTradeOpen    = useGameStore((s) => s.openTradeModal);
   const handleTradeSelectOpen = useGameStore((s) => s.openTradeSelect);

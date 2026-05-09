@@ -17,7 +17,7 @@ export const CHANCE_CARDS = [
   { id: 'startup', name: '창업', description: '창업 지원금을 받습니다.', delta: +200 },
   { id: 'childbirth', name: '출산', description: '출산 준비 비용을 지불합니다.', delta: -100 },
   { id: 'honor_retire', name: '명예퇴직', description: '명예퇴직금을 받습니다.', delta: +300 },
-  { id: 'military', name: '군 입대', description: '입대 준비 비용을 지불합니다.', delta: -100 },
+  { id: 'military', name: '군 입대', description: '군 복무로 2턴 쉽니다.', skipTurns: 2 },
   { id: 'holiday_bonus', name: '명절 보너스', description: '명절 보너스를 받습니다.', delta: +100 },
   { id: 'accident', name: '사고', description: '사고 처리 비용을 지불합니다.', delta: -150 },
   { id: 'lotto', name: '로또', description: '로또에 당첨되어 상금을 받습니다.', delta: +500 },
@@ -34,6 +34,12 @@ export const drawChanceCard = (state, playerId, rng) => {
     player.cash += card.delta;
     log.delta = card.delta;
     log.effectText = `${card.description} (${moneyText(card.delta)})`;
+  }
+
+  if (card.skipTurns) {
+    player.skipTurns = (player.skipTurns ?? 0) + card.skipTurns;
+    log.skipTurns = card.skipTurns;
+    log.effectText = `${card.description} (${card.skipTurns}턴 휴식)`;
   }
 
   if (card.upgrade) {
