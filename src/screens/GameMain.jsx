@@ -838,34 +838,26 @@ export default function GameMain({ onExit }) {
       <div className="relative flex h-full min-h-dvh flex-col gap-1.5 overflow-hidden p-1.5 md:min-h-full md:gap-1.5 md:p-2">
         {/* === STAGE === */}
         <div className="hidden flex-1 min-h-0 md:flex">
-          <CurrentPlayerStage
+          <IveRenewalLayout
             player={turnPlayer}
             index={turnIndex}
             state={state}
             hostLine={hostLine}
             turnBriefing={turnBriefing}
-            activeEvent={modalEvent && showEventModal ? modalEvent : null}
-            onCloseEvent={confirmEvent}
-            year={state.year}
-            loanRate={state.loanRate}
-            onStep={handleStep}
-            onDiceRoll={runManualDiceMove}
-            diceMode={diceMode}
-            onDiceModeChange={setDiceMode}
-            onAppDiceRoll={rollAppDice}
+            turnResult={turnResult}
+            pendingPurchase={pendingPurchase}
             lastDiceRoll={lastDiceRoll}
+            diceLocked={diceInputLocked}
+            onAppDiceRoll={rollAppDice}
+            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenResultCard={handleOpenResultCard}
+            onEndTurn={handleEndTurn}
             onShowNoticeLog={showNoticeLog}
             hasNoticeLog={noticeLog.length > 0}
-            diceLocked={diceInputLocked}
-            onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
-            turnResult={turnResult}
-            onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
-            pendingPurchase={pendingPurchase}
-            hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
             onToggleBgm={() => setBgmEnabled((enabled) => !enabled)}
+            disabled={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
@@ -1491,6 +1483,153 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
         </div>
       </div>
     </div>
+  );
+}
+
+function IveRenewalLayout({
+  player,
+  index,
+  state,
+  hostLine,
+  turnBriefing,
+  turnResult,
+  pendingPurchase,
+  lastDiceRoll,
+  diceLocked,
+  onAppDiceRoll,
+  onOpenBoard,
+  onOpenResultCard,
+  onEndTurn,
+  onShowNoticeLog,
+  hasNoticeLog,
+  onExit,
+  bgmEnabled,
+  onToggleBgm,
+  disabled,
+}) {
+  if (!player || !state) return null;
+  const meta = CHAR_META[player.character] ?? { name: `${index + 1}P`, color: '#d83b2f', emoji: '🎭' };
+  const name = displayPlayerName(player, meta.name ?? `${index + 1}P`);
+  const owned = state.board.tiles.filter((tile) => tile.type === 'property' && state.tileState?.[tile.pos]?.owner === index).map((tile) => tile.pos);
+  const totalDebt = (player.creditLoan?.principal ?? 0) + (player.loanShark?.principal ?? 0) + Object.values(player.mortgages ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
+  const activePos = player.position ?? 0;
+  const activeTile = state.board.tiles?.[activePos];
+  const activeName = activeTile?.names?.ko ?? activeTile?.name ?? '현재 위치';
+  const diceA = lastDiceRoll?.dice?.[0] ?? lastDiceRoll?.d1 ?? 1;
+  const diceB = lastDiceRoll?.dice?.[1] ?? lastDiceRoll?.d2 ?? 1;
+  const prompt = turnResult?.kind === 'card'
+    ? '카드를 뒤집어 결과를 확인하세요.'
+    : pendingPurchase
+      ? '계약할지 스킵할지 결정하세요.'
+      : diceLocked
+        ? '정산을 확인하고 턴을 넘기세요.'
+        : '주사위를 굴려 다음 인생 칸으로 이동하세요.';
+
+  return (
+    <section className="relative grid h-full w-full grid-cols-[250px_minmax(0,1fr)_270px] grid-rows-[1fr_126px] gap-2 overflow-hidden rounded-[22px] border-[3px] border-[#17120c] bg-[#09131f] p-2 shadow-[0_8px_0_#17120c,0_26px_60px_-32px_rgba(0,0,0,0.95)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(80,170,255,0.16),transparent_34%),linear-gradient(135deg,rgba(255,216,120,0.08),transparent_42%,rgba(14,116,144,0.1))]" />
+
+      <aside className="relative z-10 flex min-h-0 flex-col gap-2 rounded-2xl border-2 border-white/16 bg-white/9 p-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-[10px]">
+        <div className="rounded-xl border-2 border-white/18 bg-black/24 p-3">
+          <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-white/48">current player</div>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl border-2 border-white/55 text-3xl shadow-[0_4px_0_#0F0C0A]" style={{ background: `linear-gradient(135deg, ${meta.color} 0%, rgba(255,255,255,0.18) 100%)` }}>{meta.emoji ?? '🎭'}</div>
+            <div className="min-w-0">
+              <div className="truncate font-board text-[28px] leading-none">{name}</div>
+              <div className="mt-1 font-display text-[10px] font-black uppercase tracking-[0.18em] text-white/50">{index + 1}P · {activeName}</div>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 font-board">
+            <div className="rounded-lg border border-emerald-200/30 bg-emerald-300/12 px-2 py-2"><div className="text-[12px] text-white/48">예금</div><div className="text-[22px] text-emerald-200">{Number(player.cash ?? 0).toLocaleString('ko-KR')}만</div></div>
+            <div className="rounded-lg border border-red-200/30 bg-red-300/12 px-2 py-2"><div className="text-[12px] text-white/48">부채</div><div className="text-[22px] text-red-200">{Number(totalDebt).toLocaleString('ko-KR')}만</div></div>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 rounded-xl border-2 border-white/14 bg-[#fff7df] p-2 text-ink shadow-[0_4px_0_#0F0C0A]">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-ink/50">title deeds</span>
+            <span className="font-board text-sm text-ink/60">{owned.length}/8</span>
+          </div>
+          <div className="grid h-[calc(100%-24px)] grid-cols-2 grid-rows-4 gap-1.5">
+            {Array.from({ length: 8 }).map((_, slot) => owned[slot] != null ? (
+              <div key={owned[slot]} className="overflow-hidden rounded-md"><PropertyDeedMini pos={owned[slot]} /></div>
+            ) : (
+              <div key={`empty-${slot}`} className="grid place-items-center rounded-md border-2 border-dashed border-ink/18 bg-black/5 font-display text-[8px] font-black uppercase tracking-[0.16em] text-ink/24">empty</div>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      <main className="relative z-10 min-h-0 overflow-hidden rounded-2xl border-2 border-white/16 bg-[radial-gradient(circle_at_50%_45%,#214b3b_0%,#143427_52%,#091c18_100%)] p-3 shadow-[inset_0_0_0_5px_rgba(255,255,255,0.06),0_4px_0_#0F0C0A]">
+        <div className="absolute left-4 top-4 z-20 rounded-full border border-white/22 bg-black/42 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.24em] text-white/70 backdrop-blur">board cinema</div>
+        <div className="absolute right-4 top-4 z-20 rounded-full border border-yellow-200/35 bg-yellow-300/12 px-4 py-2 font-board text-[16px] text-yellow-100 shadow-[0_2px_0_#0F0C0A]">{activeName}</div>
+        <div className="mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-1 rounded-[24px] border-[4px] border-[#17120c] bg-[#4e8b62] p-2 shadow-[inset_0_0_0_5px_rgba(255,255,255,0.12),0_16px_42px_rgba(0,0,0,0.35)]">
+          {state.board.tiles.map((tile) => {
+            const grid = boardGridStyle(tile.pos);
+            const isHere = tile.pos === activePos;
+            const ownerId = state.tileState?.[tile.pos]?.owner;
+            const owner = typeof ownerId === 'number' ? state.players?.[ownerId] : null;
+            const ownerColor = owner ? (CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
+            const special = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax'].includes(tile.type);
+            return (
+              <div key={tile.pos} className={cn('relative overflow-hidden rounded-lg border-2 border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_2px_0_rgba(0,0,0,0.5)]', isHere && 'ring-4 ring-yellow-300 ring-offset-2 ring-offset-[#4e8b62]')} style={grid}>
+                {owner && <div className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-white/70" style={{ backgroundColor: ownerColor }} />}
+                {!special && <div className="mb-1 h-2 rounded" style={{ backgroundColor: tile.color ?? '#d6b15d' }} />}
+                <div className="font-board text-[clamp(9px,1vw,13px)] leading-none text-ink">{special ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
+                {isHere && <motion.div className="absolute inset-0 rounded-lg border-[3px] border-yellow-300" animate={{ opacity: [0.25, 1, 0.25] }} transition={{ duration: 1.1, repeat: Infinity }} />}
+                {isHere && <div className="absolute bottom-1 left-1/2 grid h-7 w-7 -translate-x-1/2 place-items-center rounded-full border-2 border-white text-[12px] font-black text-white shadow-[0_2px_0_#0F0C0A]" style={{ backgroundColor: meta.color }}>{index + 1}</div>}
+              </div>
+            );
+          })}
+          <div className="col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[24px] border-[4px] border-[#17120c] bg-[radial-gradient(circle_at_50%_35%,#fff7df_0%,#e2bd66_52%,#93652d_100%)] p-4 text-center shadow-[inset_0_4px_0_rgba(255,255,255,0.55)]">
+            <div>
+              <div className="font-display text-[12px] font-black uppercase tracking-[0.32em] text-ink/42">The RealLife</div>
+              <div className="mt-2 font-board text-[44px] leading-none text-ink">한 턴 더</div>
+              <div className="mt-2 font-board text-[18px] text-ink/60">{prompt}</div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside className="relative z-10 flex min-h-0 flex-col gap-2 rounded-2xl border-2 border-white/16 bg-white/9 p-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-[10px]">
+        <div className="rounded-xl border-2 border-white/18 bg-black/24 p-3">
+          <div className="flex items-center gap-3">
+            <img src="/ui/host-mic.jpg" alt="" className="h-16 w-16 rounded-2xl border-2 border-yellow-100/60 object-cover object-top shadow-[0_4px_0_#0F0C0A]" draggable={false} />
+            <div>
+              <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-yellow-200/70">host booth</div>
+              <div className="font-board text-[24px] leading-none">사회자 부스</div>
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl border border-white/14 bg-white/10 p-3 font-board text-[18px] leading-snug text-white/86">{hostLine || prompt}</div>
+        </div>
+        <div className="rounded-xl border-2 border-white/14 bg-[#fff7df] p-3 text-ink shadow-[0_4px_0_#0F0C0A]">
+          <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/45">turn signal</div>
+          <div className="mt-2 font-board text-[24px] leading-none">{turnResult?.title ?? '주사위 대기'}</div>
+          <div className="mt-2 font-board text-[15px] leading-snug text-ink/62">{turnResult?.text ?? prompt}</div>
+          {turnResult?.kind === 'card' && <button type="button" onClick={() => onOpenResultCard?.(turnResult)} className="mt-3 w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff,#ffd978)] px-3 py-3 font-board text-xl text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none">카드 정산 보기</button>}
+        </div>
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <button type="button" onClick={onShowNoticeLog} disabled={!hasNoticeLog} className="rounded-xl border-2 border-white/20 bg-white/12 px-3 py-2 font-board text-[17px] text-white shadow-[0_3px_0_#0F0C0A] disabled:opacity-35">알림</button>
+          <button type="button" onClick={onToggleBgm} className="rounded-xl border-2 border-white/20 bg-white/12 px-3 py-2 font-board text-[17px] text-white shadow-[0_3px_0_#0F0C0A]">BGM {bgmEnabled ? 'ON' : 'OFF'}</button>
+          <button type="button" onClick={onExit} className="col-span-2 rounded-xl border-2 border-red-200/40 bg-red-500/20 px-3 py-2 font-board text-[17px] text-red-100 shadow-[0_3px_0_#0F0C0A]">나가기</button>
+        </div>
+      </aside>
+
+      <div className="relative z-10 col-span-3 grid grid-cols-[1fr_190px_190px_190px] items-center gap-3 rounded-2xl border-2 border-white/16 bg-black/34 p-3 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-[10px]">
+        <div className="min-w-0">
+          <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-white/42">action deck</div>
+          <div className="mt-1 truncate font-board text-[26px] leading-none">{prompt}</div>
+        </div>
+        <div className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/18 bg-white/10 p-2">
+          <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceA))}.svg`} alt="" className="h-12 w-12" draggable={false} />
+          <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceB))}.svg`} alt="" className="h-12 w-12" draggable={false} />
+        </div>
+        <button type="button" onClick={onAppDiceRoll} disabled={disabled || diceLocked} className="h-[70px] rounded-2xl border-[3px] border-[#17120c] bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_48%,#f1b84d_100%)] font-board text-[26px] text-ink shadow-[0_5px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45">주사위</button>
+        <div className="grid h-[70px] grid-cols-2 gap-2">
+          <button type="button" onClick={onOpenBoard} className="rounded-2xl border-2 border-white/22 bg-white/12 font-board text-[19px] text-white shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">보드</button>
+          <button type="button" onClick={onEndTurn} disabled={!diceLocked} className="rounded-2xl border-2 border-red-950 bg-[linear-gradient(180deg,#ff7474,#e12d39)] font-board text-[19px] text-white shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45">턴끝</button>
+        </div>
+      </div>
+    </section>
   );
 }
 
