@@ -13,6 +13,9 @@ export const CHARACTER_IMG = {
   steveJobs: '/characters/steve-jobs.png',
   billGates: '/characters/bill-gates.png',
   donaldTrump: '/characters/donald-trump.png',
+  leeJaeMyung: '/characters/lee-jae-myung.png',
+  wakizakaYasuharu: '/characters/wakizaka-yasuharu.png',
+  toyotomiHideyoshi: '/characters/toyotomi-hideyoshi.png',
 };
 
 // NPC 2종
@@ -53,6 +56,9 @@ export const CHARACTER_META = {
   steveJobs: { name: '스티브 잡스', emoji: '📱', desc: '혁신가·기술' },
   billGates: { name: '빌 게이츠', emoji: '💻', desc: '소프트웨어·사업가' },
   donaldTrump: { name: '트럼프', emoji: '🏢', desc: '사업가·정치인' },
+  leeJaeMyung: { name: '이재명', emoji: '🗳️', desc: '정치인' },
+  wakizakaYasuharu: { name: '와키자카', emoji: '🗡️', desc: '일본 장수' },
+  toyotomiHideyoshi: { name: '도요토미', emoji: '🏯', desc: '일본 장수' },
 };
 
 // ===== 이벤트 카드 7장 =====
@@ -81,6 +87,10 @@ export const CHANCE_CARD_IMG = {
   accident: '/cards/chance/accident.png',
   lotto: '/cards/chance/lotto.png',
   subscription_win: '/cards/chance/subscription_win.png',
+  move_forward_3: '/cards/chance/teleport.png',
+  move_forward_2: '/cards/chance/teleport.png',
+  move_back_3: '/cards/chance/teleport.png',
+  move_back_2: '/cards/chance/teleport.png',
   teleport: '/cards/chance/teleport.png',
 };
 
@@ -110,3 +120,41 @@ export const getEventCardImg = (id) => EVENT_CARD_IMG[id] ?? null;
 export const getChanceCardImg = (id) => CHANCE_CARD_IMG[id] ?? null;
 export const getWelfareCardImg = (id) => WELFARE_CARD_IMG[id] ?? null;
 export const getIconImg = (id) => ICON_IMG[id] ?? null;
+
+const unique = (items) => [...new Set(items.filter(Boolean))];
+
+export const ESSENTIAL_GAME_ASSETS = unique([
+  ...Object.values(CHARACTER_IMG),
+  NPC_IMG.realtor,
+  ICON_IMG.villa,
+  ICON_IMG.apartment,
+]);
+
+export const BACKGROUND_GAME_ASSETS = unique([
+  ...Object.values(EVENT_CARD_IMG),
+  ...Object.values(CHANCE_CARD_IMG),
+  ...Object.values(WELFARE_CARD_IMG),
+  ...Object.values(NPC_IMG),
+  ...Object.values(ICON_IMG),
+]);
+
+export const preloadImages = (urls = [], { timeoutMs = 3500 } = {}) => {
+  if (typeof Image === 'undefined') return Promise.resolve();
+  const loadOne = (url) => new Promise((resolve) => {
+    const img = new Image();
+    const done = () => resolve(url);
+    const timer = window.setTimeout(done, timeoutMs);
+    img.onload = () => { window.clearTimeout(timer); done(); };
+    img.onerror = () => { window.clearTimeout(timer); done(); };
+    img.decoding = 'async';
+    img.src = url;
+  });
+  return Promise.all(urls.map(loadOne));
+};
+
+export const preloadGameAssets = async () => {
+  await preloadImages(ESSENTIAL_GAME_ASSETS, { timeoutMs: 2600 });
+  window.setTimeout(() => {
+    preloadImages(BACKGROUND_GAME_ASSETS, { timeoutMs: 5000 });
+  }, 80);
+};

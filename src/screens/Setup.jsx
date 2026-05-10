@@ -1,13 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '@/stores/gameStore.js';
+import { preloadGameAssets } from '@/lib/assets.js';
 import { useCustomCharacterStore } from '@/stores/customCharacterStore.js';
 import { DEFAULT_OPTIONS } from '@/engine/gameState.js';
 import { cn } from '@/lib/cn.js';
 import { getAvailableCharacters } from '@/lib/characterRoster.js';
 import AssetFrame from '@/components/AssetFrame.jsx';
-import { useGameDialog } from '@/components/GameDialog.jsx';
 
 const PLAYER_COLORS = ['#E12D39', '#2F75C9', '#F27A1A', '#238B45'];
+
+const SETUP_PREFS_KEY = 'reallife:setupPrefs';
+const loadSetupPrefs = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(window.localStorage?.getItem(SETUP_PREFS_KEY) || 'null');
+  } catch {
+    return null;
+  }
+};
+
 
 const optionGroups = [
   { key: 'startingCash', label: '시작 자금', unit: '만', values: [1500, 2500, 3000] },
@@ -24,17 +35,14 @@ const optionGroups = [
 
 export default function Setup({ onStart }) {
   const initGame = useGameStore((s) => s.initGame);
-  const loadGame = useGameStore((s) => s.load);
-  const hasSaved = useGameStore((s) => s.hasSavedGame);
-  const clearSave = useGameStore((s) => s.clearSave);
   const customCharacters = useCustomCharacterStore((s) => s.characters);
-  const dialog = useGameDialog();
 
   const roster = getAvailableCharacters();
   const rosterSlotCount = Math.max(20, Math.ceil(roster.length / 4) * 4 + 12);
   const rosterSlots = [...roster, ...Array.from({ length: Math.max(0, rosterSlotCount - roster.length) }, (_, index) => ({ id: `locked-${index}`, locked: true }))].slice(0, rosterSlotCount);
   const customCount = customCharacters.filter((character) => character.active !== false).length;
-  const [numPlayers, setNumPlayers] = useState(4);
+  const setupPrefs = loadSetupPrefs();
+  const [numPlayers, setNumPlayers] = useState(() => Math.min(4, Math.max(2, Number(setupPrefs?.numPlayers ?? 2) || 2)));
   const [options, setOptions] = useState(() => ({
     ...DEFAULT_OPTIONS,
     startingCash: 1500,
@@ -42,18 +50,15 @@ export default function Setup({ onStart }) {
     deathmatchStartMinutes: 15,
     predistributeCount: 4,
     teamMode: false,
+    ...(setupPrefs?.options ?? {}),
   }));
   const [picked, setPicked] = useState([]);
-  const [playerTypes, setPlayerTypes] = useState(() => Array.from({ length: 4 }, () => 'human'));
+  const [playerTypes, setPlayerTypes] = useState(() => Array.from({ length: Math.min(4, Math.max(2, Number(setupPrefs?.numPlayers ?? 2) || 2)) }, (_, i) => setupPrefs?.playerTypes?.[i] ?? 'human'));
   const [names, setNames] = useState({});
-  const [savedExists, setSavedExists] = useState(false);
   const [numberPad, setNumberPad] = useState(null);
+  const [preloading, setPreloading] = useState(false);
   const rosterScrollerRef = useRef(null);
   const rosterDragRef = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false, raf: null, nextScrollLeft: 0 });
-
-  useEffect(() => {
-    setSavedExists(hasSaved?.() ?? false);
-  }, [hasSaved]);
 
   useEffect(() => {
     setPicked((prev) => prev.slice(0, numPlayers));
@@ -96,6 +101,13 @@ export default function Setup({ onStart }) {
 
   const start = () => {
     const selected = picked.map((id) => roster.find((c) => c.id === id)).filter(Boolean);
+    if (typeof window !== 'undefined') {
+      window.localStorage?.setItem(SETUP_PREFS_KEY, JSON.stringify({
+        numPlayers,
+        options,
+        playerTypes: playerTypes.slice(0, numPlayers),
+      }));
+    }
     initGame({
       numPlayers,
       options,
@@ -108,27 +120,21 @@ export default function Setup({ onStart }) {
   };
 
   const startNew = async () => {
-    if (!ready) return;
-    if (savedExists) {
-      const ok = await dialog.confirm({
-        title: '새 게임 시작',
-        message: '저장된 게임이 있습니다. 새 게임을 시작하면 이전 진행은 사라집니다.',
-        okText: '새 게임',
-        cancelText: '돌아가기',
-        tone: 'danger',
-      });
-      if (!ok) return;
-      clearSave?.();
+    if (!ready || preloading) return;
+    setPreloading(true);
+    try {
+      await Promise.race([
+        preloadGameAssets(),
+        new Promise((resolve) => window.setTimeout(resolve, 3200)),
+      ]);
+    } catch (error) {
+      console.warn('[Setup] preload failed; starting game anyway', error);
     }
     start();
   };
 
-  const continueGame = () => {
-    if (loadGame()) onStart();
-  };
-
   const remainingPlayers = numPlayers - selectedCount;
-  const startLabel = ready ? '게임 시작' : selectedCount === 0 ? `${numPlayers}명 선택` : `${remainingPlayers}명 더 선택`;
+  const startLabel = preloading ? '필수 에셋 로딩 중...' : ready ? '게임 시작' : selectedCount === 0 ? `${numPlayers}명 선택` : `${remainingPlayers}명 더 선택`;
 
   const scrollRoster = (direction) => {
     rosterScrollerRef.current?.scrollBy({
@@ -280,16 +286,6 @@ export default function Setup({ onStart }) {
           </section>
 
         <aside className="setup-rules relative z-40 flex min-h-0 w-[37%] flex-col gap-2.5 overflow-visible">
-          {savedExists && (
-            <button
-              type="button"
-              onClick={continueGame}
-              className="h-12 shrink-0 rounded-lg border-[3px] border-[#17120c] bg-[#0f8a5f] font-board text-xl text-[#fffaf0] shadow-[0_4px_0_#17120c] transition active:translate-y-1 active:shadow-none"
-            >
-              ▶ 이어하기
-            </button>
-          )}
-
           <div className="setup-glass-panel min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border-2 border-rose-100/45 bg-[linear-gradient(135deg,rgba(255,255,255,0.25),rgba(255,75,112,0.13),rgba(54,207,255,0.08))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_4px_0_#17120c,0_16px_30px_-22px_rgba(80,10,28,0.58),0_0_24px_rgba(255,55,96,0.16)] backdrop-blur-[10px] no-scrollbar">
             <div className="mb-2.5 flex items-start justify-between gap-2">
               <div>
@@ -327,10 +323,10 @@ export default function Setup({ onStart }) {
           <button
             type="button"
             onClick={startNew}
-            disabled={!ready}
+            disabled={!ready || preloading}
             className={cn(
               'group mt-auto flex h-[78px] shrink-0 items-center justify-between rounded-2xl border-[3px] border-[#17120c] px-4 text-left shadow-[0_5px_0_#17120c] transition active:translate-y-[5px] active:shadow-none',
-              ready
+              ready && !preloading
                 ? 'bg-[linear-gradient(135deg,#ff4d66_0%,#e12d39_56%,#a90f27_100%)] text-white drop-shadow-[0_0_18px_rgba(225,45,57,0.52)]'
                 : 'cursor-not-allowed bg-[linear-gradient(135deg,rgba(255,255,255,0.52),rgba(204,224,236,0.78))] text-[#24465a]',
             )}
@@ -339,8 +335,8 @@ export default function Setup({ onStart }) {
               <span className="font-display text-[10px] font-black uppercase tracking-[0.22em] opacity-80">Game Ready</span>
               <span className="font-board text-[30px] leading-none">{startLabel}</span>
             </span>
-            <span className={cn('grid h-12 w-12 place-items-center rounded-full border-2 border-[#17120c] bg-white/70 font-board text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_3px_0_#17120c]', ready ? 'text-[#e12d39]' : 'text-[#24465a]/70')}>
-              ▶
+            <span className={cn('grid h-12 w-12 place-items-center rounded-full border-2 border-[#17120c] bg-white/70 font-board text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_3px_0_#17120c]', ready && !preloading ? 'text-[#e12d39]' : 'text-[#24465a]/70')}>
+              {preloading ? '…' : '▶'}
             </span>
           </button>
         </aside>

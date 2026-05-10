@@ -71,6 +71,9 @@ function GameDialog({ dialog }) {
       {dialog && (
         <motion.div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/55 px-4 backdrop-blur-[2px]"
+          style={{ touchAction: 'none' }}
+          onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+          onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -81,6 +84,8 @@ function GameDialog({ dialog }) {
             exit={{ scale: 0.96, y: 12, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 320, damping: 24 }}
             className="relative w-full max-w-[520px] overflow-hidden rounded-lg border-[3px] border-[#17120c] bg-[#fffdf5] p-5 shadow-[0_8px_0_#17120c,0_0_0_6px_rgba(64,152,211,0.22),0_22px_60px_rgba(0,0,0,0.42)]"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div
               className={cn(

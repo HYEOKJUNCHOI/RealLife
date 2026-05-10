@@ -1,4 +1,4 @@
-// 카드 시스템 — 찬스/복지(즉시) / 이벤트(2년 결산 / 데스매치)
+// 카드 시스템 — 찬스/복지(즉시) / 이벤트(매년 결산 / 데스매치)
 
 import { round10 } from './constants.js';
 import { propertyPositions } from './board.js';
@@ -9,6 +9,9 @@ const tileName = (state, pos) => state.board.tiles[pos]?.names?.ko ?? state.boar
 const playerName = (state, playerId) => state.players[playerId]?.name ?? `${playerId + 1}P`;
 
 // =================== 찬스 카드 (즉시 발동) ===================
+
+export const LIFE_CHANGE_CHANCE_RATE = 0.10;
+export const DEFENSE_CARD_CHANCE_RATE = 0.15;
 
 export const CHANCE_CARDS = [
   { id: 'marriage', name: '결혼', description: '결혼식 비용을 지불합니다.', delta: -200 },
@@ -22,26 +25,64 @@ export const CHANCE_CARDS = [
   { id: 'accident', name: '사고', description: '사고 처리 비용을 지불합니다.', delta: -150 },
   { id: 'lotto', name: '로또', description: '로또에 당첨되어 상금을 받습니다.', delta: +500 },
   { id: 'subscription_win', name: '청약 당첨', description: '보유 부동산 1곳을 한 단계 업그레이드합니다.', upgrade: true },
+  { id: 'move_forward_3', name: '앞으로 3칸', description: '말을 앞으로 3칸 이동합니다.', moveSteps: +3 },
+  { id: 'move_forward_2', name: '앞으로 2칸', description: '말을 앞으로 2칸 이동합니다.', moveSteps: +2 },
+  { id: 'move_back_3', name: '뒤로 3칸', description: '말을 뒤로 3칸 이동합니다.', moveSteps: -3 },
+  { id: 'move_back_2', name: '뒤로 2칸', description: '말을 뒤로 2칸 이동합니다.', moveSteps: -2 },
   { id: 'teleport', name: '순간이동', description: '이번 버전에서는 이동 효과 없이 카드만 공개됩니다.', delta: 0 },
 ];
 
-export const drawChanceCard = (state, playerId, rng) => {
-  const card = rng.pick(CHANCE_CARDS);
+export const drawChanceCard = (state, playerId, rng, { deferEffects = false } = {}) => {
   const player = state.players[playerId];
+  const rareRoll = rng.next();
+  if (rareRoll < LIFE_CHANGE_CHANCE_RATE) {
+    if (!deferEffects) state.pendingLifeChange = { playerId, nonce: Date.now() };
+    return {
+      card: '인생체인지',
+      cardId: 'life_change',
+      description: '선택한 상대와 자산·잔고·카드 상태를 맞바꿀 수 있습니다.',
+      effectText: `${playerName(state, playerId)} 인생체인지 권한 획득`,
+      choiceRequired: true,
+    };
+  }
+  if (rareRoll < LIFE_CHANGE_CHANCE_RATE + DEFENSE_CARD_CHANCE_RATE) {
+    const nextDefenseCards = (player.defenseCards ?? 0) + 1;
+    if (!deferEffects) player.defenseCards = nextDefenseCards;
+    return {
+      card: '방어카드',
+      cardId: 'defense_card',
+      description: '인생체인지 공격을 1회 막을 수 있습니다.',
+      effectText: `방어카드 1장 획득 (보유 ${nextDefenseCards}장)`,
+      defenseCards: nextDefenseCards,
+    };
+  }
+
+  const card = rng.pick(CHANCE_CARDS);
   const log = { card: card.name, cardId: card.id, description: card.description };
 
   if (card.delta) {
-    player.cash += card.delta;
+    if (!deferEffects) player.cash += card.delta;
     log.delta = card.delta;
     log.effectText = `${card.description} (${moneyText(card.delta)})`;
   }
 
   if (card.skipTurns) {
-    player.skipTurns = (player.skipTurns ?? 0) + card.skipTurns;
+    if (!deferEffects) player.skipTurns = (player.skipTurns ?? 0) + card.skipTurns;
     log.skipTurns = card.skipTurns;
     log.effectText = card.delta
       ? `${card.description} (${moneyText(card.delta)}, ${card.skipTurns}턴 휴식)`
       : `${card.description} (${card.skipTurns}턴 휴식)`;
+  }
+
+  if (card.moveSteps) {
+    const boardSize = state.board?.tiles?.length ?? 40;
+    const fromPos = player.position ?? 0;
+    const toPos = ((fromPos + card.moveSteps) % boardSize + boardSize) % boardSize;
+    if (!deferEffects) player.position = toPos;
+    log.moveSteps = card.moveSteps;
+    log.fromPos = fromPos;
+    log.toPos = toPos;
+    log.effectText = `${card.description} (${tileName(state, fromPos)} → ${tileName(state, toPos)})`;
   }
 
   if (card.upgrade) {
@@ -51,7 +92,7 @@ export const drawChanceCard = (state, playerId, rng) => {
     if (owned.length > 0) {
       owned.sort((a, b) => currentPrice(state, b) - currentPrice(state, a));
       const target = owned[0];
-      state.tileState[target].stage = (state.tileState[target].stage ?? 0) + 1;
+      if (!deferEffects) state.tileState[target].stage = (state.tileState[target].stage ?? 0) + 1;
       log.upgraded = target;
       log.effectText = `${tileName(state, target)} 1단계 업그레이드`;
     } else {
@@ -78,28 +119,30 @@ export const WELFARE_CARDS = [
   { id: 10, name: '부정수급적발', description: '부정수급 적발로 환수금을 냅니다.', delta: -200 },
 ];
 
-export const drawWelfareCard = (state, playerId, rng) => {
+export const drawWelfareCard = (state, playerId, rng, { deferEffects = false } = {}) => {
   const card = rng.pick(WELFARE_CARDS);
   const player = state.players[playerId];
   const log = { card: card.name, cardId: card.id, description: card.description };
 
   if (card.delta) {
-    player.cash += card.delta;
+    if (!deferEffects) player.cash += card.delta;
     log.delta = card.delta;
     log.effectText = `${card.description} (${moneyText(card.delta)})`;
   }
 
   if (card.allDelta) {
-    for (const p of state.players) p.cash += card.allDelta;
+    if (!deferEffects) for (const p of state.players) p.cash += card.allDelta;
     log.allDelta = card.allDelta;
     log.effectText = `${card.description} (모두 ${moneyText(card.allDelta)})`;
   }
 
   if (card.collectFromAll) {
-    for (let i = 0; i < state.players.length; i++) {
-      if (i === playerId) continue;
-      state.players[i].cash -= card.collectFromAll;
-      player.cash += card.collectFromAll;
+    if (!deferEffects) {
+      for (let i = 0; i < state.players.length; i++) {
+        if (i === playerId) continue;
+        state.players[i].cash -= card.collectFromAll;
+        player.cash += card.collectFromAll;
+      }
     }
     log.collected = card.collectFromAll * (state.players.length - 1);
     log.effectText = `${card.description} (+${log.collected}만)`;
@@ -112,7 +155,7 @@ export const drawWelfareCard = (state, playerId, rng) => {
     if (owned.length > 0) {
       owned.sort((a, b) => currentPrice(state, b) - currentPrice(state, a));
       const target = owned[0];
-      state.tileState[target].stage = (state.tileState[target].stage ?? 0) + 1;
+      if (!deferEffects) state.tileState[target].stage = (state.tileState[target].stage ?? 0) + 1;
       log.upgraded = target;
       log.effectText = `${tileName(state, target)} 1단계 업그레이드`;
     } else {
@@ -124,7 +167,7 @@ export const drawWelfareCard = (state, playerId, rng) => {
   return log;
 };
 
-// =================== 이벤트 카드 (7장, 2년 결산 / 데스매치) ===================
+// =================== 이벤트 카드 (7장, 매년 결산 / 데스매치) ===================
 
 export const EVENT_CARDS = [
   { id: 1, name: '전쟁', kind: 'war', description: '랜덤 플레이어의 부동산 1곳이 국유화됩니다.' },
@@ -263,6 +306,7 @@ export const triggerEventCard = (state, rng) => {
       }
       break;
     }
+
   }
 
   if (!log.effectText) log.effectText = card.description;
@@ -272,3 +316,48 @@ export const triggerEventCard = (state, rng) => {
 const countPropsOwned = (state, playerId) =>
   propertyPositions(state.board.tiles).filter((p) => state.tileState[p]?.owner === playerId)
     .length;
+
+
+export const applyDeferredCardEffect = (state, playerId, event) => {
+  if (!state || !event || event._applied) return null;
+  const player = state.players[playerId];
+  if (!player) return null;
+  const kind = event.kind;
+  if (kind === 'chance_draw') {
+    if (event.cardId === 'life_change') {
+      state.pendingLifeChange = { playerId, nonce: Date.now() };
+    } else if (event.cardId === 'defense_card') {
+      player.defenseCards = event.defenseCards ?? ((player.defenseCards ?? 0) + 1);
+    } else if (event.delta) {
+      player.cash += event.delta;
+    }
+    if (event.skipTurns) player.skipTurns = (player.skipTurns ?? 0) + event.skipTurns;
+    if (event.moveSteps) {
+      const boardSize = state.board?.tiles?.length ?? 40;
+      const fromPos = player.position ?? event.fromPos ?? 0;
+      player.position = event.toPos != null
+        ? event.toPos
+        : (((fromPos + event.moveSteps) % boardSize + boardSize) % boardSize);
+    }
+    if (event.upgraded != null && state.tileState[event.upgraded]) {
+      state.tileState[event.upgraded].stage = (state.tileState[event.upgraded].stage ?? 0) + 1;
+    }
+  }
+  if (kind === 'welfare_draw') {
+    if (event.delta) player.cash += event.delta;
+    if (event.allDelta) for (const p of state.players) p.cash += event.allDelta;
+    if (event.collected) {
+      const each = event.collected / Math.max(1, state.players.length - 1);
+      for (let i = 0; i < state.players.length; i++) {
+        if (i === playerId) continue;
+        state.players[i].cash -= each;
+        player.cash += each;
+      }
+    }
+    if (event.upgraded != null && state.tileState[event.upgraded]) {
+      state.tileState[event.upgraded].stage = (state.tileState[event.upgraded].stage ?? 0) + 1;
+    }
+  }
+  event._applied = true;
+  return event;
+};

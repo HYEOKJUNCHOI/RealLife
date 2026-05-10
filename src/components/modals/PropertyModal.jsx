@@ -201,7 +201,7 @@ function RailButton({ children, tone = 'paper', className, ...props }) {
     <button
       type="button"
       className={cn(
-        'rail-button min-h-[42px] rounded-md border-2 border-ink-line px-2 py-2 font-display text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em]',
+        'rail-button min-h-[48px] rounded-md border-2 border-ink-line px-2 py-2 font-display text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em]',
         'shadow-[0_3px_0_0_#0F0C0A,0_8px_12px_-10px_rgba(0,0,0,0.7)] transition',
         'active:translate-y-px active:shadow-[0_2px_0_0_#0F0C0A]',
         'disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-ink/30 disabled:shadow-[0_2px_0_0_#0F0C0A]',
@@ -243,7 +243,7 @@ function PropertyActionRail({
   onCancelStage,
 }) {
   return (
-    <aside className="property-action-rail order-2 flex w-[min(92vw,336px)] shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)] sm:order-1 sm:w-[112px] sm:flex-col sm:self-start">
+    <aside className={cn('property-action-rail order-2 flex shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)]', isEmpty ? 'w-[min(80vw,420px)] justify-center' : 'w-[min(92vw,336px)] sm:order-1 sm:w-[112px] sm:flex-col sm:self-start')}>
       <div className="hidden rounded-md border-2 border-ink-line bg-ink px-2 py-1 text-center font-display text-[9px] font-extrabold uppercase tracking-[0.14em] text-white sm:block">
         메뉴
       </div>
@@ -266,7 +266,7 @@ function PropertyActionRail({
           </RailButton>
           {!canBuy && (
             <div className="basis-full rounded-md border border-monopoly-deep/40 bg-white px-2 py-1.5 text-center font-display text-[9px] font-bold uppercase leading-tight text-monopoly-deep sm:basis-auto">
-              잔액 {fmt(visitor?.cash)}만
+              {!hasPropertySlot ? '보유 8개 초과 불가 · 하나 정리 후 매입' : `잔액 ${fmt(visitor?.cash)}만`}
             </div>
           )}
         </>
@@ -399,7 +399,12 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
   const isOpponentOwned = !isEmpty && !isOwn;
   const rent            = isOpponentOwned ? computeRent(state, visitorId, pos) : 0;
   const canPay          = visitor && visitor.cash >= rent;
-  const canBuy          = visitor && visitor.cash >= price;
+  const ownedPropertyCount = Object.entries(state.tileState ?? {}).filter(([ownedPos, tileState]) => {
+    const ownedTile = state.board?.tiles?.[Number(ownedPos)];
+    return ownedTile?.type === 'property' && tileState?.owner === visitorId;
+  }).length;
+  const hasPropertySlot = ownedPropertyCount < 8;
+  const canBuy          = visitor && visitor.cash >= price && hasPropertySlot;
   const currentStage    = ts.stage ?? 0;
   const skylineSlot     = COLOR_TO_SKYLINE[tile.color];
   const rents           = stageRents(state, pos);
@@ -446,9 +451,9 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
       onClose={handleModalClose}
       hideClose
       surface={false}
-      className="w-auto max-w-[calc(100vw-24px)]"
+      className="w-auto max-w-[calc(100vw-24px)] scale-[0.94] sm:scale-[0.9]"
     >
-      <div className="property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar sm:flex-row sm:items-start">
+      <div className={cn('property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar', isEmpty ? 'sm:flex-col' : 'sm:flex-row sm:items-start')}>
         <PropertyActionRail
           isEmpty={isEmpty}
           isOpponentOwned={isOpponentOwned}
@@ -477,7 +482,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
           onCancelStage={handleCancelDevelopment}
         />
         <div
-          className="property-deed-card deed-surface relative order-1 w-[min(92vw,336px)] shrink-0 overflow-hidden sm:order-2"
+          className={cn('property-deed-card deed-surface relative order-1 shrink-0 overflow-hidden', isEmpty ? 'w-[min(80vw,420px)]' : 'w-[min(92vw,312px)] sm:order-2')}
           style={{ boxShadow: cardShadow }}
         >
           <button

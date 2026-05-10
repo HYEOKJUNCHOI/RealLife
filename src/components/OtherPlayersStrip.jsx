@@ -21,10 +21,26 @@ const AVATAR_POSITION = {
   general:    '36% 29%',     // 투구 얼굴 중앙 맞춤
   magistrate: 'center 26%',  // 익선관
   farmer:     'center 26%',  // 패랭이
+  chunDooHwan: 'center 18%',
+  genghisKhan: 'center 24%',
+  steveJobs: 'center 24%',
+  billGates: 'center 24%',
+  donaldTrump: 'center 22%',
+  leeJaeMyung: 'center 22%',
+  wakizakaYasuharu: 'center 24%',
+  toyotomiHideyoshi: 'center 24%',
 };
 
 const AVATAR_SIZE = {
   general: '135%',
+  chunDooHwan: '145%',
+  genghisKhan: '142%',
+  steveJobs: '138%',
+  billGates: '138%',
+  donaldTrump: '138%',
+  leeJaeMyung: '138%',
+  wakizakaYasuharu: '140%',
+  toyotomiHideyoshi: '140%',
 };
 
 // 보유 stage 별 개수 반환: 땅문서(전체) / 집(빌라 1~4) / 아파트(stage 5)

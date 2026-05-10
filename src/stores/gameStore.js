@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { createGameState } from '@/engine/gameState.js';
 import { createRng } from '@/engine/rng.js';
 import { advanceTurn, finishGame, playTurn } from '@/engine/rules.js';
+import { applyDeferredCardEffect } from '@/engine/cards.js';
 import { currentPrice, hasColorMonopoly, rentFromStage } from '@/engine/inflation.js';
 import { CREDIT_ELIGIBILITY_CASH, CREDIT_LIMIT, LOANSHARK_LIMIT, round10 } from '@/engine/constants.js';
 import { canTakeCredit, canTakeLoanshark, takeCredit, takeLoanshark } from '@/engine/loan.js';
@@ -144,6 +145,21 @@ export const useGameStore = create((set, get) => ({
     get().save();
     return true;
   },
+  revealCardEffect: (playerId, event) => {
+    const { state, lastTurn, log } = get();
+    if (!state || !event || event._applied) return false;
+    const before = state.players[playerId]?.cash ?? 0;
+    const applied = applyDeferredCardEffect(state, playerId, event);
+    if (!applied) return false;
+    const after = state.players[playerId]?.cash ?? before;
+    set({
+      state: { ...state },
+      log: [...log],
+      lastTurn: lastTurn?.playerId === playerId ? { ...lastTurn, cashAfter: after } : lastTurn,
+    });
+    get().save();
+    return true;
+  },
 
   // ===== 토스트 (매트릭스 페이드아웃) =====
   addToast: ({ type, amount, x, y, size, message, tone }) => {
@@ -171,6 +187,14 @@ export const useGameStore = create((set, get) => ({
     const price = currentPrice(state, pos);
     const player = state.players[playerId];
     if (!tile || !player || player.cash < price) return false;
+    const ownedPropertyCount = Object.entries(state.tileState ?? {}).filter(([ownedPos, tileState]) => {
+      const ownedTile = state.board?.tiles?.[Number(ownedPos)];
+      return ownedTile?.type === 'property' && tileState?.owner === playerId;
+    }).length;
+    if (ownedPropertyCount >= 8) {
+      get().addToast({ message: '부동산은 최대 8개까지만 보유할 수 있습니다. 하나 정리하고 매입하세요.', tone: 'warn' });
+      return false;
+    }
     const ts = state.tileState[pos];
     if (!ts || ts.owner != null) return false;
     // 차감 + 등록
@@ -334,6 +358,84 @@ export const useGameStore = create((set, get) => ({
   closeTradeModal: () => {
     set({ modal: { ...get().modal, trade: null } });
   },
+  skipLifeChange: (playerId) => {
+    const { state } = get();
+    if (!state?.pendingLifeChange || state.pendingLifeChange.playerId !== playerId) return false;
+    state.pendingLifeChange = null;
+    set({ state: { ...state } });
+    get().addToast({ message: '인생체인지를 스킵했습니다.', tone: 'info' });
+    get().save();
+    return true;
+  },
+
+  lifeChange: (fromId, toId, { useDefense = false } = {}) => {
+    const { state, log, lastTurn } = get();
+    if (!state || state.finished) return false;
+    const pending = state.pendingLifeChange;
+    if (!pending || pending.playerId !== fromId || fromId === toId) return false;
+    const from = state.players[fromId];
+    const to = state.players[toId];
+    if (!from || !to || from.bankrupt || to.bankrupt) return false;
+
+    if (useDefense && (to.defenseCards ?? 0) > 0) {
+      to.defenseCards -= 1;
+      state.pendingLifeChange = null;
+      const event = { kind: 'life_change_blocked', fromId, toId };
+      const nextEvents = lastTurn?.playerId === fromId ? [...(lastTurn.events ?? []), event] : [event];
+      set({
+        state: { ...state },
+        log: [...log, event],
+        lastTurn: {
+          playerId: fromId,
+          cashBefore: lastTurn?.playerId === fromId ? lastTurn.cashBefore : from.cash,
+          cashAfter: from.cash,
+          events: nextEvents,
+        },
+      });
+      get().addToast({ message: `${to.name ?? `${toId + 1}P`} 방어카드 발동 · 인생체인지 무효`, tone: 'warn' });
+      get().save();
+      return 'blocked';
+    }
+
+    const swapKeys = [
+      'cash', 'salaryBonus', 'creditUsed', 'creditDebt', 'creditMisses', 'loansharkUsed', 'loansharkDebt', 'defenseCards',
+      'propertyLoans', 'chanceCards', 'welfareCards', 'activeCards', 'passives',
+    ];
+    for (const key of swapKeys) {
+      const tmp = from[key];
+      from[key] = to[key];
+      to[key] = tmp;
+    }
+
+    for (const ts of Object.values(state.tileState ?? {})) {
+      if (!ts) continue;
+      if (ts.owner === fromId) ts.owner = toId;
+      else if (ts.owner === toId) ts.owner = fromId;
+    }
+    const rebuildProperties = (playerId) => Object.entries(state.tileState ?? {})
+      .filter(([, ts]) => ts?.owner === playerId)
+      .map(([pos]) => Number(pos));
+    from.properties = rebuildProperties(fromId);
+    to.properties = rebuildProperties(toId);
+    state.pendingLifeChange = null;
+
+    const event = { kind: 'life_change_swap', fromId, toId };
+    const nextEvents = lastTurn?.playerId === fromId ? [...(lastTurn.events ?? []), event] : [event];
+    set({
+      state: { ...state },
+      log: [...log, event],
+      lastTurn: {
+        playerId: fromId,
+        cashBefore: lastTurn?.playerId === fromId ? lastTurn.cashBefore : to.cash,
+        cashAfter: from.cash,
+        events: nextEvents,
+      },
+    });
+    get().addToast({ message: `${from.name ?? `${fromId + 1}P`} ↔ ${to.name ?? `${toId + 1}P`} 인생체인지 완료`, tone: 'success' });
+    get().save();
+    return true;
+  },
+
   submitTrade: ({ fromId, toId, givePos = [], getPos = [], giveCash = 0, getCash = 0 }) => {
     const { state } = get();
     if (!state) return;

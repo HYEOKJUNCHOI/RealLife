@@ -143,7 +143,7 @@ const movePlayer = (state, playerId, steps, log) => {
 };
 
 // 도착 칸 처리
-const handleTileArrival = (state, playerId, pos, rng, log) => {
+const handleTileArrival = (state, playerId, pos, rng, log, turnOptions = {}) => {
   const tile = state.board.tiles[pos];
   switch (tile.type) {
     case 'go':
@@ -181,12 +181,12 @@ const handleTileArrival = (state, playerId, pos, rng, log) => {
       break;
     }
     case 'chance': {
-      const r = drawChanceCard(state, playerId, rng);
+      const r = drawChanceCard(state, playerId, rng, { deferEffects: !!turnOptions.deferCardEffects });
       log.push({ kind: 'chance_draw', ...r });
       break;
     }
     case 'community_chest': {
-      const r = drawWelfareCard(state, playerId, rng);
+      const r = drawWelfareCard(state, playerId, rng, { deferEffects: !!turnOptions.deferCardEffects });
       log.push({ kind: 'welfare_draw', ...r });
       break;
     }
@@ -253,7 +253,7 @@ export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
     }
     if (!player.bankrupt) {
       const newPos = movePlayer(state, playerId, dice.sum, log);
-      handleTileArrival(state, playerId, newPos, rng, log);
+      handleTileArrival(state, playerId, newPos, rng, log, turnOptions);
       if (player.cash < 0) {
         const rec = tryRecover(state, playerId, state.options.loanshark);
         log.push({ kind: 'recover', ...rec });
@@ -298,7 +298,7 @@ export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
       manual: true,
     });
     const newPos = movePlayer(state, playerId, steps, log);
-    handleTileArrival(state, playerId, newPos, rng, log);
+    handleTileArrival(state, playerId, newPos, rng, log, turnOptions);
     if (player.cash < 0) {
       const rec = tryRecover(state, playerId, state.options.loanshark);
       log.push({ kind: 'recover_arrival', ...rec });
@@ -317,7 +317,7 @@ export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
       break;
     }
     const newPos = movePlayer(state, playerId, dice.sum, log);
-    handleTileArrival(state, playerId, newPos, rng, log);
+    handleTileArrival(state, playerId, newPos, rng, log, turnOptions);
     if (player.cash < 0) {
       const rec = tryRecover(state, playerId, state.options.loanshark);
       log.push({ kind: 'recover_arrival', ...rec });
@@ -394,7 +394,7 @@ const yearEndSettlement = (state, rng, log) => {
   state.loanRate = rollNewLoanRate(rng);
   log.push({ kind: 'loan_rate_update', rate: state.loanRate });
 
-  // 2년 결산 시 이벤트 카드 (데스매치 모드 X일 때만)
+  // 매년 결산 시 이벤트 카드 (데스매치 모드 X일 때만)
   if (state.options.eventCards && !state.deathmatch && state.year % EVENT_TRIGGER_YEARS === 0) {
     const r = triggerEventCard(state, rng);
     log.push({ kind: 'event_card', ...r });

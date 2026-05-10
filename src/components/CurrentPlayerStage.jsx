@@ -1,13 +1,13 @@
-﻿// 중앙 스테이지 — 현재 차례 플레이어
+// 중앙 스테이지 — 현재 차례 플레이어
 //
 // 레이아웃:
 //   상단: 플레이어 + 잔고 + 주요 상태 칩
 //   본문: 보유 부동산 카드 4x2
 //   우측: 사회자 멘트와 진행자 일러스트
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import AssetFrame from '@/components/AssetFrame.jsx';
 import PropertyDeedMini from '@/components/PropertyDeedMini.jsx';
 import AnimatedCash from '@/components/AnimatedCash.jsx';
@@ -75,6 +75,9 @@ const AVATAR_POSITION = {
   steveJobs: 'center 24%',
   billGates: 'center 24%',
   donaldTrump: 'center 22%',
+  leeJaeMyung: 'center 22%',
+  wakizakaYasuharu: 'center 24%',
+  toyotomiHideyoshi: 'center 24%',
 };
 const AVATAR_SIZE = {
   general: '135%',
@@ -83,6 +86,9 @@ const AVATAR_SIZE = {
   steveJobs: '138%',
   billGates: '138%',
   donaldTrump: '138%',
+  leeJaeMyung: '138%',
+  wakizakaYasuharu: '140%',
+  toyotomiHideyoshi: '140%',
 };
 
 const HOST_VARIANTS = ['a', 'b', 'c', 'd'];
@@ -140,8 +146,16 @@ export default function CurrentPlayerStage({
   onOpenLoan,
   onOpenBoard,
   pendingPurchase,
+  diceMode = 'keypad',
+  onDiceModeChange,
+  onAppDiceRoll,
+  lastDiceRoll,
+  onShowNoticeLog,
+  hasNoticeLog = false,
   compact = false,
   hideSkipOverlay = false,
+  bgmEnabled = false,
+  onToggleBgm,
 }) {
   if (!player) return null;
   const baseMeta = CHAR_META[player.character] ?? { name: player.character, color: '#666', slot: null };
@@ -183,19 +197,10 @@ export default function CurrentPlayerStage({
   const loansharkInterest = (player.loansharkDebt ?? 0) > 0 ? LOANSHARK_INTEREST_PER_TURN : 0;
   const loanInterest = mortgageInterest + creditInterest + loansharkInterest;
 
-  // 턴 변경 배너
-  const [turnAnnounce, setTurnAnnounce] = useState(false);
-  const prevIndexRef = useRef(index);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hostVariant, setHostVariant] = useState(() => getRandomHostVariant());
   useEffect(() => {
-    if (prevIndexRef.current !== index) {
-      setTurnAnnounce(true);
-      setHostVariant(getRandomHostVariant());
-      const t = setTimeout(() => setTurnAnnounce(false), 1500);
-      prevIndexRef.current = index;
-      return () => clearTimeout(t);
-    }
+    setHostVariant(getRandomHostVariant());
   }, [index]);
 
   const openModal = useGameStore((s) => s.openPropertyModal);
@@ -224,8 +229,7 @@ export default function CurrentPlayerStage({
   const currentTileState = state.tileState?.[player.position];
   const pendingOwner = pendingPurchase?.pos != null ? state.tileState?.[pendingPurchase.pos]?.owner : null;
   const hasPendingPurchasePreview = pendingPurchase?.visitorId === index && pendingOwner == null;
-  const pendingPreviewSlot = hasPendingPurchasePreview ? Math.min(owned.length, OWNED_SLOTS - 1) : -1;
-  const canReopenPurchase = currentTile?.type === 'property' && currentTileState && currentTileState.owner == null && !state.finished;
+  const pendingPreviewSlot = -1;
 
   const isSkipping = !!player.inJail || (player.skipTurns ?? 0) > 0;
   const jailTurnsRemaining = Math.max(0, JAIL_TURNS - (player.jailTurns ?? 0));
@@ -237,60 +241,6 @@ export default function CurrentPlayerStage({
 
   return (
     <>
-    {/* 턴 변경 배너 */}
-    {createPortal(
-      <AnimatePresence>
-        {turnAnnounce && (
-          <motion.div
-            key={`turn-${index}`}
-            initial={{ opacity: 0, scale: 0.6, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 1.15, y: 30 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-            className="pointer-events-none fixed inset-0 z-[200] flex items-center justify-center"
-          >
-            <div
-              className="relative flex max-w-[76vw] items-center gap-3 overflow-hidden rounded-[22px] border-2 border-ink-line bg-parchment-50 px-7 py-4 shadow-[0_5px_0_0_#0F0C0A,0_18px_36px_-16px_rgba(0,0,0,0.65)]"
-              style={{
-                boxShadow: `0 18px 46px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -1px 0 rgba(255,255,255,0.32), 0 0 0 1px ${meta.color}88, 0 0 34px ${meta.color}77`,
-              }}
-            >
-              {/* 캐릭터 미니 */}
-              {meta.slot ? (
-                <AssetFrame
-                  slot={meta.slot}
-                  transparent
-                  className="relative h-14 w-14 shrink-0 drop-shadow-[0_8px_14px_rgba(15,12,10,0.22)]"
-                />
-              ) : characterImg ? (
-                <img
-                  src={characterImg}
-                  alt={meta.name}
-                  className="relative h-14 w-14 shrink-0 object-contain drop-shadow-[0_8px_14px_rgba(15,12,10,0.22)]"
-                  draggable={false}
-                />
-              ) : null}
-              <span
-                className="relative rounded-lg border border-white/55 px-2.5 py-1 font-display text-[18px] font-extrabold uppercase tracking-[0.2em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_18px_-12px_rgba(0,0,0,0.8)]"
-                style={{
-                  background: `linear-gradient(180deg, ${meta.color}f2 0%, ${meta.color}bf 100%)`,
-                }}
-              >
-                {index + 1}P
-              </span>
-              <h2 className={cn('relative whitespace-nowrap font-board text-[25px] font-extrabold leading-none text-ink drop-shadow-[0_1px_0_rgba(255,255,255,0.7)]', Array.from(meta.name ?? '').length === 3 && 'tracking-[0.28em]')}>
-                {meta.name}
-              </h2>
-              <span className="relative whitespace-nowrap font-board text-[25px] font-extrabold leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]" style={{ color: meta.color }}>
-                차례!
-              </span>
-            </div>
-          </motion.div>
-    )}
-      </AnimatePresence>,
-      document.body
-    )}
-
     {skipReason && !hideSkipOverlay && createPortal(
       <div className="pointer-events-none fixed inset-0 z-[190] flex items-center justify-center">
         <div
@@ -351,9 +301,16 @@ export default function CurrentPlayerStage({
           <button
             type="button"
             onClick={handleRestartGame}
-            className="w-full rounded-md border-2 border-ink-line bg-monopoly-red px-3 py-2 font-board text-base text-white shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
+            className="mb-2 w-full rounded-md border-2 border-ink-line bg-monopoly-red px-3 py-2 font-board text-base text-white shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
           >
             게임 다시하기
+          </button>
+          <button
+            type="button"
+            onClick={onToggleBgm}
+            className={cn('w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none', bgmEnabled ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink')}
+          >
+            BGM {bgmEnabled ? '끄기' : '켜기'}
           </button>
         </div>
       )}
@@ -455,19 +412,14 @@ export default function CurrentPlayerStage({
               {owned.length}{owned.length > OWNED_SLOTS ? `/${owned.length}` : ` / ${OWNED_SLOTS}`}
             </span>
           </span>
-          {canReopenPurchase ? (
-            <button
-              type="button"
-              onClick={() => openModal(player.position, index)}
-              className="rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#fff7d8_0%,#f0c35d_100%)] px-2.5 py-1 font-board text-sm leading-none text-ink shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
-            >
-              {currentTile.name} 매입
-            </button>
-          ) : (
-            <span className="font-display text-[9px] font-semibold uppercase tracking-wider text-ink/45">
-              {'\uCE74\uB4DC \uD074\uB9AD -> \uAD8C\uB9AC\uC99D / \uAC70\uB798 / \uAC74\uC124'}
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={onShowNoticeLog}
+            disabled={!hasNoticeLog}
+            className="rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_48%,#6fb3ff_100%)] px-2.5 py-1 font-board text-sm leading-none text-ink shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            알림보기
+          </button>
         </div>
 
         {/* 권리증 mini 4x2 */}
@@ -560,6 +512,10 @@ export default function CurrentPlayerStage({
           <RealDiceTurnPanel
             result={turnResult}
             onDiceRoll={onDiceRoll}
+            diceMode={diceMode}
+            onDiceModeChange={onDiceModeChange}
+            onAppDiceRoll={onAppDiceRoll}
+            lastDiceRoll={lastDiceRoll}
             diceLocked={diceLocked}
             onUnlockDice={onUnlockDice}
             onOpenResultCard={onOpenResultCard}
@@ -582,7 +538,26 @@ const EVENT_SLOT_IMAGES = {
   lottery_estate: '/cards/event/subscription.png',
 };
 
-function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpenResultCard, disabled }) {
+function DiceFace({ value = 1, rolling = false }) {
+  const safeValue = Math.max(1, Math.min(6, value));
+  return (
+    <motion.div
+      className="relative h-[78px] w-[78px] overflow-visible rounded-[20px]"
+      animate={rolling ? { scale: [1, 1.035, 1.01], y: [0, -1, 0] } : { scale: [1.03, 1] }}
+      transition={rolling ? { duration: 0.18, ease: 'linear' } : { duration: 0.22, ease: 'easeOut' }}
+    >
+      <img
+        key={safeValue}
+        src={`/ui/dice-face-${safeValue}.svg`}
+        alt={`${safeValue}`}
+        draggable={false}
+        className="h-full w-full select-none object-contain drop-shadow-[0_8px_0_#0F0C0A]"
+      />
+    </motion.div>
+  );
+}
+
+function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceModeChange, onAppDiceRoll, lastDiceRoll, diceLocked, onUnlockDice, onOpenResultCard, disabled }) {
   const nums = Array.from({ length: 12 }, (_, i) => i + 1);
   const resultTitle = result?.title ?? '주사위 눈금 입력';
   const resultText = result?.text ?? '굴린 값을 눌러주세요';
@@ -668,19 +643,41 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
         </div>
       ) : showNumberPad ? (
         <div className="rounded-xl border-2 border-ink-line bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_2px_0_#0F0C0A]">
-          <div className="grid grid-cols-3 gap-2">
-            {nums.map((num) => (
+          <div className="mb-1.5 grid grid-cols-2 gap-1.5 rounded-lg border-2 border-ink-line bg-[#fffaf0] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
+            <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('h-8 rounded-md border-2 border-ink-line font-board text-[13px] shadow-[0_1px_0_#0F0C0A]', diceMode === 'keypad' ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink/58')}>키패드</button>
+            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-8 rounded-md border-2 border-ink-line font-board text-[13px] shadow-[0_1px_0_#0F0C0A]', diceMode === 'app' ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink/58')}>게임 주사위</button>
+          </div>
+          {diceMode === 'app' ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-3 rounded-lg border-2 border-ink-line bg-[#f7ecd0] px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] [perspective:760px]">
+                <DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} />
+                <span className="font-display text-[24px] font-black text-ink">+</span>
+                <DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} />
+              </div>
               <button
-                key={num}
                 type="button"
                 disabled={disabled || diceLocked}
-                onClick={() => onDiceRoll?.(num)}
-                className="h-14 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_58%,#f1b84d_100%)] font-display text-[22px] font-extrabold leading-none text-ink shadow-[0_3px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={onAppDiceRoll}
+                className="h-14 w-full rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_58%,#f1b84d_100%)] font-board text-[22px] text-ink shadow-[0_3px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {num}
+                🎲 주사위 굴리기
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-1.5 rounded-lg border-2 border-ink-line bg-[#f7ecd0] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+              {nums.map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  disabled={disabled || diceLocked}
+                  onClick={() => onDiceRoll?.(num)}
+                  className="h-[46px] rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_58%,#f1b84d_100%)] font-display text-[19px] font-extrabold leading-none text-ink shadow-[0_3px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          )}
           {diceLocked && onUnlockDice && (
             <button
               type="button"
@@ -713,10 +710,10 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
                 rotateY: { type: 'spring', stiffness: 230, damping: 24 },
                 rotate: cardFlipped ? { duration: 0.18 } : { duration: 0.72, repeat: Infinity, repeatDelay: 0.85 },
               }}
-              className="relative h-[248px] rounded-lg [transform-style:preserve-3d]"
+              className="relative h-[218px] rounded-lg [transform-style:preserve-3d]"
             >
               <div className="absolute inset-0 grid place-items-center overflow-hidden rounded-lg border-2 border-ink-line bg-[linear-gradient(135deg,#20324d_0%,#51244b_54%,#d6a94b_100%)] text-white shadow-[0_3px_0_#0F0C0A] [backface-visibility:hidden]">
-                <div className="grid h-[154px] w-[116px] place-items-center rounded-xl border-2 border-white/45 bg-white/12 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
+                <div className="grid h-[132px] w-[100px] place-items-center rounded-xl border-2 border-white/45 bg-white/12 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
                   <div>
                     <div className="text-[42px] leading-none">🎴</div>
                     <div className="mt-2 font-board text-[22px] leading-none">카드<br />뒤집기</div>
@@ -732,8 +729,8 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceLocked, onUnlockDice, onOpe
                 )}
                 <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-10 text-white">
                   <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/66">{result?.cardKind ?? 'card'}</div>
-                  <div className="mt-0.5 font-board text-[22px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{resultTitle}</div>
-                  <div className="mt-1.5 line-clamp-2 font-board text-[13px] leading-snug text-white/88">카드 확인 후 정산을 공개합니다.</div>
+                  <div className="mt-0.5 font-board text-[22px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{result?.cardName ?? resultTitle}</div>
+                  <div className="mt-1.5 line-clamp-2 font-board text-[13px] leading-snug text-white/88">{result?.revealText ?? '카드 확인 후 정산을 공개합니다.'}</div>
                 </div>
               </div>
             </motion.div>
@@ -875,7 +872,7 @@ function SettlementBubble({ content }) {
   const showTotal = visibleSteps >= totalSteps;
 
   return (
-    <div className="relative z-10 mt-2 w-full rounded-[14px] border-2 border-ink-line bg-[#fffaf0] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_3px_0_#0F0C0A,0_14px_24px_-16px_rgba(0,0,0,0.36)]">
+    <div className="relative z-10 mt-2 max-h-[28vh] w-full overflow-y-auto rounded-[14px] border-2 border-ink-line bg-[#fffaf0] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_3px_0_#0F0C0A,0_14px_24px_-16px_rgba(0,0,0,0.36)] no-scrollbar">
       <div className="mb-1.5 flex items-center justify-end border-b border-ink-line/15 pb-1.5">
         <span className="font-board text-[15px] leading-none text-ink">{content.title ?? '이번 턴 정산'}</span>
       </div>
@@ -1188,10 +1185,16 @@ function EmptyDeed({ previewPos = null, state = null, onClick } = {}) {
     </div>
   ) : (
     <div
-      className="flex h-full w-full items-center justify-center rounded-md border-2 border-dashed border-ink/15 bg-parchment-100/30 text-ink/15"
+      className="relative h-full w-full overflow-hidden rounded-md border-2 border-dashed border-ink/18 bg-parchment-100/35 text-ink/18 grayscale saturate-0"
       aria-hidden="true"
     >
-      <span className="text-2xl opacity-50">{'⌂'}</span>
+      <div className="absolute inset-1 rounded-[5px] border border-ink/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.45)_0%,rgba(218,210,194,0.42)_100%)]" />
+      <div className="absolute inset-x-2 top-2 h-[24%] rounded-sm bg-ink/14" />
+      <div className="absolute inset-x-2 top-[38%] space-y-1">
+        <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/18" />
+        <div className="mx-auto h-1.5 w-8 rounded-full bg-ink/14" />
+      </div>
+      <div className="absolute inset-x-0 bottom-2 text-center font-display text-[8px] font-black uppercase tracking-[0.18em] text-ink/20">TITLE DEED</div>
     </div>
   );
   if (!onClick) return body;

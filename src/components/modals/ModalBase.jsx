@@ -25,7 +25,9 @@ export default function ModalBase({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 backdrop-blur-[3px] p-3"
-      onClick={onClose}
+      style={{ touchAction: 'none' }}
+      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); }}
     >
       <div
         className={cn(
@@ -36,6 +38,7 @@ export default function ModalBase({
           className,
         )}
         style={style}
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

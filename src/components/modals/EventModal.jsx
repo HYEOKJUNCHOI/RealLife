@@ -184,6 +184,26 @@ const EVENT_META = {
     subtext: '-100만 참가비 / 당첨 시 +500만',
     chip: { icon: '🍀', text: '-100만 / 당첨 +500만' },
   },
+  chance_life_change: {
+    category: 'chance',
+    cardLabel: 'LIFE CHANGE',
+    ko: '인생체인지',
+    icon: '🔄',
+    imageSrc: '/cards/chance/life_change.png',
+    headline: '다른 사람과 인생을 바꿀 기회',
+    subtext: '체인지/스킵 선택 후 상대 스테이터스에서 체인지합니다',
+    chip: { icon: '🔄', text: '10% 레어' },
+  },
+  chance_defense_card: {
+    category: 'chance',
+    cardLabel: 'DEFENSE',
+    ko: '방어카드',
+    icon: '🛡️',
+    imageSrc: '/cards/chance/defense_card.png',
+    headline: '인생체인지 방어권 획득',
+    subtext: '누군가 인생체인지를 걸면 1회 막을 수 있습니다',
+    chip: { icon: '🛡️', text: '15% 획득' },
+  },
 
   // === WELFARE (복지 카드) ===
   welfare_covid: {

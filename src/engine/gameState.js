@@ -50,6 +50,7 @@ export const createGameState = ({
     position: 0,
     cash: opts.startingCash,
     salaryBonus: 0,
+    defenseCards: 0,
     inJail: false,
     jailTurns: 0,
     skipTurns: 0,

@@ -2603,3 +2603,30 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   top: 4px !important;
 }
 
+
+/* Board overlay fit refinement: align to left play area, not inside with extra margins */
+.board-turn-layer {
+  top: 116px !important;
+  left: 8px !important;
+  right: 262px !important;
+  bottom: 82px !important;
+  padding: 0 !important;
+}
+
+.board-turn-shell {
+  border-radius: 14px !important;
+}
+
+.board-turn-shell .board-turn-grid {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+@media (max-width: 767px) {
+  .board-turn-layer {
+    top: 96px !important;
+    left: 6px !important;
+    right: 6px !important;
+    bottom: 74px !important;
+  }
+}

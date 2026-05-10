@@ -1,4 +1,4 @@
-﻿// 메인 게임 화면 — 실제 보드 + 실제 주사위 입력 흐름
+// 메인 게임 화면 — 실제 보드 + 실제 주사위 입력 흐름
 // 중앙 스테이지, 우측 정산/카드 패널, 하단 플레이어 스트립으로 구성
 // 카드/정산/환승/감옥 UX는 실제 플레이 진행을 방해하지 않도록 작게 제어한다.
 
@@ -6,6 +6,7 @@
 
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore.js';
 import { HUB_TELEPORT_FEE, JAIL_BAIL, JAIL_TURNS } from '@/engine/constants.js';
@@ -16,6 +17,8 @@ import CurrentPlayerStage from '@/components/CurrentPlayerStage.jsx';
 import OtherPlayersStrip from '@/components/OtherPlayersStrip.jsx';
 import MatrixToast from '@/components/MatrixToast.jsx';
 import PropertyModal from '@/components/modals/PropertyModal.jsx';
+import PropertyDeedMini from '@/components/PropertyDeedMini.jsx';
+import CardArtwork from '@/components/CardArtwork.jsx';
 import TradeModal from '@/components/modals/TradeModal.jsx';
 import TradeSelectModal from '@/components/modals/TradeSelectModal.jsx';
 import EventModal from '@/components/modals/EventModal.jsx';
@@ -31,6 +34,7 @@ const displayPlayerName = (player, fallback) => {
   const name = player?.name?.trim();
   return name && name !== player?.character ? name : fallback;
 };
+const tileNameForPos = (state, pos) => state?.board?.tiles?.[pos]?.names?.ko ?? state?.board?.tiles?.[pos]?.name ?? '도착한 땅';
 
 export default function GameMain({ onExit }) {
   const state = useGameStore((s) => s.state);
@@ -53,6 +57,7 @@ export default function GameMain({ onExit }) {
   const closePropertyModal = useGameStore((s) => s.closePropertyModal);
   const openPropertyModal = useGameStore((s) => s.openPropertyModal);
   const buyProperty = useGameStore((s) => s.buyProperty);
+  const revealCardEffect = useGameStore((s) => s.revealCardEffect);
   const closeTradeModal = useGameStore((s) => s.closeTradeModal);
   const closeTradeSelect = useGameStore((s) => s.closeTradeSelect);
   const closeRecoveryModal = useGameStore((s) => s.closeRecoveryModal);
@@ -67,6 +72,8 @@ export default function GameMain({ onExit }) {
   const addToast = useGameStore((s) => s.addToast);
   const tickClock = useGameStore((s) => s.tickClock);
   const hubTeleportAction = useGameStore((s) => s.hubTeleport);
+  const lifeChangeAction = useGameStore((s) => s.lifeChange);
+  const skipLifeChangeAction = useGameStore((s) => s.skipLifeChange);
   const initialDealPlayedRef = useRef(false);
   const prevTurnIndexRef = useRef(null);
   const jailPromptKeyRef = useRef(null);
@@ -83,7 +90,17 @@ export default function GameMain({ onExit }) {
   const autoBoardTurnKeyRef = useRef(null);
   const diceSnapshotRef = useRef(null);
   const [diceLocked, setDiceLocked] = useState(false);
+  const [diceMode, setDiceMode] = useState('keypad');
+  const [lastDiceRoll, setLastDiceRoll] = useState(null);
+  const audioRef = useRef(null);
+  const [bgmEnabled, setBgmEnabled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage?.getItem('reallife:bgmEnabled') === '1';
+  });
+  const [globalNotice, setGlobalNotice] = useState(null);
+  const [noticeLog, setNoticeLog] = useState([]);
   const [viewPlayerIndex, setViewPlayerIndex] = useState(null);
+  const [propertyShatter, setPropertyShatter] = useState(null);
 
   const initialDealCards = useMemo(() => {
     if (!state?.tileState || !state?.players?.length || !state?.board?.tiles) return [];
@@ -150,6 +167,26 @@ export default function GameMain({ onExit }) {
     return () => document.documentElement.classList.remove('turn-card-touch-live');
   }, [showTurnCardTouch]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    window.localStorage?.setItem('reallife:bgmEnabled', bgmEnabled ? '1' : '0');
+    if (!audioRef.current) {
+      audioRef.current = new Audio('/audio/bgm.mp3');
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.34;
+    }
+    const audio = audioRef.current;
+    if (bgmEnabled) {
+      audio.play().catch(() => {
+        setBgmEnabled(false);
+        addToast?.({ message: 'BGM 파일을 찾을 수 없거나 재생이 차단되었습니다.', tone: 'warn' });
+      });
+    } else {
+      audio.pause();
+    }
+    return undefined;
+  }, [bgmEnabled, addToast]);
+
 
   // 실시간 게임 시간: 실제 플레이에서는 1초 단위로 흐른다.
   useEffect(() => {
@@ -180,8 +217,45 @@ export default function GameMain({ onExit }) {
     setDiceLocked(false);
     setTurnMovedKey(null);
     setCardSettlementSeenKey(null);
+    setLastDiceRoll(null);
+    const activePlayer = state?.players?.[state?.turnIndex ?? 0];
+    const activeBaseMeta = activePlayer
+      ? CHAR_META[activePlayer.character] ?? { name: activePlayer.character, color: '#d83b2f' }
+      : { name: '플레이어', color: '#d83b2f' };
+    const activeName = activePlayer ? displayPlayerName(activePlayer, activeBaseMeta.name) : activeBaseMeta.name;
+    const diceHelpSeen = typeof window !== 'undefined' && window.localStorage?.getItem('reallife:diceModeHelpSeen') === '1';
+    if (!diceHelpSeen && typeof window !== 'undefined') window.localStorage?.setItem('reallife:diceModeHelpSeen', '1');
+    pushGlobalNotice({
+      kind: 'dice',
+      speaker: '사회자',
+      title: `${activeName} 차례`,
+      text: '주사위를 굴려주세요.',
+      cta: diceHelpSeen ? '터치해서 닫기' : '키패드 또는 게임 주사위로 진행',
+      icon: '🎲',
+      subtle: false,
+      color: activeBaseMeta.color,
+    });
     diceSnapshotRef.current = null;
   }, [state?.round, state?.turnIndex]);
+
+  const pushGlobalNotice = (notice) => {
+    if (!notice) return;
+    const item = { ...notice, id: Date.now() + Math.random() };
+    setNoticeLog((prev) => [item, ...prev].slice(0, 8));
+    setGlobalNotice(item);
+  };
+
+  const showNoticeLog = () => {
+    const latest = noticeLog[0];
+    if (!latest) return;
+    setGlobalNotice({ ...latest, id: Date.now() + Math.random(), replay: true, subtle: false });
+  };
+
+  const triggerPropertyShatter = (pos, label = '권리증 파괴') => {
+    if (pos == null) return;
+    setPropertyShatter({ pos, label, id: Date.now() + Math.random() });
+    window.setTimeout(() => setPropertyShatter((current) => current?.pos === pos ? null : current), 1150);
+  };
 
   const cardSettlementKey = turnResult?.kind === 'card'
     ? `${lastTurn?.playerId ?? ''}|${turnResult.cardKind ?? ''}|${turnResult.cardId ?? ''}|${turnResult.eventId ?? ''}|${turnResult.text ?? ''}`
@@ -200,13 +274,60 @@ export default function GameMain({ onExit }) {
       return;
     }
     if (card?.kind === 'card' && cardSettlementKey) {
+      revealCardEffect?.(lastTurn?.playerId ?? state?.turnIndex ?? 0, card.rawEvent ?? card);
       setCardSettlementSeenKey(cardSettlementKey);
+      pushGlobalNotice({
+        kind: 'card_revealed',
+        speaker: '사회자',
+        title: card.cardName ?? card.title ?? '카드 공개',
+        text: card.revealText ?? card.text ?? '카드 효과를 정산합니다.',
+        icon: card.icon ?? '💡',
+        subtle: false,
+      });
+      const revealedEvent = card.rawEvent ?? card;
+      if (revealedEvent?.lossPos != null && ['war', 'multihouse', 'fire'].includes(revealedEvent.kind)) {
+        window.setTimeout(() => triggerPropertyShatter(revealedEvent.lossPos, revealedEvent.effectText ?? '부동산 피해'), 360);
+      }
+      if ((card.rawEvent ?? card)?.cardId === 'life_change') {
+        window.setTimeout(async () => {
+          const playerId = lastTurn?.playerId ?? state?.turnIndex ?? 0;
+          const use = await dialog.confirm({
+            title: '인생체인지',
+            badgeText: '레어 찬스카드',
+            message: '다른 사람과 현금·부동산·대출·카드 상태를 바꿀 수 있습니다. 진행할까요?',
+            okText: '체인지',
+            cancelText: '스킵',
+            tone: 'danger',
+          });
+          if (!use) {
+            skipLifeChangeAction?.(playerId);
+            return;
+          }
+          addToast?.({ message: '푸터에서 바꿀 상대의 스테이터스를 열고 체인지 버튼을 누르세요.', tone: 'warn' });
+        }, 520);
+      }
     }
   };
 
   const handleBuyProperty = (playerId, pos) => {
     const tile = state?.board?.tiles?.[pos];
     const price = tile ? (state.tileState?.[pos]?.price ?? undefined) : undefined;
+    const ownedPropertyCount = Object.entries(state?.tileState ?? {}).filter(([ownedPos, tileState]) => {
+      const ownedTile = state?.board?.tiles?.[Number(ownedPos)];
+      return ownedTile?.type === 'property' && tileState?.owner === playerId;
+    }).length;
+    if (ownedPropertyCount >= 8) {
+      addToast?.({ message: '부동산은 최대 8개까지만 보유할 수 있습니다. 하나 정리하고 매입하세요.', tone: 'warn' });
+      pushGlobalNotice({
+        kind: 'buy_limit',
+        speaker: '중개 NPC',
+        title: '보유 한도 초과',
+        text: '부동산은 8개까지만 보유할 수 있습니다. 하나 정리하고 다시 매입하세요.',
+        icon: '⚠️',
+        subtle: false,
+      });
+      return false;
+    }
     const ok = buyProperty?.(playerId, pos);
     if (!ok) {
       addToast?.({ message: '매입에 실패했습니다. 잔액 또는 소유 상태를 확인해주세요.', tone: 'warn' });
@@ -223,7 +344,10 @@ export default function GameMain({ onExit }) {
       pos,
       visitorId: playerId,
       amount: price,
+      cash: useGameStore.getState().state?.players?.[playerId]?.cash,
     });
+    pushGlobalNotice({ kind: 'bought', speaker: '중개 NPC', title: '이동 중 → 매입 완료!', text: `${tileName} · ${signedMoney(-(price ?? 0))} 지출`, icon: '🏠', amount: -(price ?? 0), cash: useGameStore.getState().state?.players?.[playerId]?.cash });
+    closePropertyModal?.();
     return true;
   };
 
@@ -432,6 +556,11 @@ export default function GameMain({ onExit }) {
 
   const summarizeTurnResult = (events, playerId, pendingBuy) => {
     if (pendingBuy) return { kind: 'buy', title: '매입 가능', text: `${pendingBuy.tileName ?? '도착한 땅'} 매입`, icon: '🏠', pos: pendingBuy.pos, visitorId: playerId };
+    const jailSent = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+    if (jailSent) {
+      const reason = jailSent.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸 도착';
+      return { kind: 'jail_sent', title: '감옥 수감', text: `${reason} · 감옥으로 이동했습니다. 다음 차례부터 최대 ${JAIL_TURNS}턴 동안 출소 시도`, icon: '🚓', jailTurns: JAIL_TURNS };
+    }
     const cardEvent = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
     if (cardEvent) {
       const cardDelta = cardEvent.delta ?? cardEvent.allDelta ?? cardEvent.collected;
@@ -447,7 +576,7 @@ export default function GameMain({ onExit }) {
       const cardTitle = cardEvent.kind === 'welfare_draw' ? '복지 카드' : isEventCard ? '이벤트 카드' : '찬스 카드';
       const cardKind = cardEvent.kind === 'welfare_draw' ? 'welfare' : isEventCard ? 'event' : 'chance';
       const cardId = isEventCard ? cardEvent.kind : (cardEvent.cardId ?? cardEvent.kind);
-      return { kind: 'card', title: cardTitle, text: cardText, icon: cardEvent.kind === 'welfare_draw' ? '🎁' : isEventCard ? '⚡' : '🎴', cardKind, cardId, eventId: cardEvent.kind };
+      return { kind: 'card', title: `${cardTitle} 도착`, cardName: cardEvent.card ?? cardEvent.description ?? cardTitle, revealText: cardText, text: '카드를 뒤집어야 결과가 공개됩니다.', icon: cardEvent.kind === 'welfare_draw' ? '🎁' : isEventCard ? '⚡' : '💡', cardKind, cardId, eventId: cardEvent.kind, rawEvent: cardEvent };
     }
     const taxEvent = events.find((event) => event.kind === 'income_tax' || event.kind === 'luxury_tax');
     if (taxEvent) return { kind: 'tax', title: taxEvent.kind === 'luxury_tax' ? '사치세' : '소득세', text: `${taxEvent.amt ?? taxEvent.amount ?? 0}만 납부`, icon: taxEvent.kind === 'luxury_tax' ? '💎' : '🧾' };
@@ -465,11 +594,11 @@ export default function GameMain({ onExit }) {
     }
     const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'parking_jackpot', 'go_to_jail'].includes(event.kind));
     if (arrival) return { kind: 'arrival', title: '도착', text: arrival.tileName ?? arrival.name ?? '도착 처리 완료', icon: arrival.kind === 'go_to_jail' ? '🚓' : '📍' };
-    return { kind: 'ready', title: '진행 완료', text: '다음 행동을 확인하세요', icon: '✓' };
+    return { kind: 'ready', title: '턴 처리 확인', text: '보드 이동과 도착 처리를 확인하세요.', icon: '📍' };
   };
 
-  const runManualDiceMove = async (manualSteps, { ai = false } = {}) => {
-    if (!state || state.finished || boardTurn || diceLocked) return;
+  const runManualDiceMove = async (manualSteps, { ai = false, allowLocked = false } = {}) => {
+    if (!state || state.finished || boardTurn || (!allowLocked && diceLocked)) return;
     const currentKey = `${state.round ?? 0}-${state.turnIndex ?? 0}`;
     if (turnMovedKey === currentKey) {
       addToast?.({ message: '이미 주사위를 진행했습니다.', tone: 'warn' });
@@ -487,28 +616,58 @@ export default function GameMain({ onExit }) {
     const cashBeforeMove = turnPlayer?.cash ?? 0;
     diceSnapshotRef.current = ai ? null : { state: JSON.parse(JSON.stringify(state)), log: JSON.parse(JSON.stringify(log)), lastTurn: JSON.parse(JSON.stringify(lastTurn)), modal: JSON.parse(JSON.stringify({ property: modalProperty, trade: modalTrade, tradeSelect: modalTradeSelect, event: modalEvent, yearEnd: modalYearEnd, deathmatch: modalDeathmatch, recovery: modalRecovery, loan: modalLoan })) };
     setDiceLocked(true);
-    setTurnResult({ kind: 'moving', title: '이동 중', text: `${manualSteps}칸 이동합니다`, icon: '🎲' });
+    setTurnResult({ kind: 'moving', title: '이동 중', text: '말을 이동합니다', icon: '🎲' });
     setBoardTurn({ phase: 'rolling', playerId, startPos, displayPos: startPos, manualSteps, nonce: Date.now() });
-    const events = step({ manualSteps, deferPropertyModal: true, deferAdvance: true });
+    const events = step({ manualSteps, deferPropertyModal: true, deferAdvance: true, deferCardEffects: !ai });
     const turnKey = `${state.round ?? 0}-${playerId}`;
     setTurnMovedKey(turnKey);
     const pendingBuy = events.find((event) => event.kind === 'arrive_property' && event.type === 'unowned');
     const buyState = pendingBuy ? { pos: pendingBuy.pos, visitorId: playerId, turnKey } : null;
     setPendingPurchase(buyState);
     const roll = events.find((event) => event.kind === 'roll' || event.kind === 'jail_turn');
-    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'income_tax', 'luxury_tax', 'chance_draw', 'welfare_draw', 'parking_jackpot', 'go_to_jail'].includes(event.kind));
+    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'income_tax', 'luxury_tax', 'chance_draw', 'welfare_draw', 'parking_jackpot', 'go_to_jail', 'three_doubles_jail'].includes(event.kind));
     const card = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
     const endPos = state.players[playerId]?.position ?? startPos;
+    const path = Array.from({ length: Math.max(0, manualSteps) }, (_, idx) => (startPos + idx + 1) % (state.board?.tiles?.length ?? 40));
     window.setTimeout(() => {
-      setBoardTurn((prev) => prev ? { ...prev, phase: 'moving', roll, arrival, card, endPos } : prev);
-    }, 260);
+      setBoardTurn((prev) => prev ? { ...prev, phase: 'moving', roll, arrival, card, endPos, path } : prev);
+      let delay = 0;
+      path.forEach((pathPos, idx) => {
+        const prevPos = idx === 0 ? startPos : path[idx - 1];
+        const cornerPause = [0, 10, 20, 30].includes(pathPos) || Math.abs(boardDirection(prevPos) - boardDirection(pathPos)) > 0;
+        delay += cornerPause ? 245 : 155;
+        window.setTimeout(() => {
+          setBoardTurn((current) => current ? { ...current, phase: 'moving', displayPos: pathPos } : current);
+        }, delay);
+      });
+    }, 180);
+    const arrivalDelay = Math.max(980, 360 + path.length * 175);
     window.setTimeout(() => {
       setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', roll, arrival, card, endPos, displayPos: endPos } : prev);
       const toastMessage = buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos });
-      if (toastMessage) addToast?.({ message: toastMessage, tone: pendingBuy ? 'success' : 'info' });
-    }, 980);
+      const isCardArrival = !!card;
+      if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
+      if (toastMessage && !isCardArrival) addToast?.({ message: toastMessage, tone: pendingBuy ? 'success' : 'info' });
+      const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+      const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
+      const startName = tileNameForPos(state, startPos);
+      const endName = tileNameForPos(state, endPos);
+      pushGlobalNotice({
+        kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : isCardArrival ? 'card_arrival' : 'arrival',
+        speaker: pendingBuy ? '중개 NPC' : '사회자',
+        title: pendingBuy ? `${playerName} 이동 완료 · 매입 가능!` : jailNotice ? `${playerName} 감옥 수감!` : isCardArrival ? `${playerName} 카드칸 도착` : `${playerName} 이동 완료`,
+        text: pendingBuy ? `${startName} → ${endName} · 권리증을 확인하고 매입 여부를 결정하세요.` : isCardArrival ? `${startName} → ${endName} · 카드를 뒤집어주세요. 무슨 카드가 나올까요?` : `${startName} → ${endName}${toastMessage ? ` · ${toastMessage}` : ''}`,
+        icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : isCardArrival ? '💡' : '📍',
+        cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
+        previewPos: pendingBuy?.pos,
+        price: pendingBuy?.buyPrice,
+        onBuy: pendingBuy ? () => handleBuyProperty(playerId, pendingBuy.pos) : undefined,
+        onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
+      });
+    }, arrivalDelay);
     window.setTimeout(() => {
-      setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
+      const nextResult = summarizeTurnResult(events, playerId, pendingBuy);
+      setTurnResult(nextResult);
       const hubEvent = events.find((event) => event.kind === 'arrive_hub' && ['self_teleport_free', 'stay_no_fee'].includes(event.type));
       if (!ai && hubEvent) {
         setHubTeleport({
@@ -518,13 +677,41 @@ export default function GameMain({ onExit }) {
           title: hubEvent.type === 'stay_no_fee' ? '환승 선택' : '무료 환승',
         });
       }
+      const lifeChangeEvent = events.find((event) => event.kind === 'chance_draw' && event.cardId === 'life_change');
       if (ai) {
+        if (lifeChangeEvent) skipLifeChangeAction?.(playerId);
         if (pendingBuy) buyProperty?.(playerId, pendingBuy.pos);
         const summary = buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore: cashBeforeMove });
         setAiTurnSummary(summary);
         setBoardTurn(null);
       }
-    }, 1900);
+    }, arrivalDelay + 520);
+  };
+
+  const rollAppDice = () => {
+    if (diceLocked || boardTurn || state?.finished) return;
+    setDiceLocked(true);
+    const finalD1 = Math.floor(Math.random() * 6) + 1;
+    const finalD2 = Math.floor(Math.random() * 6) + 1;
+    const delays = [42, 46, 52, 60, 72, 88, 110, 138, 174, 220, 280];
+    let tick = 0;
+    const spin = () => {
+      if (tick >= delays.length) {
+        setLastDiceRoll({ d1: finalD1, d2: finalD2, sum: finalD1 + finalD2, rolling: false, nonce: Date.now() });
+        window.setTimeout(() => runManualDiceMove(finalD1 + finalD2, { allowLocked: true }), 220);
+        return;
+      }
+      setLastDiceRoll({
+        d1: Math.floor(Math.random() * 6) + 1,
+        d2: Math.floor(Math.random() * 6) + 1,
+        rolling: true,
+        nonce: Date.now(),
+      });
+      const delay = delays[tick];
+      tick += 1;
+      window.setTimeout(spin, delay);
+    };
+    spin();
   };
 
   const handleBoardDiceRoll = (manualSteps) => {
@@ -570,6 +757,36 @@ export default function GameMain({ onExit }) {
     addToast?.({ message: '환승하지 않고 현재 역에 머무릅니다.', tone: 'success' });
   };
 
+  const handleLifeChange = async (targetId) => {
+    const holderId = state?.pendingLifeChange?.playerId;
+    if (holderId == null || targetId == null || holderId === targetId) return false;
+    const holder = state.players?.[holderId];
+    const target = state.players?.[targetId];
+    const ok = await dialog.confirm({
+      title: '인생체인지',
+      badgeText: `${holder?.name ?? `${holderId + 1}P`} ↔ ${target?.name ?? `${targetId + 1}P`}`,
+      message: '시그니처 색, nP, 캐릭터, 현재 위치는 그대로 두고 현금·부동산·대출·패시브/카드 상태만 맞바꿉니다.',
+      okText: '체인지',
+      cancelText: '취소',
+      tone: 'danger',
+    });
+    if (!ok) return false;
+    let useDefense = false;
+    if ((target?.defenseCards ?? 0) > 0) {
+      useDefense = await dialog.confirm({
+        title: '방어카드',
+        badgeText: `${target?.name ?? `${targetId + 1}P`} 보유 ${(target?.defenseCards ?? 0)}장`,
+        message: '방어카드를 사용해 인생체인지를 막겠습니까?',
+        okText: '방어',
+        cancelText: '그냥 당하기',
+        tone: 'warn',
+      });
+    }
+    const changed = lifeChangeAction?.(holderId, targetId, { useDefense });
+    if (changed) setViewPlayerIndex(null);
+    return changed;
+  };
+
   useEffect(() => {
     if (!state || state.finished || turnPlayer?.controller !== 'ai') return undefined;
     if (boardTurn || diceLocked || aiTurnSummary || hubTeleport || modalProperty || modalTrade || modalTradeSelect || modalEvent || modalYearEnd || modalDeathmatch || modalRecovery || modalLoan) return undefined;
@@ -579,6 +796,40 @@ export default function GameMain({ onExit }) {
     }, 750);
     return () => window.clearTimeout(timer);
   }, [state?.round, state?.turnIndex, turnPlayer?.controller, boardTurn, diceLocked, aiTurnSummary, modalProperty, modalTrade, modalTradeSelect, modalEvent, modalYearEnd, modalDeathmatch, modalRecovery, modalLoan]);
+
+  useEffect(() => {
+    if (!state?.finished) return;
+    setBoardTurn(null);
+    setAiTurnSummary(null);
+    setHubTeleport(null);
+    setPendingPurchase(null);
+    setTurnResult(null);
+    setGlobalNotice(null);
+    setDiceLocked(false);
+    setViewPlayerIndex(null);
+    closePropertyModal?.();
+    closeTradeModal?.();
+    closeTradeSelect?.();
+    closeRecoveryModal?.();
+    closeLoanModal?.();
+    confirmDeathmatch?.();
+  }, [state?.finished]);
+
+  if (state.finished) {
+    return (
+      <>
+        <div className="fixed inset-0 bg-parchment-100" style={{ zIndex: 2147483400 }} />
+        <GameEndOverlay
+          state={state}
+          onRestart={() => {
+            restartSameGame?.();
+          }}
+          onQuit={onExit}
+        />
+        <MatrixToast />
+      </>
+    );
+  }
 
   return (
     <>
@@ -599,6 +850,12 @@ export default function GameMain({ onExit }) {
             loanRate={state.loanRate}
             onStep={handleStep}
             onDiceRoll={runManualDiceMove}
+            diceMode={diceMode}
+            onDiceModeChange={setDiceMode}
+            onAppDiceRoll={rollAppDice}
+            lastDiceRoll={lastDiceRoll}
+            onShowNoticeLog={showNoticeLog}
+            hasNoticeLog={noticeLog.length > 0}
             diceLocked={diceInputLocked}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             turnResult={turnResult}
@@ -607,6 +864,8 @@ export default function GameMain({ onExit }) {
             onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             pendingPurchase={pendingPurchase}
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
+            bgmEnabled={bgmEnabled}
+            onToggleBgm={() => setBgmEnabled((enabled) => !enabled)}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
@@ -622,6 +881,12 @@ export default function GameMain({ onExit }) {
             loanRate={state.loanRate}
             onStep={handleStep}
             onDiceRoll={runManualDiceMove}
+            diceMode={diceMode}
+            onDiceModeChange={setDiceMode}
+            onAppDiceRoll={rollAppDice}
+            lastDiceRoll={lastDiceRoll}
+            onShowNoticeLog={showNoticeLog}
+            hasNoticeLog={noticeLog.length > 0}
             diceLocked={diceInputLocked}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             turnResult={turnResult}
@@ -632,6 +897,8 @@ export default function GameMain({ onExit }) {
             pendingPurchase={pendingPurchase}
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
+            bgmEnabled={bgmEnabled}
+            onToggleBgm={() => setBgmEnabled((enabled) => !enabled)}
           />
         </div>
 
@@ -659,10 +926,12 @@ export default function GameMain({ onExit }) {
             onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             onBack={() => setViewPlayerIndex(null)}
             onOpenLoan={openLoanModal}
+            canLifeChange={state.pendingLifeChange?.playerId != null && viewPlayerIndex !== state.pendingLifeChange.playerId}
+            onLifeChange={() => handleLifeChange(viewPlayerIndex)}
           />
         )}
 
-        {boardTurn && (
+        {!state.finished && boardTurn && (
           <BoardTurnOverlay
             state={state}
             replay={boardTurn}
@@ -671,11 +940,11 @@ export default function GameMain({ onExit }) {
           />
         )}
 
-        {aiTurnSummary && (
+        {!state.finished && aiTurnSummary && (
           <AiTurnSummaryModal summary={aiTurnSummary} onContinue={finishAiTurnSummary} />
         )}
 
-        {showInitialDeal && (
+        {!state.finished && showInitialDeal && (
           <InitialDealOverlay
             players={state.players}
             turnIndex={state.turnIndex}
@@ -683,7 +952,7 @@ export default function GameMain({ onExit }) {
           />
         )}
 
-        {hubTeleport && (
+        {!state.finished && hubTeleport && (
           <HubTeleportModal
             state={state}
             request={hubTeleport}
@@ -693,7 +962,7 @@ export default function GameMain({ onExit }) {
         )}
 
         {/* === MODALS === */}
-        {modalProperty && (
+        {!state.finished && modalProperty && (
           <PropertyModal
             open
             onClose={closePropertyModal}
@@ -702,7 +971,7 @@ export default function GameMain({ onExit }) {
             onBuy={handleBuyProperty}
           />
         )}
-        {modalTrade && (
+        {!state.finished && modalTrade && (
           <TradeModal
             open
             onClose={closeTradeModal}
@@ -711,7 +980,7 @@ export default function GameMain({ onExit }) {
             initialGetPos={modalTrade.initialGetPos}
           />
         )}
-        {modalTradeSelect && (
+        {!state.finished && modalTradeSelect && (
           <TradeSelectModal
             open
             onClose={closeTradeSelect}
@@ -727,7 +996,7 @@ export default function GameMain({ onExit }) {
             affected={modalEvent.affected}
           />
         )}
-        {modalYearEnd && (
+        {!state.finished && modalYearEnd && (
           <YearEndModal
             open
             onClose={confirmYearEnd}
@@ -735,8 +1004,8 @@ export default function GameMain({ onExit }) {
             summary={modalYearEnd.summary}
           />
         )}
-        {modalDeathmatch && <DeathmatchModal open onClose={confirmDeathmatch} />}
-        {modalRecovery && (
+        {!state.finished && modalDeathmatch && <DeathmatchModal open onClose={confirmDeathmatch} />}
+        {!state.finished && modalRecovery && (
           <RecoveryModal
             open
             onClose={closeRecoveryModal}
@@ -744,7 +1013,7 @@ export default function GameMain({ onExit }) {
             needAmount={modalRecovery.needAmount}
           />
         )}
-        {modalLoan && (
+        {!state.finished && modalLoan && (
           <LoanModal
             open
             onClose={closeLoanModal}
@@ -752,16 +1021,11 @@ export default function GameMain({ onExit }) {
           />
         )}
 
-        {state.finished && (
-          <GameEndOverlay
-            state={state}
-            onRestart={() => {
-              restartSameGame?.();
-            }}
-            onQuit={onExit}
-          />
+        <GlobalNoticeBand notice={globalNotice} onDismiss={(item) => { setGlobalNotice(null); item?.action?.(); }} />
+        {cardSettlementPending && turnResult?.kind === 'card' && (
+          <CardRevealOverlay card={turnResult} onReveal={() => handleOpenResultCard(turnResult)} />
         )}
-
+        <PropertyShatterOverlay effect={propertyShatter} state={state} />
         <MatrixToast />
       </div>
     </>
@@ -769,6 +1033,191 @@ export default function GameMain({ onExit }) {
 }
 
 
+
+function CardRevealOverlay({ card, onReveal }) {
+  const [flipped, setFlipped] = useState(false);
+  if (!card || typeof document === 'undefined') return null;
+  const layer = (
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-ink/66 p-3 backdrop-blur-[5px]"
+      style={{ zIndex: 2147483250, touchAction: 'none' }}
+      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+    >
+      <div className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] p-4 text-center shadow-[0_6px_0_#0F0C0A,0_24px_52px_rgba(0,0,0,0.55)]">
+        <div className="font-display text-[10px] font-black uppercase tracking-[0.26em] text-ink/46">card reveal</div>
+        <div className="mt-1 font-board text-[28px] leading-none text-ink">카드를 뒤집어주세요</div>
+        <div className="mt-1 font-board text-[15px] text-ink/58">무슨 카드가 나올까요?</div>
+        <button
+          type="button"
+          onClick={() => setFlipped(true)}
+          className="mx-auto mt-4 block [perspective:1100px]"
+        >
+          <motion.div
+            className="relative h-[360px] w-[260px] rounded-2xl [transform-style:preserve-3d]"
+            animate={{ rotateY: flipped ? 180 : 0, y: flipped ? 0 : [0, -4, 0], rotate: flipped ? 0 : [-1.2, 1.2, -1.2] }}
+            transition={{ rotateY: { type: 'spring', stiffness: 210, damping: 22 }, y: { duration: 0.9, repeat: flipped ? 0 : Infinity }, rotate: { duration: 1.1, repeat: flipped ? 0 : Infinity } }}
+          >
+            <div className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[linear-gradient(135deg,#20324d_0%,#51244b_54%,#d6a94b_100%)] text-white shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden]">
+              <div className="grid h-[240px] w-[176px] place-items-center rounded-2xl border-[3px] border-white/45 bg-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
+                <div>
+                  <div className="text-[76px] leading-none">🎴</div>
+                  <div className="mt-3 font-board text-[34px] leading-none">카드<br />뒤집기</div>
+                  <div className="mt-3 font-display text-[9px] font-black uppercase tracking-[0.2em] text-white/64">tap to reveal</div>
+                </div>
+              </div>
+            </div>
+            <div className="absolute inset-0 overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[#fffaf0] text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+              {card?.cardKind ? (
+                <CardArtwork type={card.cardKind} id={String(card.cardId ?? card.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
+              ) : (
+                <div className="absolute inset-0 grid place-items-center bg-[#fffaf0] text-[84px]">{card.icon ?? '🎴'}</div>
+              )}
+              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.94)_100%)] px-4 pb-4 pt-16 text-white">
+                <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/66">{card.cardKind ?? 'card'}</div>
+                <div className="mt-1 font-board text-[30px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{card.cardName ?? card.title ?? '카드 공개'}</div>
+                <div className="mt-2 font-board text-[16px] leading-snug text-white/88">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
+              </div>
+            </div>
+          </motion.div>
+        </button>
+        <button
+          type="button"
+          onClick={onReveal}
+          disabled={!flipped}
+          className="mt-5 h-13 min-h-[52px] w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_55%,#f1b84d_100%)] font-board text-[22px] text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45 disabled:grayscale"
+        >
+          {flipped ? '카드 확인 · 정산 공개' : '먼저 카드를 뒤집어주세요'}
+        </button>
+      </div>
+    </div>
+  );
+  return createPortal(layer, document.body);
+}
+
+function PropertyShatterOverlay({ effect, state }) {
+  if (!effect || typeof document === 'undefined') return null;
+  const tile = state?.board?.tiles?.[effect.pos];
+  const title = tile?.names?.ko ?? tile?.name ?? '권리증';
+  const pieces = Array.from({ length: 18 }, (_, idx) => {
+    const col = idx % 6;
+    const row = Math.floor(idx / 6);
+    const angle = -90 + idx * 11;
+    const distance = 120 + ((idx * 37) % 90);
+    return { idx, col, row, x: Math.cos(angle * Math.PI / 180) * distance, y: Math.sin(angle * Math.PI / 180) * distance + 30, r: -160 + ((idx * 47) % 320) };
+  });
+  const layer = (
+    <div className="pointer-events-none fixed inset-0 flex items-center justify-center" style={{ zIndex: 2147483200 }}>
+      <div className="absolute inset-0 bg-black/18 backdrop-blur-[1px]" />
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="relative h-[240px] w-[190px]"
+      >
+        <motion.div
+          className="absolute left-1/2 top-1/2 z-10 w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-xl border-[4px] border-red-950 bg-red-600 px-4 py-2 text-center font-board text-3xl text-white shadow-[0_5px_0_#0F0C0A,0_0_30px_rgba(220,38,38,0.62)]"
+          initial={{ scale: 0.7, rotate: -8, opacity: 0 }}
+          animate={{ scale: [0.7, 1.12, 1], rotate: [-8, 3, -2], opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 0.95, times: [0, 0.18, 0.7, 1] }}
+        >
+          파괴!
+          <div className="mt-1 truncate font-display text-[10px] font-black uppercase tracking-[0.18em]">{title}</div>
+        </motion.div>
+        <motion.div
+          className="absolute inset-0 overflow-hidden rounded-xl border-[3px] border-ink-line bg-white shadow-[0_5px_0_#0F0C0A]"
+          initial={{ opacity: 1, scale: 1 }}
+          animate={{ opacity: [1, 1, 0], scale: [1, 0.98, 0.9] }}
+          transition={{ duration: 0.38, times: [0, 0.5, 1] }}
+        >
+          <PropertyDeedMini pos={effect.pos} />
+        </motion.div>
+        {pieces.map((piece) => (
+          <motion.div
+            key={`${effect.id}-${piece.idx}`}
+            className="absolute left-1/2 top-1/2 overflow-hidden rounded-sm border border-ink/20 bg-white shadow-[0_2px_5px_rgba(0,0,0,0.28)]"
+            style={{ width: 32, height: 44 }}
+            initial={{ x: -16, y: -22, rotate: 0, opacity: 0 }}
+            animate={{ x: piece.x, y: piece.y, rotate: piece.r, opacity: [0, 1, 1, 0] }}
+            transition={{ duration: 0.95, delay: 0.12 + piece.idx * 0.006, ease: 'easeOut' }}
+          >
+            <div
+              className="h-[240px] w-[190px]"
+              style={{ transform: `translate(${-piece.col * 32}px, ${-piece.row * 44}px)` }}
+            >
+              <PropertyDeedMini pos={effect.pos} />
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  );
+  return createPortal(layer, document.body);
+}
+
+function GlobalNoticeBand({ notice, onDismiss }) {
+  if (!notice || typeof document === 'undefined') return null;
+  const amount = Number(notice.amount);
+  const showAmount = Number.isFinite(amount) && amount !== 0;
+  const layer = (
+    <div
+      className="pointer-events-auto fixed inset-0 flex items-center justify-center px-3"
+      style={{ zIndex: 2147483000, touchAction: 'none' }}
+      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); onDismiss?.(notice); }}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+    >
+      <motion.div
+        key={`${notice.kind}-${notice.title}-${notice.text}`}
+        initial={{ opacity: 0, scale: 0.96, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: -10 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      >
+        <div
+          className={cn('mx-auto grid overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[38px_1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[30vh] max-w-[980px] grid-rows-[42px_1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
+          style={notice.kind === 'dice' && notice.color ? { boxShadow: `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${notice.color}aa, 0 0 42px ${notice.color}99, inset 0 0 28px ${notice.color}22` } : undefined}
+        >
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/18 bg-black/22 px-3 font-board text-[clamp(14px,2vw,22px)] leading-none text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
+            {notice.kind === 'buy' ? <img src="/ui/host-mic.jpg" alt="" className="h-10 w-10 rounded-full border border-emerald-200/70 object-cover object-top shadow-[0_0_18px_rgba(80,255,160,0.45)]" draggable={false} /> : <span className="text-[1.15em]">🎙️</span>}
+            <span className={cn('font-display text-[10px] font-black uppercase tracking-[0.24em]', notice.kind === 'buy' ? 'text-emerald-200' : 'text-monopoly-gold/86')}>{notice.speaker ?? 'NPC'}</span>
+            <span className="truncate">{notice.text}</span>
+          </div>
+          {notice.kind === 'buy' && notice.previewPos != null ? (
+            <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
+              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] border-emerald-200 bg-white shadow-[0_5px_0_#0F0C0A,0_0_24px_rgba(80,255,160,0.35)]">
+                <PropertyDeedMini pos={notice.previewPos} />
+              </div>
+              <div className="min-w-0 text-center sm:text-left">
+                <div className="flex items-center justify-center gap-3 sm:justify-start">
+                  <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🏠'}</motion.span>
+                  <div className="font-board text-[clamp(30px,5vw,62px)] leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
+                </div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,28px)] leading-tight text-white/92">{notice.text}</div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#bff7d8_48%,#22c55e_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
+                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-0 items-center justify-center gap-3">
+              <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
+              <div className="min-w-0">
+                <div className={cn('font-board leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', notice.subtle ? 'text-[clamp(24px,4.2vw,46px)]' : 'text-[clamp(30px,6vw,74px)]')}>{notice.title}</div>
+                <div className={cn('mt-1 line-clamp-1 font-display font-black uppercase tracking-[0.18em] text-monopoly-gold/78', notice.subtle ? 'text-[10px]' : 'text-[12px]')}>{notice.cta ?? 'tap to close'}</div>
+              </div>
+            </div>
+          )}
+          <div className={cn('flex items-start justify-center gap-3 font-board', notice.subtle ? 'hidden' : 'text-[clamp(18px,3vw,34px)]')}>
+            {showAmount && <span className={amount >= 0 ? 'text-emerald-200' : 'text-red-200'}>{signedMoney(amount)}</span>}
+            {notice.cash != null && <span className="text-monopoly-gold">내 예금 {Number(notice.cash).toLocaleString('ko-KR')}만</span>}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+  return createPortal(layer, document.body);
+}
 
 function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos }) {
   const tile = state?.board?.tiles?.[endPos ?? arrival?.pos];
@@ -783,9 +1232,10 @@ function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPo
   }
   if (arrival?.kind === 'arrive_station') return `${tileName} 적립금 ${arrival.collected ?? 0}만 수령 · 새 역장 부임`;
   if (arrival?.kind === 'parking_jackpot') return `무료주차 적립금 ${arrival.amt ?? 0}만 수령`;
-  if (arrival?.kind === 'go_to_jail') return `${playerName}님 감옥 이동 · ${JAIL_TURNS}턴 출소 시도`;
+  if (arrival?.kind === 'go_to_jail') return `${playerName}님 감옥 수감 · 다음 차례부터 최대 ${JAIL_TURNS}턴 출소 시도`;
+  if (events?.some((event) => event.kind === 'three_doubles_jail')) return `${playerName}님 3연속 더블 · 감옥 수감 · 최대 ${JAIL_TURNS}턴 출소 시도`;
   if (arrival?.kind === 'income_tax' || arrival?.kind === 'luxury_tax') return `${tileName} ${arrival.amt ?? 0}만 납부`;
-  if (arrival?.card) return `${tileName} 카드 도착 · ${arrival.card}`;
+  if (arrival?.card || arrival?.kind === 'chance_draw' || arrival?.kind === 'welfare_draw' || arrival?.kind === 'event_card') return `${tileName} 카드 도착 · 카드를 뒤집어보세요`;
   return `${playerName}님 ${tileName} 도착`;
 }
 
@@ -826,7 +1276,7 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
         pushMoney(event.kind === 'luxury_tax' ? '사치세' : '소득세', -event.amt);
         break;
       case 'chance_draw':
-        pushMoney(`복지카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? 0, { showZero: event.upgraded != null || event.delta == null });
+        pushMoney(`찬스카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? 0, { showZero: event.upgraded != null || event.delta == null });
         break;
       case 'welfare_draw':
         pushMoney(`복지카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? event.allDelta ?? event.collected ?? 0, { showZero: event.upgraded != null });
@@ -958,7 +1408,7 @@ function AiTurnSummaryModal({ summary, onContinue }) {
   );
 }
 
-function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing, turnResult, diceLocked, onDiceRoll, onUnlockDice, onOpenResultCard, onOpenBoard, onBack, onOpenLoan }) {
+function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing, turnResult, diceLocked, onDiceRoll, onUnlockDice, onOpenResultCard, onOpenBoard, onBack, onOpenLoan, canLifeChange = false, onLifeChange }) {
   const player = state.players[playerIndex];
   const current = state.players[currentIndex];
   const base = CHAR_META[player?.character] ?? { name: `${playerIndex + 1}P`, color: '#D32F2F' };
@@ -980,13 +1430,24 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
               <div className="font-board text-[15px] font-extrabold leading-none text-ink">{playerIndex + 1}P · {name}</div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onBack}
-            className="shrink-0 rounded-md border-2 border-ink-line bg-monopoly-red px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
-          >
-            돌아가기
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {canLifeChange && (
+              <button
+                type="button"
+                onClick={onLifeChange}
+                className="rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#ffcf4a_100%)] px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-ink shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
+              >
+                체인지
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-md border-2 border-ink-line bg-monopoly-red px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
+            >
+              돌아가기
+            </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 p-2">
           <CurrentPlayerStage
@@ -1033,15 +1494,23 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
       : replay.phase === 'moving'
         ? `${startName} → ${endName}`
         : replay.phase === 'arrived'
-          ? (replay.card ? '카드를 뒤집어보세요!' : `실제 말을 ${endName}(으)로 옮겨주세요`)
+          ? `${endName} 도착`
           : '보드판 확인';
 
   const closeOnTouch = replay.phase !== 'ready';
+  const cameraGrid = boardGridStyle(pos);
+  const cameraCol = Number(cameraGrid.gridColumn) || 6;
+  const cameraRow = Number(cameraGrid.gridRow) || 6;
+  const cameraActive = ['moving', 'arrived'].includes(replay.phase);
+  const cameraZoom = cameraActive ? 1.28 : 1;
+  const cameraX = cameraActive ? (6 - cameraCol) * 7.1 : 0;
+  const cameraY = cameraActive ? (6 - cameraRow) * 7.1 : 0;
 
   return (
     <div
       className="board-turn-layer fixed z-[85] flex items-center justify-center bg-transparent p-2"
-      onPointerDown={closeOnTouch ? onClose : undefined}
+      onPointerDown={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.stopPropagation(); }}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
       <div className="board-turn-shell relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border-[3px] border-[#17120c] bg-[#efe1bb] shadow-[0_6px_0_#17120c,0_22px_44px_-24px_rgba(0,0,0,0.85)]">
         <div className="flex items-center justify-between border-b-[3px] border-[#17120c] bg-[linear-gradient(180deg,#fff7df_0%,#e4c47a_100%)] px-3 py-2">
@@ -1049,13 +1518,19 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
             <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/55">board turn</div>
             <div className="font-board text-xl leading-none text-ink">{player?.name || `${(replay.playerId ?? 0) + 1}P`} 차례</div>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg border-2 border-ink-line bg-white px-3 py-1.5 font-board text-base text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-1 active:shadow-none">
-            스테이지로 돌아가기
-          </button>
+          <div className="rounded-lg border-2 border-ink-line bg-white/80 px-3 py-1.5 font-board text-base text-ink/70 shadow-[0_2px_0_#0F0C0A]">
+            {closeOnTouch ? '화면 터치로 닫기' : '중앙 주사위판 선택'}
+          </div>
         </div>
 
-        <div className="relative min-h-0 p-2">
-          <div className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-[3px] border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.18)]">
+        <div className="relative min-h-0 overflow-hidden p-2">
+          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border-2 border-ink-line bg-black/62 px-4 py-1.5 font-board text-[18px] text-white shadow-[0_3px_0_#0F0C0A]">
+            {replay.phase === 'moving' ? '카메라 이동 중' : replay.phase === 'arrived' ? `${endName} 도착` : phaseText}
+          </div>
+          <div
+            className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-[3px] border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.18)] will-change-transform"
+            style={{ transform: `translate(${cameraX}%, ${cameraY}%) scale(${cameraZoom})`, transition: replay.phase === 'moving' ? 'transform 190ms cubic-bezier(.2,.8,.2,1)' : 'transform 360ms ease-out' }}
+          >
             {tiles.map((tile) => {
               const grid = boardGridStyle(tile.pos);
               const isActive = tile.pos === pos;
@@ -1075,7 +1550,8 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                   <div className={cn('board-turn-tile-name', isCenterSpecial && 'board-turn-tile-name-special')} title={tile.names?.ko ?? tile.name ?? String(tile.pos)}>{isCenterSpecial ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
                   <div className="board-turn-pieces">
                     {state.players.map((piecePlayer, pieceIndex) => {
-                      if ((piecePlayer.position ?? 0) !== tile.pos || piecePlayer.bankrupt) return null;
+                      const renderPos = pieceIndex === replay.playerId ? pos : (piecePlayer.position ?? 0);
+                      if (renderPos !== tile.pos || piecePlayer.bankrupt) return null;
                       const pieceColor = CHAR_META[piecePlayer.character]?.color ?? '#d83b2f';
                       return (
                         <div
@@ -1092,9 +1568,9 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                 </div>
               );
             })}
-            <div className="col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-[3px] border-[#17120c] bg-[radial-gradient(circle_at_50%_35%,#fff7df_0%,#ecd08d_52%,#ba7a36_100%)] p-2 text-center shadow-[inset_0_3px_0_rgba(255,255,255,0.52)]">
+            <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-[3px] border-[#17120c] bg-[radial-gradient(circle_at_50%_35%,#fff7df_0%,#ecd08d_52%,#ba7a36_100%)] p-2 text-center shadow-[inset_0_3px_0_rgba(255,255,255,0.52)]', cameraActive && 'opacity-45')}>
               <div className="space-y-3">
-                <div className="font-board text-2xl text-ink">{phaseText}</div>
+                {replay.phase === 'ready' && <div className="font-board text-2xl text-ink">{phaseText}</div>}
                 {replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
@@ -1106,17 +1582,10 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                 ) : replay.phase === 'inspect' ? (
                   <div className="font-board text-lg text-ink/62">한 번 터치하면 닫기</div>
                 ) : (
-                  <div className={cn('board-turn-manual-result', replay.phase === 'rolling' && 'is-rolling')}>
+                  <div className={cn('board-turn-manual-result scale-75', replay.phase === 'rolling' && 'is-rolling')}>
                     {rollSum ?? replay.manualSteps ?? '?'}
                   </div>
                 )}
-                {replay.phase === 'arrived' && (
-                  <div className="rounded-2xl border-2 border-[#17120c] bg-white/92 px-4 py-3 font-board text-lg leading-snug text-ink shadow-[0_3px_0_#17120c]">
-                    <div className="text-[21px] text-monopoly-red">{endName} 도착</div>
-                    <span className="text-base text-ink/55">상세 결과는 토스트와 스테이지 정산에 표시됩니다.</span>
-                  </div>
-                )}
-
               </div>
             </div>
           </div>
@@ -1138,6 +1607,13 @@ function boardGridStyle(pos) {
   return { gridRow: pos - 29, gridColumn: 11 };
 }
 
+function boardDirection(pos) {
+  if (pos <= 10) return 0;
+  if (pos <= 20) return 1;
+  if (pos <= 30) return 2;
+  return 3;
+}
+
 function diceFace(n) {
   return String(n);
 }
@@ -1154,7 +1630,7 @@ function specialTileContent(tile) {
   if (tile?.type === 'free_parking') return make('🅿️', '무료주차');
   if (tile?.type === 'jail') return make('🚓', '감옥');
   if (tile?.type === 'go_to_jail') return make('🚔', '감옥행');
-  if (tile?.type === 'chance') return make('🎴', '찬스');
+  if (tile?.type === 'chance') return make('💡', '찬스');
   if (tile?.type === 'community_chest') return make('🎁', '복지');
   if (tile?.type === 'tax') return tile.taxKind === 'luxury' ? make('💎', '사치세') : make('🧾', '소득세');
   return name;
@@ -1288,13 +1764,13 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
   const winnerTeam = state.winnerTeam ?? teamRanking[0]?.team;
   const winnerTeamName = winnerTeam === 'ai' ? 'AI팀' : '플레이어팀';
 
-  return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/60 backdrop-blur-[5px] p-4">
+  const overlay = (
+    <div className="fixed inset-0 flex items-center justify-center bg-ink/72 p-3 backdrop-blur-[5px]" style={{ zIndex: 2147483500 }}>
       <motion.div
         initial={{ y: 20, opacity: 0, scale: 0.96 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-        className="w-[min(92vw,560px)] overflow-hidden rounded-lg border-[3px] border-ink-line bg-parchment-50 shadow-[0_5px_0_0_#0F0C0A,0_18px_38px_-12px_rgba(0,0,0,0.7)]"
+        className="flex max-h-[94dvh] w-[min(94vw,620px)] flex-col overflow-hidden rounded-lg border-[3px] border-ink-line bg-parchment-50 shadow-[0_5px_0_0_#0F0C0A,0_18px_38px_-12px_rgba(0,0,0,0.7)]"
       >
         <div className="bg-[linear-gradient(180deg,#d83b2f_0%,#a61f1a_100%)] px-5 py-4 text-center text-white">
           <div className="font-display text-[10px] font-extrabold uppercase tracking-[0.32em] opacity-80">
@@ -1308,7 +1784,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
           </div>
         </div>
 
-        <div className="space-y-2 px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4 no-scrollbar">
           {teamMode && (
             <div className="mb-3 grid grid-cols-2 gap-2">
               {teamRanking.map((team, idx) => (
@@ -1379,7 +1855,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
           })}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 border-t-2 border-ink-line bg-parchment-100 px-5 py-4">
+        <div className="grid shrink-0 grid-cols-2 gap-2 border-t-2 border-ink-line bg-parchment-100 px-5 py-4">
           <button
             type="button"
             onClick={onQuit}
@@ -1398,6 +1874,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
       </motion.div>
     </div>
   );
+  return typeof document === 'undefined' ? overlay : createPortal(overlay, document.body);
 }
 
 // === 이벤트 라벨 / 정산 유틸 ===
