@@ -1899,11 +1899,11 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
                 시작하기
               </button>
               <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+150px)] z-30 w-[min(58vw,420px)] -translate-x-1/2 px-3 py-2 text-center">
-                <div className="flex items-center justify-between font-display text-[8px] font-black uppercase tracking-[0.22em] text-[#f6d58b]/90">
-                  <span>Loading map</span>
-                  <span>RealLife III</span>
+                <div className="flex items-center justify-between font-display text-[8px] font-black uppercase tracking-[0.22em] text-[#9ff6ff]/90">
+                  <span>Charging portal essence</span>
+                  <span className="initial-start-loading-percent">100%</span>
                 </div>
-                <div className="initial-start-loading-bar mt-1.5 h-[13px] overflow-hidden rounded-[3px] border border-[#2b1708] bg-[#120906] shadow-[inset_0_1px_3px_rgba(0,0,0,0.78),0_1px_0_rgba(255,224,149,0.26)]">
+                <div className="initial-start-loading-bar mt-1.5 h-[14px] overflow-hidden rounded-[3px] border border-[#103849] bg-[#061018] shadow-[inset_0_1px_3px_rgba(0,0,0,0.78),0_1px_0_rgba(166,245,255,0.22)]">
                   <div className="initial-start-loading-fill h-full" />
                 </div>
               </div>
