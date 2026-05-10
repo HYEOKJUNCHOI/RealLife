@@ -62,6 +62,7 @@ const displayPlayerName = (player, fallback) => {
   return name && name !== player?.character ? name : fallback;
 };
 const tileNameForPos = (state, pos) => state?.board?.tiles?.[pos]?.names?.ko ?? state?.board?.tiles?.[pos]?.name ?? '도착한 땅';
+const fmt = (n) => Math.round(n ?? 0).toLocaleString('ko-KR');
 
 export default function GameMain({ onExit }) {
   const state = useGameStore((s) => s.state);
@@ -1734,7 +1735,9 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
             })}
             <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
-                {replay.phase === 'arrived' ? null : replay.phase === 'ready' ? (
+                {replay.phase === 'arrived' ? (
+                  <BoardArrivalCard state={state} pos={replay.endPos ?? pos} playerColor={playerColor} />
+                ) : replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
                       <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
@@ -1754,6 +1757,58 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
 
       </div>
     </div>
+  );
+}
+
+function BoardArrivalCard({ state, pos, playerColor = '#d83b2f' }) {
+  const tile = state?.board?.tiles?.[pos];
+  if (!tile) return null;
+  const ts = state.tileState?.[pos] ?? {};
+  const owner = Number.isInteger(ts.owner) ? state.players?.[ts.owner] : null;
+  const ownerMeta = owner ? CHAR_META[owner.character] : null;
+  const name = tile.names?.ko ?? tile.name ?? `${pos}번 칸`;
+  const isProperty = tile.type === 'property';
+  const isStation = tile.type === 'railroad' && tile.subType === 'station';
+  const isCard = tile.type === 'chance' || tile.type === 'community_chest';
+  const color = tile.color ?? (isStation ? '#2f75c9' : isCard ? '#7c3aed' : playerColor);
+  const subtitle = isProperty
+    ? `구매가 ${fmt(tile.price ?? 0)}만`
+    : isStation
+      ? `역 적립금 ${fmt(ts.fund ?? 0)}만`
+      : tile.type === 'tax'
+        ? '세금 정산 칸'
+        : isCard
+          ? (tile.type === 'chance' ? '찬스 카드 칸' : '일상 카드 칸')
+          : `${pos}번 칸`;
+
+  return (
+    <motion.div
+      className="board-arrival-card-slot mx-auto w-[min(52vw,250px)] rounded-2xl border-[3px] border-[#17120c] bg-[#fff7df] p-2 text-ink shadow-[0_6px_0_#17120c,0_16px_34px_rgba(0,0,0,0.32)]"
+      initial={{ y: 18, scale: 0.84, opacity: 0, rotate: -2 }}
+      animate={{ y: 0, scale: 1, opacity: 1, rotate: 0 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+    >
+      <div className="font-display text-[8px] font-black uppercase tracking-[0.22em] text-ink/42">arrival card</div>
+      <div className="mt-1 h-[235px] overflow-hidden rounded-xl border-2 border-[#17120c] bg-white p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        {isProperty ? (
+          <PropertyDeedMini pos={pos} className="scale-[0.98]" />
+        ) : (
+          <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border-2 border-[#17120c] bg-[#fffaf0]">
+            <div className="h-14 border-b-2 border-[#17120c]" style={{ background: `linear-gradient(135deg, ${color}, #fff2a8)` }} />
+            <div className="flex flex-1 flex-col items-center justify-center px-3 text-center">
+              <div className="grid h-16 w-16 place-items-center rounded-full border-2 border-[#17120c] bg-white text-[34px] shadow-[0_3px_0_#17120c]">
+                {isStation ? '🚉' : tile.type === 'chance' ? '💡' : tile.type === 'community_chest' ? '🏠' : tile.type === 'tax' ? '💸' : '📍'}
+              </div>
+              <div className="mt-4 font-board text-[28px] leading-none">{name}</div>
+              <div className="mt-2 font-board text-[15px] text-ink/62">{subtitle}</div>
+              {owner && <div className="mt-3 rounded-full border-2 border-[#17120c] bg-white px-3 py-1 font-board text-[13px]" style={{ color: ownerMeta?.color ?? color }}>{owner.name ?? `${ts.owner + 1}P`} 소유</div>}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 font-board text-[18px] leading-none" style={{ color }}>{name}</div>
+      <div className="mt-1 font-display text-[8px] font-black uppercase tracking-[0.18em] text-ink/44">터치하면 닫기</div>
+    </motion.div>
   );
 }
 
