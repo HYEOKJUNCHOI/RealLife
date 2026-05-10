@@ -87,7 +87,7 @@ export const CATEGORY_LABEL = {
   skyline: '컬러셋 스카이라인',
   'card.event': '이벤트 카드',
   'card.chance': '찬스 카드',
-  'card.welfare': '복지 카드',
+  'card.welfare': '일상 카드',
   icon: 'UI 아이콘',
   brand: '브랜딩',
 };

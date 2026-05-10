@@ -606,10 +606,10 @@ export default function GameMain({ onExit }) {
             : `${cardEvent.card ?? '카드'} · ${cardEvent.description ?? '카드 효과'}`;
       const eventCardKinds = new Set(['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate']);
       const isEventCard = cardEvent.kind === 'event_card' || (cardEvent.card && eventCardKinds.has(cardEvent.kind));
-      const cardTitle = cardEvent.kind === 'welfare_draw' ? '복지 카드' : isEventCard ? '이벤트 카드' : '찬스 카드';
+      const cardTitle = cardEvent.kind === 'welfare_draw' ? '일상 카드' : isEventCard ? '이벤트 카드' : '찬스 카드';
       const cardKind = cardEvent.kind === 'welfare_draw' ? 'welfare' : isEventCard ? 'event' : 'chance';
       const cardId = isEventCard ? cardEvent.kind : (cardEvent.cardId ?? cardEvent.kind);
-      return { kind: 'card', title: `${cardTitle} 도착`, cardName: cardEvent.card ?? cardEvent.description ?? cardTitle, revealText: cardText, text: '카드를 뒤집어야 결과가 공개됩니다.', icon: cardEvent.kind === 'welfare_draw' ? '🎁' : isEventCard ? '⚡' : '💡', cardKind, cardId, eventId: cardEvent.kind, rawEvent: cardEvent };
+      return { kind: 'card', title: `${cardTitle} 도착`, cardName: cardEvent.card ?? cardEvent.description ?? cardTitle, revealText: cardText, text: '카드를 뒤집어야 결과가 공개됩니다.', icon: cardEvent.kind === 'welfare_draw' ? '🏠' : isEventCard ? '🌪️' : '💡', cardKind, cardId, eventId: cardEvent.kind, rawEvent: cardEvent };
     }
     const taxEvent = events.find((event) => event.kind === 'income_tax' || event.kind === 'luxury_tax');
     if (taxEvent) return { kind: 'tax', title: taxEvent.kind === 'luxury_tax' ? '사치세' : '소득세', text: `${taxEvent.amt ?? taxEvent.amount ?? 0}만 납부`, icon: taxEvent.kind === 'luxury_tax' ? '💎' : '🧾' };
@@ -1100,9 +1100,9 @@ export default function GameMain({ onExit }) {
 
 
 const CARD_REVEAL_TONE = {
-  chance: { label: 'Chance', from: '#182C62', mid: '#4E2F8F', to: '#D7A83E', glow: 'rgba(91,141,255,0.5)' },
-  welfare: { label: 'Welfare', from: '#0F5F5A', mid: '#138C75', to: '#D9B650', glow: 'rgba(42,230,174,0.44)' },
-  event: { label: 'Event', from: '#4B121A', mid: '#8B1F2E', to: '#F2B84B', glow: 'rgba(255,80,80,0.48)' },
+  chance: { label: 'Chance', mark: '💡', from: '#090A0D', mid: '#181A20', to: '#C89421', glow: 'rgba(255,211,77,0.52)' },
+  welfare: { label: 'Daily', mark: '🏠', from: '#EAF8F2', mid: '#7BC9B1', to: '#245D5E', glow: 'rgba(82,211,178,0.42)' },
+  event: { label: 'Event', mark: '🌪️', from: '#100D24', mid: '#392365', to: '#7B4CE0', glow: 'rgba(139,92,246,0.54)' },
 };
 
 function CardRevealOverlay({ card, onReveal }) {
@@ -1143,7 +1143,7 @@ function CardRevealOverlay({ card, onReveal }) {
               <div className="absolute -right-14 bottom-8 h-40 w-40 rounded-full border-[16px] border-black/10" />
               <div className="relative grid h-[250px] w-[184px] place-items-center rounded-2xl border-[3px] border-white/45 bg-black/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_8px_rgba(255,255,255,0.05)]">
                 <div className="text-center">
-                  <div className="mx-auto grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/52 bg-white/13 font-display text-[32px] font-black tracking-[-0.12em] shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_7px_0_rgba(15,12,10,0.35)]">RL</div>
+                  <div className="mx-auto grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/52 bg-white/13 text-[38px] shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_7px_0_rgba(15,12,10,0.35)]">{tone.mark}</div>
                   <div className="mt-5 font-display text-[11px] font-black uppercase tracking-[0.34em] text-white/70">The RealLife</div>
                   <div className="mt-2 font-board text-[36px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
                   <div className="mx-auto mt-4 h-px w-24 bg-white/35" />
@@ -1403,7 +1403,7 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
         pushMoney(`찬스카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? 0, { showZero: event.upgraded != null || event.delta == null });
         break;
       case 'welfare_draw':
-        pushMoney(`복지카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? event.allDelta ?? event.collected ?? 0, { showZero: event.upgraded != null });
+        pushMoney(`일상카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? event.allDelta ?? event.collected ?? 0, { showZero: event.upgraded != null });
         break;
       case 'event_card':
         pushMoney(`이벤트카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.sale ?? 0, { showZero: true });
@@ -1738,7 +1738,7 @@ function specialTileContent(tile) {
   if (tile?.type === 'jail') return make('🚓', '감옥');
   if (tile?.type === 'go_to_jail') return make('🚔', '감옥행');
   if (tile?.type === 'chance') return make('💡', '찬스');
-  if (tile?.type === 'community_chest') return make('🎁', '복지');
+  if (tile?.type === 'community_chest') return make('🏠', '일상');
   if (tile?.type === 'tax') return tile.taxKind === 'luxury' ? make('💎', '사치세') : make('🧾', '소득세');
   return name;
 }
@@ -2151,7 +2151,7 @@ function buildTurnBriefing(turn, state) {
         push(`찬스카드 ${event.card} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? 0, { showZero: event.upgraded != null || event.delta == null });
         break;
       case 'welfare_draw':
-        push(`복지카드 ${event.card} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? event.allDelta ?? event.collected ?? 0, { showZero: event.upgraded != null });
+        push(`일상카드 ${event.card} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? event.allDelta ?? event.collected ?? 0, { showZero: event.upgraded != null });
         break;
       case 'event_card':
         push(`이벤트카드 ${event.card} · ${event.effectText ?? event.description ?? ''}`.trim(), event.sale ?? 0, { showZero: true });
