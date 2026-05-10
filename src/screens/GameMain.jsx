@@ -385,8 +385,8 @@ export default function GameMain({ onExit }) {
 
   const hostLine = useMemo(() => {
     if (showInitialDeal) return '권리증을 나눠드리는 중입니다.';
-    if (pendingPurchase) return '이 땅을 매입할까요? 권리증을 보고 결정하세요.';
-    if (turnResult?.kind === 'buy') return '이 땅을 매입할까요? 권리증을 보고 결정하세요.';
+    if (pendingPurchase) return `${tileNameForPos(state, pendingPurchase.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`;
+    if (turnResult?.kind === 'buy') return `${tileNameForPos(state, turnResult.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`;
     if (turnResult?.kind === 'rent') return `${turnResult.ownerName ?? '소유자'}님의 땅입니다. 통행료 ${turnResult.amount ?? 0}만을 지불합니다.`;
     if (turnResult?.kind === 'tax') return `${turnResult.title ?? '세금'} ${turnResult.amount ?? ''}만을 납부합니다.`;
     if (turnResult?.kind === 'bought') return '매입 완료! 내 권리증 슬롯에 추가됐습니다.';
@@ -400,7 +400,7 @@ export default function GameMain({ onExit }) {
     }
     if (turnBriefing) return '이번 턴 정산을 확인하세요.';
     return summarizeEvent(last);
-  }, [showInitialDeal, pendingPurchase, turnResult?.kind, turnBriefing, log]);
+  }, [showInitialDeal, pendingPurchase, turnResult?.kind, turnResult?.pos, turnBriefing, log, state]);
 
   if (!state) {
     return (
@@ -592,7 +592,10 @@ export default function GameMain({ onExit }) {
   };
 
   const summarizeTurnResult = (events, playerId, pendingBuy) => {
-    if (pendingBuy) return { kind: 'buy', title: '매입 가능', text: `${pendingBuy.tileName ?? '도착한 땅'} 매입`, icon: '🏠', pos: pendingBuy.pos, visitorId: playerId };
+    if (pendingBuy) {
+      const tileName = tileNameForPos(state, pendingBuy.pos);
+      return { kind: 'buy', title: '매입 가능', text: `${tileName}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`, icon: '🏠', pos: pendingBuy.pos, visitorId: playerId, tileName };
+    }
     const jailSent = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
     if (jailSent) {
       const reason = jailSent.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸 도착';
@@ -690,8 +693,8 @@ export default function GameMain({ onExit }) {
         pushGlobalNotice({
           kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : 'card_arrival',
           speaker: pendingBuy ? '중개 NPC' : '사회자',
-          title: pendingBuy ? '매입할까요?' : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
-          text: pendingBuy ? '권리증을 확인하고 매입 여부를 결정하세요.' : isCardArrival ? '무슨 카드가 나올까요?' : (toastMessage ?? '감옥으로 이동합니다.'),
+          title: pendingBuy ? '구매할까요?' : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
+          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?` : isCardArrival ? '무슨 카드가 나올까요?' : (toastMessage ?? '감옥으로 이동합니다.'),
           icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : '💡',
           cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
           previewPos: pendingBuy?.pos,
