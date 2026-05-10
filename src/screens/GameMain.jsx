@@ -691,7 +691,24 @@ export default function GameMain({ onExit }) {
       const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
       const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
       const stationEvent = events.find((event) => event.kind === 'arrive_station');
+      const propertyEvent = events.find((event) => event.kind === 'arrive_property');
       const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
+      if (propertyEvent && !pendingBuy && !rentEvent && !isCardArrival && !jailNotice) {
+        const propertyName = tileNameForPos(state, propertyEvent.pos ?? endPos);
+        const isOwn = propertyEvent.type === 'own';
+        const isMortgaged = propertyEvent.type === 'mortgaged';
+        pushGlobalNotice({
+          kind: 'property',
+          speaker: '사회자',
+          hostText: isOwn ? `${playerName}님, ${propertyName}에 도착했습니다. 여긴 이미 내 땅입니다 🏠` : `${playerName}님, ${propertyName}에 도착했습니다. 권리증을 확인해볼게요 👀`,
+          title: `${propertyName}\n도착`,
+          text: isOwn ? '내가 보유한 권리증입니다. 이번엔 정산 없이 지나갑니다.' : isMortgaged ? '담보 설정된 권리증이라 통행료 정산은 없습니다.' : '도착 처리를 확인했습니다.',
+          icon: isOwn ? '🏠' : '📍',
+          previewPos: propertyEvent.pos ?? endPos,
+          color: turnBaseMeta.color,
+          cta: '터치해서 닫기',
+        });
+      }
       if (stationEvent && !pendingBuy && !isCardArrival && !jailNotice) {
         const stationName = tileNameForPos(state, stationEvent.pos ?? endPos);
         const collected = stationEvent.collected ?? 0;
@@ -1270,6 +1287,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   const accent = notice.color ?? '#22c55e';
   const isBuy = notice.kind === 'buy' && notice.previewPos != null;
   const isStationNotice = notice.kind === 'station' && notice.previewPos != null;
+  const isPropertyNotice = notice.kind === 'property' && notice.previewPos != null;
   const isRent = notice.kind === 'rent';
   const hostText = notice.hostText ?? notice.text;
   const noticeStyle = notice.color ? {
@@ -1311,7 +1329,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
           className={cn('mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
           style={noticeStyle}
         >
-          {isBuy || isStationNotice ? (
+          {isBuy || isStationNotice || isPropertyNotice ? (
             <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
               <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
                 <PropertyDeedMini pos={notice.previewPos} />
