@@ -788,10 +788,16 @@ function DiceControl({ onStep, disabled }) {
 function NpcGuidePanel({ content }) {
   return (
     <div
-      className="flex min-h-[46px] w-full shrink-0 items-center justify-center rounded-full border-2 border-emerald-300 bg-[linear-gradient(180deg,#f0fdf4_0%,#86efac_100%)] px-4 text-center font-board text-[16px] font-extrabold leading-tight text-emerald-950 shadow-[inset_0_2px_0_rgba(255,255,255,0.92),0_10px_22px_-17px_rgba(6,95,70,0.72)]"
+      className="flex min-h-[48px] w-full shrink-0 items-center gap-2 rounded-full border-2 border-emerald-300 bg-[linear-gradient(180deg,#f0fdf4_0%,#86efac_100%)] px-3.5 text-left shadow-[inset_0_2px_0_rgba(255,255,255,0.92),0_10px_22px_-17px_rgba(6,95,70,0.72)]"
       style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}
     >
-      {content}
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-[15px] text-white shadow-[0_8px_16px_-12px_rgba(6,95,70,0.85)]">🎙️</span>
+      <div className="min-w-0 flex-1">
+        <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-800/66">사회자</div>
+        <div className="font-board text-[15px] font-extrabold leading-tight text-emerald-950">
+          {content}
+        </div>
+      </div>
     </div>
   );
 }
