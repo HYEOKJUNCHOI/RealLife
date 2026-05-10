@@ -394,7 +394,7 @@ export default function CurrentPlayerStage({
               />
             </div>
 
-          <div className="col-span-2 flex min-w-0 items-center gap-1.5 overflow-visible">
+          <div className="col-span-2 -mt-1 flex min-w-0 items-center gap-1.5 overflow-visible">
             <FinanceChip totalWorth={totalWorth} cash={player.cash ?? 0} debt={totalDebt} onLoanClick={() => openLoanModal?.(index)} />
             <HeaderChip icon={'\uD83D\uDED2'} label={'\uC0DD\uD65C'} value={'-' + livingCost} unit={'\uB9CC'} tone="red" size="normal" />
             <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-' + fmt(loanInterest)} unit={'\uB9CC'} tone="red" size="normal" />
@@ -443,11 +443,11 @@ export default function CurrentPlayerStage({
                 <span
                   key={`${pos}-${state._lastDeedAdded?.nonce ?? 'base'}`}
                   className={cn(
-                    'deed-slot-card relative z-[1] block h-full w-full',
+                    'deed-slot-card relative z-[1] block h-full w-full p-[2px]',
                     state._lastDeedAdded?.playerId === index && state._lastDeedAdded?.pos === pos && 'deed-slot-card-insert',
                   )}
                 >
-                  <PropertyDeedMini pos={pos} />
+                  <PropertyDeedMini pos={pos} className="scale-[0.985]" />
                 </span>
               </button>
             );
@@ -508,7 +508,7 @@ export default function CurrentPlayerStage({
             </button>
           </div>
 
-          <SettlementBubble content={turnBriefing} color={meta.color} playerName={meta.name} />
+          {/* 중복 정산 패널 제거: 도착 후 사회자창+알림창만 사용 */}
 
           <RealDiceTurnPanel
             color={meta.color}
@@ -1189,11 +1189,11 @@ function EmptyDeed({ previewPos = null, state = null, onClick } = {}) {
     </div>
   ) : (
     <div
-      className="relative h-full w-full overflow-hidden rounded-md border-2 border-dashed border-ink/18 bg-parchment-100/35 text-ink/18 grayscale saturate-0"
+      className="relative h-full w-full overflow-hidden rounded-md border-2 border-dashed border-ink/55 bg-white/18 text-ink/35 grayscale saturate-0"
       aria-hidden="true"
     >
-      <div className="absolute inset-1 rounded-[5px] border border-ink/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.45)_0%,rgba(218,210,194,0.42)_100%)]" />
-      <div className="absolute inset-x-2 top-2 h-[24%] rounded-sm bg-ink/14" />
+      <div className="absolute inset-1 rounded-[5px] border border-ink/42 bg-[linear-gradient(180deg,rgba(255,255,255,0.38)_0%,rgba(20,18,16,0.10)_100%)]" />
+      <div className="absolute inset-x-2 top-2 h-[24%] rounded-sm bg-ink/38" />
       <div className="absolute inset-x-2 top-[38%] space-y-1">
         <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/18" />
         <div className="mx-auto h-1.5 w-8 rounded-full bg-ink/14" />

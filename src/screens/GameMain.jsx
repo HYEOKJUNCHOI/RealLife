@@ -276,18 +276,8 @@ export default function GameMain({ onExit }) {
       diceSnapshotRef.current = null;
       return;
     }
-    const diceHelpSeen = typeof window !== 'undefined' && window.localStorage?.getItem('reallife:diceModeHelpSeen') === '1';
-    if (!diceHelpSeen && typeof window !== 'undefined') window.localStorage?.setItem('reallife:diceModeHelpSeen', '1');
-    pushGlobalNotice({
-      kind: 'dice',
-      speaker: '사회자',
-      title: `${activeName} 차례`,
-      text: '주사위를 굴려주세요.',
-      cta: diceHelpSeen ? '터치해서 닫기' : '키패드 또는 게임 주사위로 진행',
-      icon: '🎲',
-      subtle: false,
-      color: activeBaseMeta.color,
-    });
+    // 이동 전 차례/주사위 안내 팝업은 띄우지 않는다.
+    // 흐름은 주사위 → 말 이동 → 전체 보드 복귀 → 사회자창+알림창만 사용한다.
     diceSnapshotRef.current = null;
   }, [state?.round, state?.turnIndex, showInitialDeal]);
 
@@ -1794,6 +1784,7 @@ function describeArrival(event, tile) {
 function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
   const [targets, setTargets] = useState({});
   const [phase, setPhase] = useState('start');
+  const [startImageReady, setStartImageReady] = useState(false);
   const introVisible = phase === 'intro';
   const dealVisible = phase === 'deal';
 
@@ -1848,14 +1839,34 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
     <div className={cn('pointer-events-none fixed inset-0 z-[80] overflow-hidden', phase === 'start' && 'bg-[#eef1ed]')}>
       {phase === 'start' && (
         <>
-          <img src="/backgrounds/initial-start.png" alt="" className="absolute inset-0 h-full w-full object-contain" draggable={false} aria-hidden="true" />
-          <button
-            type="button"
-            onClick={() => setPhase('intro')}
-            className="pointer-events-auto absolute left-1/2 top-[calc(62%+30px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]"
-          >
-            시작하기
-          </button>
+          <img
+            src="/backgrounds/initial-start.png"
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onLoad={() => setStartImageReady(true)}
+            draggable={false}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,14,16,0.10),rgba(12,14,16,0.24))] mix-blend-multiply" aria-hidden="true" />
+          <motion.div className="absolute left-[15%] top-[22%] h-20 w-20 rounded-full bg-emerald-300/18 blur-xl" animate={{ scale: [1, 1.18, 1], opacity: [0.18, 0.34, 0.18] }} transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          <motion.div className="absolute left-[67%] top-[18%] h-24 w-24 rounded-full bg-red-300/16 blur-xl" animate={{ scale: [1, 1.15, 1], opacity: [0.14, 0.3, 0.14] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          <motion.div className="absolute left-[43%] top-[63%] h-20 w-20 rounded-full bg-amber-200/14 blur-xl" animate={{ scale: [1, 1.2, 1], opacity: [0.12, 0.28, 0.12] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          {!startImageReady ? (
+            <div className="pointer-events-auto absolute inset-0 z-30 grid place-items-center bg-[#eef1ed]/72 backdrop-blur-[6px]">
+              <div className="rounded-[22px] border border-white/70 bg-white/70 px-6 py-4 text-center shadow-[0_18px_38px_-28px_rgba(0,0,0,0.72)]">
+                <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-ink/48">loading</div>
+                <div className="mt-1 font-board text-[22px] font-extrabold text-ink">무대 준비 중...</div>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPhase('intro')}
+              className="pointer-events-auto absolute left-1/2 top-[calc(62%+30px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]"
+            >
+              시작하기
+            </button>
+          )}
         </>
       )}
 

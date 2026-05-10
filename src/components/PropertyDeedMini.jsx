@@ -165,7 +165,7 @@ export default function PropertyDeedMini({ pos, className }) {
       className={cn(
         'group relative flex h-full w-full flex-col overflow-hidden',
         'border-2 border-ink-line rounded-md',
-        'bg-parchment-50',
+        'bg-parchment-50 ring-1 ring-inset ring-ink-line/55',
         'transition-transform duration-150 hover:-translate-y-0.5',
         ts.mortgaged && 'opacity-60 saturate-50',
         className,
@@ -198,14 +198,13 @@ export default function PropertyDeedMini({ pos, className }) {
           className="absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-black/30 to-transparent"
           aria-hidden="true"
         />
-        {/* TITLE DEED ?쇰꺼 */}
-        <div className="absolute inset-x-0 top-0 px-1 pt-[3px] text-center">
+        {/* TITLE DEED 캡슐 */}
+        <div className="absolute inset-x-0 top-[3px] flex justify-center px-1 text-center">
           <div
             className={cn(
-              'font-display text-[6px] font-bold uppercase leading-none',
-              'tracking-[0.18em]',
-              COLOR_HEADER_TEXT[tile.color] || 'text-white',
-              'drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]',
+              'rounded-full border border-white/22 bg-black/34 px-2 py-[2px] font-display text-[6px] font-bold uppercase leading-none',
+              'tracking-[0.18em] text-white backdrop-blur-[3px]',
+              'shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.34)]',
             )}
           >
             Title Deed
