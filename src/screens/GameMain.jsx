@@ -1034,9 +1034,16 @@ export default function GameMain({ onExit }) {
 
 
 
+const CARD_REVEAL_TONE = {
+  chance: { label: 'Chance', from: '#182C62', mid: '#4E2F8F', to: '#D7A83E', glow: 'rgba(91,141,255,0.5)' },
+  welfare: { label: 'Welfare', from: '#0F5F5A', mid: '#138C75', to: '#D9B650', glow: 'rgba(42,230,174,0.44)' },
+  event: { label: 'Event', from: '#4B121A', mid: '#8B1F2E', to: '#F2B84B', glow: 'rgba(255,80,80,0.48)' },
+};
+
 function CardRevealOverlay({ card, onReveal }) {
   const [flipped, setFlipped] = useState(false);
   if (!card || typeof document === 'undefined') return null;
+  const tone = CARD_REVEAL_TONE[card.cardKind] ?? CARD_REVEAL_TONE.chance;
   const layer = (
     <div
       className="fixed inset-0 flex items-center justify-center bg-ink/66 p-3 backdrop-blur-[5px]"
@@ -1058,12 +1065,24 @@ function CardRevealOverlay({ card, onReveal }) {
             animate={{ rotateY: flipped ? 180 : 0, y: flipped ? 0 : [0, -4, 0], rotate: flipped ? 0 : [-1.2, 1.2, -1.2] }}
             transition={{ rotateY: { type: 'spring', stiffness: 210, damping: 22 }, y: { duration: 0.9, repeat: flipped ? 0 : Infinity }, rotate: { duration: 1.1, repeat: flipped ? 0 : Infinity } }}
           >
-            <div className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[linear-gradient(135deg,#20324d_0%,#51244b_54%,#d6a94b_100%)] text-white shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden]">
-              <div className="grid h-[240px] w-[176px] place-items-center rounded-2xl border-[3px] border-white/45 bg-white/12 shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
-                <div>
-                  <div className="text-[76px] leading-none">🎴</div>
-                  <div className="mt-3 font-board text-[34px] leading-none">카드<br />뒤집기</div>
-                  <div className="mt-3 font-display text-[9px] font-black uppercase tracking-[0.2em] text-white/64">tap to reveal</div>
+            <div
+              className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border-[4px] border-ink-line text-white shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden]"
+              style={{
+                background: `radial-gradient(circle at 50% 24%, rgba(255,255,255,0.28) 0%, transparent 23%), linear-gradient(145deg, ${tone.from} 0%, ${tone.mid} 52%, ${tone.to} 100%)`,
+                boxShadow: `0 8px 0 #0F0C0A, 0 20px 42px rgba(0,0,0,0.42), 0 0 42px ${tone.glow}`,
+              }}
+            >
+              <div className="absolute inset-3 rounded-[22px] border-2 border-white/28" />
+              <div className="absolute inset-6 rounded-[18px] border border-white/18" />
+              <div className="absolute -left-16 top-10 h-44 w-44 rounded-full border-[18px] border-white/8" />
+              <div className="absolute -right-14 bottom-8 h-40 w-40 rounded-full border-[16px] border-black/10" />
+              <div className="relative grid h-[250px] w-[184px] place-items-center rounded-2xl border-[3px] border-white/45 bg-black/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_8px_rgba(255,255,255,0.05)]">
+                <div className="text-center">
+                  <div className="mx-auto grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/52 bg-white/13 font-display text-[32px] font-black tracking-[-0.12em] shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_7px_0_rgba(15,12,10,0.35)]">RL</div>
+                  <div className="mt-5 font-display text-[11px] font-black uppercase tracking-[0.34em] text-white/70">The RealLife</div>
+                  <div className="mt-2 font-board text-[36px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
+                  <div className="mx-auto mt-4 h-px w-24 bg-white/35" />
+                  <div className="mt-3 font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/64">tap to reveal</div>
                 </div>
               </div>
             </div>
