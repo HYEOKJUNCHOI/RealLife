@@ -28,6 +28,7 @@ import RecoveryModal from '@/components/modals/RecoveryModal.jsx';
 import LoanModal from '@/components/modals/LoanModal.jsx';
 import { useGameDialog } from '@/components/GameDialog.jsx';
 import { cn } from '@/lib/cn.js';
+import { getCharacterImg } from '@/lib/assets.js';
 
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
 const displayPlayerName = (player, fallback) => {
@@ -1531,8 +1532,8 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
       onPointerDown={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
-      <div className="board-turn-shell relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border-[3px] border-[#17120c] bg-[#efe1bb] shadow-[0_6px_0_#17120c,0_22px_44px_-24px_rgba(0,0,0,0.85)]">
-        <div className="flex items-center justify-between border-b-[3px] border-[#17120c] bg-[linear-gradient(180deg,#fff7df_0%,#e4c47a_100%)] px-3 py-2">
+      <div className="board-turn-shell relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#efe1bb] shadow-[0_5px_0_#17120c,0_20px_40px_-26px_rgba(0,0,0,0.82)]">
+        <div className="flex items-center justify-between border-b-2 border-[#17120c] bg-[linear-gradient(180deg,#fffaf0_0%,#ead8ad_100%)] px-3 py-2">
           <div>
             <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/55">board turn</div>
             <div className="font-board text-xl leading-none text-ink">{player?.name || `${(replay.playerId ?? 0) + 1}P`} 차례</div>
@@ -1543,11 +1544,11 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
         </div>
 
         <div className="relative min-h-0 overflow-hidden p-2">
-          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border-2 border-ink-line bg-black/62 px-4 py-1.5 font-board text-[18px] text-white shadow-[0_3px_0_#0F0C0A]">
-            {replay.phase === 'moving' ? '카메라 이동 중' : replay.phase === 'arrived' ? `${endName} 도착` : phaseText}
+          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/25 bg-black/58 px-4 py-1.5 font-board text-[17px] text-white shadow-[0_2px_0_#0F0C0A] backdrop-blur-sm">
+            {replay.phase === 'moving' ? `${startName} → ${endName}` : replay.phase === 'arrived' ? `${endName} 도착` : phaseText}
           </div>
           <div
-            className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-[3px] border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.18)] will-change-transform"
+            className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-2 border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.13),0_10px_28px_rgba(0,0,0,0.25)] will-change-transform"
             style={{ transform: `translate(${cameraX}%, ${cameraY}%) scale(${cameraZoom})`, transition: replay.phase === 'moving' ? 'transform 190ms cubic-bezier(.2,.8,.2,1)' : 'transform 360ms ease-out' }}
           >
             {tiles.map((tile) => {
@@ -1561,7 +1562,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
               return (
                 <div
                   key={tile.pos}
-                  className={cn('board-turn-tile relative overflow-hidden rounded-md border-2 border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_2px_0_rgba(0,0,0,0.45)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
+                  className={cn('board-turn-tile relative overflow-hidden rounded-md border border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_1px_0_rgba(0,0,0,0.42)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
                   style={grid}
                 >
                   {owner && <div className="board-turn-owner-bookmark" style={{ backgroundColor: ownerColor }} title={`${owner.name || `${ownerId + 1}P`} 소유`} />}
@@ -1572,14 +1573,15 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                       const renderPos = pieceIndex === replay.playerId ? pos : (piecePlayer.position ?? 0);
                       if (renderPos !== tile.pos || piecePlayer.bankrupt) return null;
                       const pieceColor = CHAR_META[piecePlayer.character]?.color ?? '#d83b2f';
+                      const pieceImg = getCharacterImg(piecePlayer.character);
                       return (
                         <div
                           key={pieceIndex}
-                          className={cn('board-turn-piece', pieceIndex === replay.playerId && 'is-current')}
-                          style={{ '--piece-color': pieceColor, '--piece-index': pieceIndex }}
+                          className={cn('board-turn-piece overflow-hidden', pieceIndex === replay.playerId && 'is-current')}
+                          style={{ '--piece-color': pieceColor, '--piece-index': pieceIndex, backgroundColor: pieceImg ? '#fffaf0' : pieceColor }}
                           title={piecePlayer.name || `${pieceIndex + 1}P`}
                         >
-                          {pieceIndex + 1}
+                          {pieceImg ? <img src={pieceImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : pieceIndex + 1}
                         </div>
                       );
                     })}
@@ -1587,7 +1589,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                 </div>
               );
             })}
-            <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-[3px] border-[#17120c] bg-[radial-gradient(circle_at_50%_35%,#fff7df_0%,#ecd08d_52%,#ba7a36_100%)] p-2 text-center shadow-[inset_0_3px_0_rgba(255,255,255,0.52)]', cameraActive && 'opacity-45')}>
+            <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
                 {replay.phase === 'ready' && <div className="font-board text-2xl text-ink">{phaseText}</div>}
                 {replay.phase === 'ready' ? (
