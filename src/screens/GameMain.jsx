@@ -1817,14 +1817,14 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
       : [{ x: -260, y: -130 }, { x: 260, y: -130 }, { x: -260, y: 180 }, { x: 260, y: 180 }];
 
   return (
-    <div className={cn('pointer-events-none fixed inset-0 z-[80] overflow-hidden', phase === 'start' && 'bg-[#eef1ed]')}>
+    <div className={cn('pointer-events-none absolute inset-0 z-[80] overflow-hidden', phase === 'start' && 'bg-[#eef1ed]')}> 
       {phase === 'start' && (
         <>
-          <div className="absolute inset-[10px] overflow-hidden rounded-[30px] bg-[#eef1ed]" aria-hidden="true">
+          <div className="absolute inset-0 overflow-hidden bg-[#eef1ed]" aria-hidden="true">
             <img
               src="/backgrounds/initial-start.png"
               alt=""
-              className="h-full w-full scale-[1.035] object-cover object-center"
+              className="h-full w-full object-cover object-center"
               onLoad={() => setStartImageReady(true)}
               draggable={false}
             />
@@ -1887,15 +1887,11 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
               '--deal-stack-x': `${(card.cardIndex - 1.5) * 18}px`,
               '--deal-stack-y': `${(card.cardIndex % 2) * 4}px`,
               '--deal-rot': `${(card.cardIndex - 1.5) * 2.2}deg`,
-              '--deed-color': card.color,
+              '--deed-color': '#17120c',
             }}
           >
-            <div className="flex h-full w-full flex-col overflow-hidden rounded-[5px] border border-white/70 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.92),transparent_34%),linear-gradient(180deg,#fffdf5_0%,#f2e3bd_100%)] text-center">
-              <div className="h-[24%] border-b-2 border-[#17120c]" style={{ backgroundColor: card.color }} />
-              <div className="flex flex-1 flex-col items-center justify-center px-1">
-                <div className="font-display text-[9px] font-black uppercase tracking-[0.16em] text-[#17120c]/52">TITLE DEED</div>
-                <div className="mt-0.5 max-w-full truncate font-board text-[11px] leading-none text-[#17120c]">{card.title}</div>
-              </div>
+            <div className="h-full w-full overflow-hidden rounded-[5px] bg-[#17120c] p-[2px]">
+              <PropertyDeedMini pos={card.pos} className="scale-[0.96]" />
             </div>
           </div>
         );
