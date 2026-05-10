@@ -1863,8 +1863,8 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xl text-white">🎙️</span>
             <div>
               <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-900/62">사회자</div>
-              <div className="font-board text-[clamp(18px,2.4vw,25px)] font-extrabold leading-tight">자, 첫 판돈은 땅입니다. 권리증 뿌립니다 👀</div>
-              <div className="mt-1 font-board text-[14px] font-extrabold text-emerald-950/54">터치하면 계약서가 펼쳐집니다</div>
+              <div className="font-board text-[clamp(18px,2.4vw,25px)] font-extrabold leading-tight">자, 첫 출발은 권리증부터 나눠드릴게요 👀</div>
+              <div className="mt-1 font-board text-[14px] font-extrabold text-emerald-950/54">터치하면 내 첫 권리증이 펼쳐집니다</div>
             </div>
           </div>
         </button>
