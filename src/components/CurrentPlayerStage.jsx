@@ -495,6 +495,9 @@ export default function CurrentPlayerStage({
             </div>
           </div>
 
+          <NpcGuidePanel content={hostLine || '주사위를 굴려주세요.'} />
+          <TurnGuidePanel name={meta.name} color={meta.color} />
+
           <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-white/42 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
             <button
               type="button"
@@ -507,9 +510,10 @@ export default function CurrentPlayerStage({
             </button>
           </div>
 
-          <SettlementBubble content={turnBriefing} />
+          <SettlementBubble content={turnBriefing} color={meta.color} playerName={meta.name} />
 
           <RealDiceTurnPanel
+            color={meta.color}
             result={turnResult}
             onDiceRoll={onDiceRoll}
             diceMode={diceMode}
@@ -557,10 +561,10 @@ function DiceFace({ value = 1, rolling = false }) {
   );
 }
 
-function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceModeChange, onAppDiceRoll, lastDiceRoll, diceLocked, onUnlockDice, onOpenResultCard, disabled }) {
+function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = 'keypad', onDiceModeChange, onAppDiceRoll, lastDiceRoll, diceLocked, onUnlockDice, onOpenResultCard, disabled }) {
   const nums = Array.from({ length: 12 }, (_, i) => i + 1);
-  const resultTitle = result?.title ?? '주사위 눈금 입력';
-  const resultText = result?.text ?? '굴린 값을 눌러주세요';
+  const resultTitle = result?.title ?? '주사위';
+  const resultText = result?.text ?? '굴릴 준비 완료';
   const resultIcon = result?.icon ?? '🎲';
   const isAction = result?.kind === 'buy' || result?.kind === 'card' || result?.kind === 'rent';
   const showCardResult = result?.kind === 'card';
@@ -574,7 +578,7 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceMode
   }, [result?.kind, result?.cardKind, result?.cardId, result?.eventId, result?.text]);
 
   return (
-    <div className="real-dice-panel mt-auto w-full shrink-0 rounded-b-2xl border-t border-white/56 bg-white/34 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[14px]">
+    <div className="real-dice-panel mt-auto w-full shrink-0 rounded-b-2xl border-t border-white/56 bg-white/34 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[14px]" style={{ '--player-color': color }}>
       {isJail ? (
         <div className="overflow-hidden rounded-xl border-2 border-ink-line bg-[linear-gradient(135deg,#f1f5f9_0%,#dbeafe_48%,#93c5fd_100%)] p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_3px_0_#0F0C0A]">
           <div className="rounded-lg border-2 border-ink-line bg-white/88 px-3 py-2 text-center shadow-[0_2px_0_rgba(15,12,10,0.55)]">
@@ -603,49 +607,41 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceMode
             <button
               type="button"
               onClick={onUnlockDice}
-              className="mt-2 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[15px] text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
+              className="mt-2 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
             >
-              🔒 잠금 해제 · 재입력
+              다시 입력
             </button>
           )}
         </div>
       ) : isRent ? (
-        <div className="overflow-hidden rounded-xl border-2 border-ink-line bg-[linear-gradient(135deg,#fff7e2_0%,#ffe4e4_45%,#ffd166_100%)] p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_3px_0_#0F0C0A]">
-          <div className="flex items-center justify-between gap-2 rounded-lg border-2 border-ink-line bg-white/85 px-3 py-2 shadow-[0_2px_0_rgba(15,12,10,0.55)]">
-            <div className="min-w-0">
-              <div className="font-display text-[9px] font-black uppercase tracking-[0.2em] text-red-700/70">아… 남의 땅!</div>
-              <div className="truncate font-board text-[18px] leading-tight text-ink">{result?.tileName ?? resultTitle}</div>
-              <div className="mt-0.5 truncate font-board text-[12px] text-ink/58">{result?.payerName ?? '방문자'} → {result?.ownerName ?? '소유자'}</div>
+        <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/50 p-2.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.84),0_12px_24px_-20px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
+          <div className="rounded-xl border border-white/75 bg-white/72 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-red-700/62">정산 안내</div>
+            <div className="mt-1 font-board text-[20px] font-extrabold leading-tight text-ink" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+              {result?.ownerName ?? '소유자'}님의 {result?.tileName ?? resultTitle}
             </div>
-            <motion.div
-              className="shrink-0 rounded-xl border-2 border-red-950 bg-red-600 px-3 py-2 text-center text-white shadow-[0_3px_0_#4a0d0d]"
-              animate={{ scale: [1, 1.08, 1], rotate: [-2, 2, -1] }}
-              transition={{ duration: 0.75, repeat: Infinity, repeatDelay: 1.2 }}
-            >
-              <div className="font-display text-[9px] font-black uppercase tracking-[0.18em] opacity-80">PAY</div>
-              <div className="font-board text-[24px] leading-none">-{fmt(result?.amount)}만</div>
-            </motion.div>
-          </div>
-          <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2 font-board text-[13px]">
-            <div className="rounded-lg border-2 border-ink-line bg-[#fff3f3] px-2 py-1.5 text-center text-red-800">탄식… 현금 지출</div>
-            <div className="text-[20px]">💸</div>
-            <div className="rounded-lg border-2 border-ink-line bg-[#eefaf1] px-2 py-1.5 text-center text-emerald-800">소유자 수금 완료</div>
+            <div className="mt-2 inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-1.5 font-board text-[20px] font-extrabold text-red-700 shadow-[0_8px_16px_-14px_rgba(220,38,38,0.72)]">
+              -{fmt(result?.amount)}만 지출
+            </div>
+            <div className="mt-2 font-board text-[14px] leading-snug text-ink/60" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+              현금은 차감되고, 소유자에게 통행료가 지급됩니다.
+            </div>
           </div>
           {diceLocked && onUnlockDice && (
             <button
               type="button"
               onClick={onUnlockDice}
-              className="mt-2 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[15px] text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
+              className="mt-2 h-9 w-full rounded-md border border-white/75 bg-white/72 font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
             >
-              🔒 잠금 해제 · 재입력
+              다시 입력
             </button>
           )}
         </div>
       ) : showNumberPad ? (
         <div className="rounded-2xl border border-white/70 bg-white/44 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
           <div className="mb-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-white/70 bg-white/44 p-1 backdrop-blur-[12px] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
-            <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('h-8 rounded-md border-2 border-ink-line font-board text-[13px] shadow-[0_1px_0_#0F0C0A]', diceMode === 'keypad' ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink/58')}>키패드</button>
-            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-8 rounded-md border-2 border-ink-line font-board text-[13px] shadow-[0_1px_0_#0F0C0A]', diceMode === 'app' ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink/58')}>게임 주사위</button>
+            <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'keypad' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'keypad' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>직접 입력</button>
+            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'app' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'app' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>앱 주사위</button>
           </div>
           {diceMode === 'app' ? (
             <div className="space-y-2">
@@ -658,9 +654,10 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceMode
                 type="button"
                 disabled={disabled || diceLocked}
                 onClick={onAppDiceRoll}
-                className="h-14 w-full rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(224,244,255,0.84)_100%)] font-board text-[22px] text-ink shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                className="h-14 w-full rounded-xl border border-white/80 px-2 font-board text-[20px] font-extrabold leading-none text-[#15324a] shadow-[0_12px_24px_-18px_rgba(36,57,74,0.78)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 whitespace-nowrap"
+                style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}26 100%)`, borderColor: `${color}66` }}
               >
-                🎲 주사위 굴리기
+                🎲 굴리기
               </button>
             </div>
           ) : (
@@ -671,7 +668,8 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceMode
                   type="button"
                   disabled={disabled || diceLocked}
                   onClick={() => onDiceRoll?.(num)}
-                  className="h-[46px] rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(224,244,255,0.84)_100%)] font-display text-[19px] font-extrabold leading-none text-ink shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                  className="h-[46px] rounded-xl border border-white/80 font-display text-[19px] font-extrabold leading-none text-[#15324a] shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                  style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}18 100%)`, borderColor: `${color}44` }}
                 >
                   {num}
                 </button>
@@ -682,9 +680,9 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceMode
             <button
               type="button"
               onClick={onUnlockDice}
-              className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[15px] text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
+              className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
             >
-              🔒 잠금 해제 · 재입력
+              다시 입력
             </button>
           )}
         </div>
@@ -747,9 +745,9 @@ function RealDiceTurnPanel({ result, onDiceRoll, diceMode = 'keypad', onDiceMode
             <button
               type="button"
               onClick={onUnlockDice}
-              className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[15px] text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
+              className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
             >
-              🔒 잠금 해제 · 재입력
+              다시 입력
             </button>
           )}
         </div>
@@ -785,6 +783,27 @@ function DiceControl({ onStep, disabled }) {
   );
 }
 
+function NpcGuidePanel({ content }) {
+  return (
+    <div className="mt-2 flex min-h-[42px] w-full shrink-0 items-center justify-center rounded-full border border-emerald-300/70 bg-[linear-gradient(180deg,rgba(236,253,245,0.94),rgba(167,243,208,0.78))] px-4 text-center font-board text-[16px] font-extrabold leading-tight text-emerald-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_12px_26px_-22px_rgba(6,95,70,0.62)] backdrop-blur-[14px]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+      {content}
+    </div>
+  );
+}
+
+function TurnGuidePanel({ name, color = '#d97706' }) {
+  return (
+    <div
+      className="mt-1.5 w-full shrink-0 rounded-full border px-4 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.84),0_10px_22px_-20px_rgba(36,57,74,0.6)] backdrop-blur-[14px]"
+      style={{ borderColor: `${color}66`, background: `linear-gradient(180deg, rgba(255,255,255,0.9) 0%, ${color}24 100%)` }}
+    >
+      <div className="font-board text-[20px] font-extrabold leading-none text-[#182a35]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+        {name} 차례
+      </div>
+    </div>
+  );
+}
+
 function EventCardSlot({ event, hostLine, onClose }) {
   const src = event ? EVENT_SLOT_IMAGES[event.eventId] : null;
   const [flipped, setFlipped] = useState(false);
@@ -804,11 +823,8 @@ function EventCardSlot({ event, hostLine, onClose }) {
 
   if (!event) {
     return (
-      <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 rounded-xl border-2 border-ink-line bg-[#fffaf0] p-3 text-center shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)]">
-        <div className="rounded-[16px] border-2 border-ink-line bg-white px-3 py-2 font-board text-[16px] leading-snug text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_2px_0_#0F0C0A]">
-          {hostLine || '주사위를 굴려 다음 행동을 진행하세요.'}
-        </div>
-        <div className="grid h-[86px] w-[64px] place-items-center rounded-lg border-2 border-dashed border-ink-line/35 bg-[linear-gradient(135deg,#20324d_0%,#51244b_54%,#d6a94b_100%)] text-2xl text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]">🎴</div>
+      <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 rounded-[22px] border border-white/72 bg-white/44 p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
+        <div className="grid h-[112px] w-[82px] place-items-center rounded-2xl border border-white/70 bg-[linear-gradient(135deg,#dff4ff_0%,#f7fbff_48%,#e8def8_100%)] text-3xl text-[#334155] shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_22px_-18px_rgba(36,57,74,0.62)]">🎴</div>
         <div className="font-display text-[8px] font-bold uppercase tracking-[0.16em] text-ink/38">card slot</div>
       </div>
     );
@@ -845,14 +861,17 @@ function EventCardSlot({ event, hostLine, onClose }) {
 function HostSpeechBubble({ content }) {
   if (!content) return null;
   return (
-    <div className="absolute left-1/2 top-[-82px] z-20 w-[220px] -translate-x-1/2 rounded-[18px] border-2 border-ink-line bg-[#fffaf0] px-3 py-2 font-board text-[15px] leading-snug text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_3px_0_#0F0C0A,0_12px_20px_-16px_rgba(0,0,0,0.72)]">
+    <div
+      className="absolute left-1/2 top-[-82px] z-20 w-[220px] -translate-x-1/2 rounded-[20px] border border-white/75 bg-white/72 px-3 py-2 font-board text-[15px] font-extrabold leading-snug text-[#182a35] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_28px_-22px_rgba(36,57,74,0.78)] backdrop-blur-[14px]"
+      style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}
+    >
       {content}
-      <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-ink-line bg-[#fffaf0]" />
+      <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-b border-r border-white/75 bg-white/72" />
     </div>
   );
 }
 
-function SettlementBubble({ content }) {
+function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' }) {
   if (!content) return null;
   const rows = content.rows ?? [];
   const total = content.total ?? 0;
@@ -872,9 +891,10 @@ function SettlementBubble({ content }) {
   const showTotal = visibleSteps >= totalSteps;
 
   return (
-    <div className="relative z-10 mt-2 max-h-[28vh] w-full overflow-y-auto rounded-[14px] border-2 border-ink-line bg-[#fffaf0] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_3px_0_#0F0C0A,0_14px_24px_-16px_rgba(0,0,0,0.36)] no-scrollbar">
-      <div className="mb-1.5 flex items-center justify-end border-b border-white/45 pb-1.5">
-        <span className="font-board text-[15px] leading-none text-ink">{content.title ?? '이번 턴 정산'}</span>
+    <div className="relative z-10 mt-2 max-h-[28vh] w-full overflow-y-auto rounded-[18px] border border-white/72 bg-white/58 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] backdrop-blur-[14px] no-scrollbar" style={{ borderColor: `${color}55`, background: `linear-gradient(180deg, rgba(255,255,255,0.66) 0%, ${color}14 100%)` }}>
+      <div className="mb-1.5 flex items-center justify-between border-b border-white/55 pb-1.5">
+        <span className="font-display text-[8px] font-black uppercase tracking-[0.2em]" style={{ color }}>{playerName}</span>
+        <span className="font-board text-[15px] font-extrabold leading-none text-[#182a35]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{content.title ?? '이번 턴 정산'}</span>
       </div>
       <div className="space-y-1 font-board text-[14px] leading-none">
         {rows.length > 0 ? rows.slice(0, visibleSteps).map((row, idx) => (

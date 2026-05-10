@@ -66,15 +66,8 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
 
   return (
     <footer
-      className="flex items-stretch gap-1.5 overflow-hidden rounded-md border-2 border-ink-line px-1.5 py-1"
+      className="flex min-h-[62px] items-stretch gap-1.5 overflow-hidden rounded-xl border border-white/65 bg-white/42 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_12px_28px_-24px_rgba(36,57,74,0.72)] backdrop-blur-[14px]"
       data-component="OtherPlayersStrip"
-      style={{
-        // 양피지 결 + 살짝 갈색 글로우 — CurrentPlayerStage 와 분위기 통일
-        background:
-          'linear-gradient(180deg, #FBF6E9 0%, #F4EAD0 100%)',
-        boxShadow:
-          'inset 0 0 0 2px rgba(149,84,54,0.30), 0 2px 0 0 #0F0C0A',
-      }}
     >
       <div className="flex flex-1 items-stretch gap-1.5 overflow-x-auto no-scrollbar">
         {others.map(({ p, i }) => (
@@ -87,7 +80,7 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
         onClick={onStep}
         disabled={finished}
         className={cn(
-          'group relative shrink-0 inline-flex w-[128px] items-center justify-center gap-1.5 rounded-md border-[3px] border-ink-line px-2 py-1.5 transition-transform duration-100 ease-out',
+          'group relative shrink-0 inline-flex w-[128px] items-center justify-center gap-1.5 rounded-lg border border-white/70 px-2 py-1.5 transition-transform duration-100 ease-out shadow-[0_10px_20px_-16px_rgba(36,57,74,0.8)]',
           'active:translate-y-[1px] active:shadow-none',
           finished
             ? 'cursor-not-allowed bg-parchment-200 text-ink/40 shadow-none'
@@ -119,12 +112,12 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
       onClick={onClick}
       data-player-strip-index={i}
       className={cn(
-        'relative flex shrink-0 items-center gap-1.5 overflow-hidden rounded-md border-2 border-ink-line bg-parchment-50 px-1.5 py-1 text-left shadow-[0_2px_0_0_#0F0C0A,0_8px_14px_-10px_rgba(0,0,0,0.65)] transition active:translate-y-[1px] active:shadow-none',
+        'relative flex h-full shrink-0 items-center gap-1.5 overflow-hidden rounded-lg border border-white/70 bg-white/62 px-1.5 py-1 text-left shadow-[0_10px_20px_-16px_rgba(36,57,74,0.72)] transition active:translate-y-[1px] active:shadow-none backdrop-blur-[10px]',
         (p.bankrupt || isCashBankrupt) && 'opacity-55 grayscale saturate-50',
       )}
       style={{
         minWidth: 188,
-        boxShadow: `0 2px 0 0 #0F0C0A, inset 0 0 0 2px ${meta.color}22`,
+        boxShadow: `inset 0 0 0 2px ${meta.color}22, 0 10px 20px -16px ${meta.color}`,
       }}
     >
       <div

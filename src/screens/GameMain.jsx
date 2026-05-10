@@ -29,6 +29,32 @@ import { useGameDialog } from '@/components/GameDialog.jsx';
 import { cn } from '@/lib/cn.js';
 import { getCharacterImg } from '@/lib/assets.js';
 
+const AVATAR_POSITION = {
+  yangban: 'center 30%',
+  general: '36% 29%',
+  magistrate: 'center 26%',
+  farmer: 'center 26%',
+  chunDooHwan: 'center 18%',
+  genghisKhan: 'center 24%',
+  steveJobs: 'center 24%',
+  billGates: 'center 24%',
+  donaldTrump: 'center 22%',
+  leeJaeMyung: 'center 22%',
+  wakizakaYasuharu: 'center 24%',
+  toyotomiHideyoshi: 'center 24%',
+};
+const AVATAR_SIZE = {
+  general: '135%',
+  chunDooHwan: '145%',
+  genghisKhan: '142%',
+  steveJobs: '138%',
+  billGates: '138%',
+  donaldTrump: '138%',
+  leeJaeMyung: '138%',
+  wakizakaYasuharu: '140%',
+  toyotomiHideyoshi: '140%',
+};
+
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
 const displayPlayerName = (player, fallback) => {
   const name = player?.name?.trim();
@@ -223,6 +249,11 @@ export default function GameMain({ onExit }) {
       ? CHAR_META[activePlayer.character] ?? { name: activePlayer.character, color: '#d83b2f' }
       : { name: '플레이어', color: '#d83b2f' };
     const activeName = activePlayer ? displayPlayerName(activePlayer, activeBaseMeta.name) : activeBaseMeta.name;
+    if (showInitialDeal) {
+      setGlobalNotice(null);
+      diceSnapshotRef.current = null;
+      return;
+    }
     const diceHelpSeen = typeof window !== 'undefined' && window.localStorage?.getItem('reallife:diceModeHelpSeen') === '1';
     if (!diceHelpSeen && typeof window !== 'undefined') window.localStorage?.setItem('reallife:diceModeHelpSeen', '1');
     pushGlobalNotice({
@@ -236,7 +267,7 @@ export default function GameMain({ onExit }) {
       color: activeBaseMeta.color,
     });
     diceSnapshotRef.current = null;
-  }, [state?.round, state?.turnIndex]);
+  }, [state?.round, state?.turnIndex, showInitialDeal]);
 
   const pushGlobalNotice = (notice) => {
     if (!notice) return;
@@ -346,24 +377,30 @@ export default function GameMain({ onExit }) {
       amount: price,
       cash: useGameStore.getState().state?.players?.[playerId]?.cash,
     });
-    pushGlobalNotice({ kind: 'bought', speaker: '중개 NPC', title: '이동 중 → 매입 완료!', text: `${tileName} · ${signedMoney(-(price ?? 0))} 지출`, icon: '🏠', amount: -(price ?? 0), cash: useGameStore.getState().state?.players?.[playerId]?.cash });
+    pushGlobalNotice({ kind: 'bought', speaker: '중개 NPC', title: '매입 완료!', text: `${tileName} · ${signedMoney(-(price ?? 0))} 지출`, icon: '🏠', amount: -(price ?? 0), cash: useGameStore.getState().state?.players?.[playerId]?.cash });
     closePropertyModal?.();
+    window.setTimeout(() => setViewPlayerIndex(playerId), 650);
     return true;
   };
 
   const hostLine = useMemo(() => {
+    if (showInitialDeal) return '권리증을 나눠드리는 중입니다.';
+    if (pendingPurchase) return '이 땅을 매입할까요? 권리증을 보고 결정하세요.';
+    if (turnResult?.kind === 'buy') return '이 땅을 매입할까요? 권리증을 보고 결정하세요.';
+    if (turnResult?.kind === 'rent') return `${turnResult.ownerName ?? '소유자'}님의 땅입니다. 통행료 ${turnResult.amount ?? 0}만을 지불합니다.`;
+    if (turnResult?.kind === 'tax') return `${turnResult.title ?? '세금'} ${turnResult.amount ?? ''}만을 납부합니다.`;
+    if (turnResult?.kind === 'bought') return '매입 완료! 내 권리증 슬롯에 추가됐습니다.';
+    if (turnResult?.kind === 'moving') return '말이 이동하고 있습니다.';
     const last = log.length > 0 ? log[log.length - 1] : null;
     if (!last) {
-      const welcome = voicelines?.realtor?.game_start;
-      if (Array.isArray(welcome) && welcome.length > 0) return welcome[0];
-      return '환영합니다. 권리증을 배포합니다.';
+      return '주사위를 굴려주세요.';
     }
     if (last.card && ['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate'].includes(last.kind)) {
       return '이벤트 카드가 발동했습니다.';
     }
     if (turnBriefing) return '이번 턴 정산을 확인하세요.';
     return summarizeEvent(last);
-  }, [turnBriefing, log]);
+  }, [showInitialDeal, pendingPurchase, turnResult?.kind, turnBriefing, log]);
 
   if (!state) {
     return (
@@ -647,23 +684,22 @@ export default function GameMain({ onExit }) {
       const toastMessage = buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos });
       const isCardArrival = !!card;
       if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
-      if (toastMessage && !isCardArrival) addToast?.({ message: toastMessage, tone: pendingBuy ? 'success' : 'info' });
       const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
       const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
-      const startName = tileNameForPos(state, startPos);
-      const endName = tileNameForPos(state, endPos);
-      pushGlobalNotice({
-        kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : isCardArrival ? 'card_arrival' : 'arrival',
-        speaker: pendingBuy ? '중개 NPC' : '사회자',
-        title: pendingBuy ? `${playerName} 이동 완료 · 매입 가능!` : jailNotice ? `${playerName} 감옥 수감!` : isCardArrival ? `${playerName} 카드칸 도착` : `${playerName} 이동 완료`,
-        text: pendingBuy ? `${startName} → ${endName} · 권리증을 확인하고 매입 여부를 결정하세요.` : isCardArrival ? `${startName} → ${endName} · 카드를 뒤집어주세요. 무슨 카드가 나올까요?` : `${startName} → ${endName}${toastMessage ? ` · ${toastMessage}` : ''}`,
-        icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : isCardArrival ? '💡' : '📍',
-        cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
-        previewPos: pendingBuy?.pos,
-        price: pendingBuy?.buyPrice,
-        onBuy: pendingBuy ? () => handleBuyProperty(playerId, pendingBuy.pos) : undefined,
-        onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
-      });
+      if (pendingBuy || jailNotice || isCardArrival) {
+        pushGlobalNotice({
+          kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : 'card_arrival',
+          speaker: pendingBuy ? '중개 NPC' : '사회자',
+          title: pendingBuy ? '매입할까요?' : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
+          text: pendingBuy ? '권리증을 확인하고 매입 여부를 결정하세요.' : isCardArrival ? '무슨 카드가 나올까요?' : (toastMessage ?? '감옥으로 이동합니다.'),
+          icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : '💡',
+          cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
+          previewPos: pendingBuy?.pos,
+          price: pendingBuy?.buyPrice,
+          onBuy: pendingBuy ? () => handleBuyProperty(playerId, pendingBuy.pos) : undefined,
+          onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
+        });
+      }
     }, arrivalDelay);
     window.setTimeout(() => {
       const nextResult = summarizeTurnResult(events, playerId, pendingBuy);
@@ -684,6 +720,8 @@ export default function GameMain({ onExit }) {
         const summary = buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore: cashBeforeMove });
         setAiTurnSummary(summary);
         setBoardTurn(null);
+      } else {
+        window.setTimeout(() => setBoardTurn(null), 820);
       }
     }, arrivalDelay + 520);
   };
@@ -948,6 +986,10 @@ export default function GameMain({ onExit }) {
             players={state.players}
             turnIndex={state.turnIndex}
             cards={initialDealCards}
+            onReady={() => {
+              setShowInitialDeal(false);
+              if (state) state._initialDealShown = true;
+            }}
           />
         )}
 
@@ -1518,10 +1560,12 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   const cameraGrid = boardGridStyle(pos);
   const cameraCol = Number(cameraGrid.gridColumn) || 6;
   const cameraRow = Number(cameraGrid.gridRow) || 6;
-  const cameraActive = ['moving', 'arrived'].includes(replay.phase);
-  const cameraZoom = cameraActive ? 1.28 : 1;
-  const cameraX = cameraActive ? (6 - cameraCol) * 7.1 : 0;
-  const cameraY = cameraActive ? (6 - cameraRow) * 7.1 : 0;
+  const cameraActive = replay.phase === 'moving';
+  const cameraZoom = cameraActive ? 1.18 : 1;
+  const rawCameraX = cameraActive ? (6 - cameraCol) * 5.1 : 0;
+  const rawCameraY = cameraActive ? (6 - cameraRow) * 5.1 : 0;
+  const cameraX = Math.max(-22, Math.min(22, rawCameraX));
+  const cameraY = Math.max(-22, Math.min(22, rawCameraY));
 
   return (
     <div
@@ -1530,12 +1574,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
       <div className="board-turn-shell relative grid h-full w-full grid-rows-[1fr] overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#efe1bb] shadow-[0_5px_0_#17120c,0_20px_40px_-26px_rgba(0,0,0,0.82)]">
-        <div className="relative min-h-0 overflow-hidden p-1.5">
-          {(replay.phase === 'moving' || replay.phase === 'arrived') && (
-            <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/25 bg-black/58 px-4 py-1.5 font-board text-[17px] text-white shadow-[0_2px_0_#0F0C0A] backdrop-blur-sm">
-              {replay.phase === 'moving' ? `${startName} → ${endName}` : `${endName} 도착`}
-            </div>
-          )}
+        <div className="relative min-h-0 overflow-hidden p-3 md:p-4">
           <div
             className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-2 border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.13),0_10px_28px_rgba(0,0,0,0.25)] will-change-transform"
             style={{ transform: `translate(${cameraX}%, ${cameraY}%) scale(${cameraZoom})`, transition: replay.phase === 'moving' ? 'transform 190ms cubic-bezier(.2,.8,.2,1)' : 'transform 360ms ease-out' }}
@@ -1580,7 +1619,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
             })}
             <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
-                {replay.phase === 'ready' ? (
+                {replay.phase === 'arrived' ? null : replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
                       <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
@@ -1661,8 +1700,22 @@ function describeArrival(event, tile) {
   return `${name} 도착`;
 }
 
-function InitialDealOverlay({ players, turnIndex = 0, cards }) {
+function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
   const [targets, setTargets] = useState({});
+  const [readyPlayers, setReadyPlayers] = useState(() => new Set());
+  const allReady = players.length > 0 && readyPlayers.size >= players.length;
+  const markReady = (index) => {
+    setReadyPlayers((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  };
+  useEffect(() => {
+    if (!allReady) return undefined;
+    const timer = window.setTimeout(() => onReady?.(), 420);
+    return () => window.clearTimeout(timer);
+  }, [allReady, onReady]);
 
   useEffect(() => {
     const readTargets = () => {
@@ -1698,6 +1751,48 @@ function InitialDealOverlay({ players, turnIndex = 0, cards }) {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[80] overflow-hidden">
+      <div className="initial-deal-caption absolute left-1/2 top-5 z-30 max-w-[min(92vw,620px)] -translate-x-1/2 rounded-[22px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(220,252,231,0.78))] px-4 py-2.5 text-left text-[#12352a] shadow-[0_14px_32px_-24px_rgba(6,95,70,0.72)] backdrop-blur-[14px]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
+          <div>
+            <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-800/62">사회자</div>
+            <div className="font-board text-[clamp(16px,2vw,22px)] font-extrabold leading-tight">먼저 권리증을 나눠드릴게요</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="pointer-events-auto absolute left-1/2 top-1/2 z-30 w-[min(92vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/75 bg-white/78 p-4 text-center shadow-[0_20px_48px_-28px_rgba(36,57,74,0.72)] backdrop-blur-[16px]">
+        <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-emerald-700/70">game ready</div>
+        <div className="mt-1 font-board text-[28px] font-extrabold leading-none text-[#182a35]">참여자 준비</div>
+        <div className="mt-2 font-board text-[16px] leading-snug text-[#182a35]/66" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>권리증을 확인한 플레이어가 차례대로 준비완료를 눌러주세요.</div>
+        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+          {players.map((player, idx) => {
+            const base = CHAR_META[player.character] ?? { name: `${idx + 1}P`, color: '#d83b2f', emoji: '🎭' };
+            const name = displayPlayerName(player, base.name);
+            const img = getCharacterImg(player.character);
+            const ready = readyPlayers.has(idx);
+            return (
+              <button
+                key={`${idx}-${player.character}`}
+                type="button"
+                onClick={() => markReady(idx)}
+                disabled={ready}
+                className="min-h-[138px] rounded-2xl border bg-white/70 px-2 py-3 text-center shadow-[0_12px_24px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:opacity-85"
+                style={{ borderColor: `${base.color}77`, background: ready ? `linear-gradient(180deg, #ffffff 0%, ${base.color}24 100%)` : 'rgba(255,255,255,0.72)' }}
+              >
+                <div className="mx-auto h-14 w-14 rounded-full border-2 bg-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_18px_-14px_rgba(36,57,74,0.8)]" style={{ borderColor: base.color, backgroundImage: img ? `url(${img})` : undefined, backgroundSize: AVATAR_SIZE[player.character] ?? '155%', backgroundPosition: AVATAR_POSITION[player.character] ?? 'center 22%', backgroundRepeat: 'no-repeat', backgroundColor: `${base.color}22` }}>
+                  {!img && <span className="grid h-full place-items-center text-2xl">{base.emoji ?? '🎭'}</span>}
+                </div>
+                <div className="mt-2 truncate font-board text-[16px] font-extrabold leading-none text-[#182a35]">{name}</div>
+                <div className="mt-3 rounded-xl border px-2 py-2 font-board text-[16px] font-extrabold leading-none" style={{ borderColor: `${base.color}77`, color: ready ? '#065f46' : base.color, background: ready ? '#dcfce7' : `${base.color}14` }}>
+                  {ready ? '준비완료 ✓' : '준비완료'}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 font-board text-[15px] font-extrabold text-[#182a35]/64">{readyPlayers.size}/{players.length} 준비 완료</div>
+      </div>
 
       {cards.map((card, dealIndex) => {
         const targetKey = `${card.playerIndex}-${card.cardIndex}`;
