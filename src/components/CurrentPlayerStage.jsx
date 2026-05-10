@@ -624,9 +624,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
             <div className="mt-2 inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-1.5 font-board text-[20px] font-extrabold text-red-700 shadow-[0_8px_16px_-14px_rgba(220,38,38,0.72)]">
               -{fmt(result?.amount)}만 지출
             </div>
-            <div className="mt-2 font-board text-[14px] leading-snug text-ink/60" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
-              현금은 차감되고, 소유자에게 통행료가 지급됩니다.
-            </div>
+
           </div>
           {diceLocked && onUnlockDice && (
             <button
@@ -642,7 +640,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
         <div className="rounded-2xl border border-white/70 bg-white/44 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
           <div className="mb-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-white/70 bg-white/44 p-1 backdrop-blur-[12px] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
             <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'keypad' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'keypad' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>직접 입력</button>
-            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'app' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'app' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>앱 주사위</button>
+            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'app' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'app' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>주사위</button>
           </div>
           {diceMode === 'app' ? (
             <div className="space-y-2">

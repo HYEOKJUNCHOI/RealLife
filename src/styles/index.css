@@ -450,6 +450,18 @@ html.turn-card-touch-live [data-deed-slot="3"] .deed-slot-card { animation-delay
   transform-origin: center;
 }
 
+html.initial-deal-pending [data-deed-slot] {
+  opacity: 1;
+}
+
+html.initial-deal-pending [data-deed-slot] .deed-slot-card {
+  opacity: 0 !important;
+}
+
+html.initial-deal-pending [data-deed-slot] .deed-slot-placeholder {
+  opacity: 1;
+}
+
 html.initial-deal-live [data-deed-slot] {
   opacity: 1;
 }

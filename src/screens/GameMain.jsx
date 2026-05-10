@@ -116,7 +116,7 @@ export default function GameMain({ onExit }) {
   const autoBoardTurnKeyRef = useRef(null);
   const diceSnapshotRef = useRef(null);
   const [diceLocked, setDiceLocked] = useState(false);
-  const [diceMode, setDiceMode] = useState('keypad');
+  const [diceMode, setDiceMode] = useState('app');
   const [lastDiceRoll, setLastDiceRoll] = useState(null);
   const audioRef = useRef(null);
   const [bgmEnabled, setBgmEnabled] = useState(() => {
@@ -710,15 +710,40 @@ export default function GameMain({ onExit }) {
       const isCardArrival = !!card;
       if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
       const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+      const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
       const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
+      if (rentEvent && !pendingBuy && !isCardArrival && !jailNotice) {
+        const ownerId = rentEvent.ownerId;
+        const owner = state.players?.[ownerId];
+        const ownerBase = CHAR_META[owner?.character] ?? { name: `${(ownerId ?? 0) + 1}P`, color: '#d83b2f' };
+        const ownerName = displayPlayerName(owner, ownerBase.name);
+        const rentTileName = tileNameForPos(state, rentEvent.pos ?? endPos);
+        const rentAmount = rentEvent.rent ?? rentEvent.fee ?? rentEvent.amount ?? 0;
+        pushGlobalNotice({
+          kind: 'rent',
+          speaker: '사회자',
+          hostText: rentEmceeLine({ visitor: playerName, owner: ownerName, tile: rentTileName, amount: rentAmount }),
+          title: '통행료 정산',
+          text: `${ownerName}님의 ${rentTileName}`,
+          icon: '💸',
+          amount: -rentAmount,
+          visitorName: playerName,
+          ownerName,
+          tileName: rentTileName,
+          visitorCharacter: turnPlayer?.character,
+          ownerCharacter: owner?.character,
+          ownerColor: ownerBase.color,
+        });
+      }
       if (pendingBuy || jailNotice || isCardArrival) {
         pushGlobalNotice({
           kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : 'card_arrival',
           speaker: '사회자',
-          title: pendingBuy ? '구매할까요?' : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
-          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?` : isCardArrival ? '무슨 카드가 나올까요? 두근두근합니다 👀' : (toastMessage ?? '감옥으로 이동합니다 😭'),
-          icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : '💡',
-          cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
+          title: pendingBuy ? `좋은 땅인데\n매입하시겠어요? 호호` : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
+          hostText: pendingBuy ? `부동산 아주머니가 ${tileNameForPos(state, pendingBuy.pos)} 권리증을 슬쩍 내밉니다 🧑‍💼` : undefined,
+          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}` : isCardArrival ? '무슨 카드가 나올까요? 두근두근합니다 👀' : (toastMessage ?? '감옥으로 이동합니다 😭'),
+          icon: pendingBuy ? '🧑‍💼' : jailNotice ? '🚓' : '💡',
+          cta: pendingBuy ? '매입 / 스킵' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
           previewPos: pendingBuy?.pos,
           price: pendingBuy?.buyPrice,
           color: pendingBuy ? turnBaseMeta.color : undefined,
@@ -1245,47 +1270,80 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   const amount = Number(notice.amount);
   const showAmount = Number.isFinite(amount) && amount !== 0;
   const accent = notice.color ?? '#22c55e';
+  const isBuy = notice.kind === 'buy' && notice.previewPos != null;
+  const isRent = notice.kind === 'rent';
+  const hostText = notice.hostText ?? notice.text;
   const noticeStyle = notice.color ? {
     background: `linear-gradient(135deg, rgba(15,12,10,0.92) 0%, ${accent}88 58%, rgba(255,255,255,0.18) 100%)`,
     boxShadow: `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${accent}aa, 0 0 42px ${accent}8f, inset 0 0 30px ${accent}22`,
   } : undefined;
+  const visitorImg = notice.visitorCharacter ? getCharacterImg(notice.visitorCharacter) : null;
+  const ownerImg = notice.ownerCharacter ? getCharacterImg(notice.ownerCharacter) : null;
+  const avatarStyle = (character, img, fallbackColor = '#d83b2f') => ({
+    backgroundImage: img ? `url(${img})` : undefined,
+    backgroundSize: AVATAR_SIZE[character] ?? '155%',
+    backgroundPosition: AVATAR_POSITION[character] ?? 'center 22%',
+    backgroundRepeat: 'no-repeat',
+    backgroundColor: `${fallbackColor}22`,
+  });
+  const dismiss = (event) => { event.preventDefault(); event.stopPropagation(); onDismiss?.(notice); };
   const layer = (
     <div
       className="pointer-events-auto fixed inset-0 flex items-center justify-center px-3"
       style={{ zIndex: 2147483000, touchAction: 'none' }}
-      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); onDismiss?.(notice); }}
+      onPointerDown={dismiss}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
       <motion.div
         key={`${notice.kind}-${notice.title}-${notice.text}`}
+        className="flex w-full max-w-[920px] flex-col items-center"
         initial={{ opacity: 0, scale: 0.96, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: -10 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
       >
+        {hostText && (
+          <div className="mb-[5px] flex max-w-[860px] items-center justify-center gap-2 rounded-[18px] border border-emerald-200/75 bg-[linear-gradient(180deg,rgba(236,253,245,0.78),rgba(16,185,129,0.34))] px-4 py-2 text-center text-[#08372b] shadow-[0_12px_28px_-22px_rgba(6,95,70,0.78),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-[16px]">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
+            <span className="font-board text-[clamp(15px,2vw,21px)] font-extrabold leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{hostText}</span>
+          </div>
+        )}
         <div
-          className={cn('mx-auto grid overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[38px_1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[30vh] max-w-[980px] grid-rows-[42px_1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
+          className={cn('mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
           style={noticeStyle}
         >
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/18 bg-black/22 px-3 font-board text-[clamp(14px,2vw,22px)] leading-none text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
-            {notice.kind === 'buy' ? <img src="/ui/host-mic.jpg" alt="" className="h-10 w-10 rounded-full border object-cover object-top shadow-[0_0_18px_rgba(255,255,255,0.35)]" style={{ borderColor: `${accent}aa` }} draggable={false} /> : <span className="text-[1.15em]">🎙️</span>}
-            <span className="font-display text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: notice.kind === 'buy' ? '#fff7d6' : undefined }}>{notice.speaker ?? 'NPC'}</span>
-            <span className="truncate">{notice.text}</span>
-          </div>
-          {notice.kind === 'buy' && notice.previewPos != null ? (
+          {isBuy ? (
             <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
               <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
                 <PropertyDeedMini pos={notice.previewPos} />
               </div>
               <div className="min-w-0 text-center sm:text-left">
                 <div className="flex items-center justify-center gap-3 sm:justify-start">
-                  <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🏠'}</motion.span>
-                  <div className="font-board text-[clamp(30px,5vw,62px)] leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
+                  <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧑‍💼'}</motion.span>
+                  <div className="whitespace-pre-line font-board text-[clamp(30px,4.5vw,54px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
                 </div>
-                <div className="mt-2 font-board text-[clamp(17px,2.4vw,28px)] leading-tight text-white/92">{notice.text}</div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">{notice.text}</div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none" style={{ background: `linear-gradient(180deg,#ffffff_0%,${accent}33_48%,${accent}_100%)` }}>매입</button>
+                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
                   <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
+                </div>
+              </div>
+            </div>
+          ) : isRent ? (
+            <div className="flex min-h-[230px] flex-col items-center justify-center gap-3 px-4">
+              <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/62">통행료 정산</div>
+              <div className="font-board text-[clamp(24px,4vw,44px)] font-extrabold leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.38)]">{notice.text}</div>
+              <div className="mt-1 flex items-center justify-center gap-5">
+                <div className="relative flex flex-col items-center gap-1">
+                  <motion.div className="absolute -top-8 rounded-full bg-red-500 px-3 py-1 font-display text-[18px] font-black text-white shadow-[0_3px_0_#0F0C0A]" animate={{ y: [10, -8, -16], opacity: [0, 1, 0] }} transition={{ duration: 1.25, repeat: 1 }}>-{fmt(Math.abs(amount))}만</motion.div>
+                  <div className="relative h-20 w-20 rounded-full border-3 border-white bg-white/70 shadow-[0_4px_0_#0F0C0A]" style={avatarStyle(notice.visitorCharacter, visitorImg, '#d83b2f')}><span className="absolute -right-2 -top-3 text-3xl">😭</span></div>
+                  <div className="max-w-[120px] truncate font-board text-[15px] text-white/86">{notice.visitorName}</div>
+                </div>
+                <div className="font-display text-[34px] text-monopoly-gold">→</div>
+                <div className="relative flex flex-col items-center gap-1">
+                  <motion.div className="absolute -top-8 rounded-full bg-emerald-500 px-3 py-1 font-display text-[18px] font-black text-white shadow-[0_3px_0_#0F0C0A]" animate={{ y: [10, -8, -16], opacity: [0, 1, 0] }} transition={{ duration: 1.25, repeat: 1 }}>+{fmt(Math.abs(amount))}만</motion.div>
+                  <motion.div className="relative h-20 w-20 rounded-full border-3 border-white bg-white/70 shadow-[0_4px_0_#0F0C0A]" animate={{ x: [-3, 4, -2, 3, 0], rotate: [-2, 2, -2, 2, 0] }} transition={{ duration: 0.9, repeat: 2 }} style={avatarStyle(notice.ownerCharacter, ownerImg, notice.ownerColor ?? '#22c55e')}><span className="absolute -right-2 -top-3 text-3xl">😏</span></motion.div>
+                  <div className="max-w-[120px] truncate font-board text-[15px] text-white/86">{notice.ownerName}</div>
                 </div>
               </div>
             </div>
@@ -1298,10 +1356,12 @@ function GlobalNoticeBand({ notice, onDismiss }) {
               </div>
             </div>
           )}
-          <div className={cn('flex items-start justify-center gap-3 font-board', notice.subtle ? 'hidden' : 'text-[clamp(18px,3vw,34px)]')}>
-            {showAmount && <span className={amount >= 0 ? 'text-emerald-200' : 'text-red-200'}>{signedMoney(amount)}</span>}
-            {notice.cash != null && <span className="text-monopoly-gold">내 예금 {Number(notice.cash).toLocaleString('ko-KR')}만</span>}
-          </div>
+          {!isBuy && !isRent && (
+            <div className={cn('flex items-start justify-center gap-3 font-board', notice.subtle ? 'hidden' : 'text-[clamp(18px,3vw,34px)]')}>
+              {showAmount && <span className={amount >= 0 ? 'text-emerald-200' : 'text-red-200'}>{signedMoney(amount)}</span>}
+              {notice.cash != null && <span className="text-monopoly-gold">내 예금 {Number(notice.cash).toLocaleString('ko-KR')}만</span>}
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
@@ -1733,20 +1793,24 @@ function describeArrival(event, tile) {
 
 function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
   const [targets, setTargets] = useState({});
-  const [readyPlayers, setReadyPlayers] = useState(() => new Set());
-  const allReady = players.length > 0 && readyPlayers.size >= players.length;
-  const markReady = (index) => {
-    setReadyPlayers((prev) => {
-      const next = new Set(prev);
-      next.add(index);
-      return next;
-    });
-  };
+  const [phase, setPhase] = useState('start');
+  const introVisible = phase === 'intro';
+  const dealVisible = phase === 'deal';
+
   useEffect(() => {
-    if (!allReady) return undefined;
-    const timer = window.setTimeout(() => onReady?.(), 420);
+    document.documentElement.classList.toggle('initial-deal-pending', introVisible);
+    document.documentElement.classList.toggle('initial-deal-live', dealVisible);
+    return () => {
+      document.documentElement.classList.remove('initial-deal-pending');
+      document.documentElement.classList.remove('initial-deal-live');
+    };
+  }, [introVisible, dealVisible]);
+
+  useEffect(() => {
+    if (!dealVisible) return undefined;
+    const timer = window.setTimeout(() => onReady?.(), 1900);
     return () => window.clearTimeout(timer);
-  }, [allReady, onReady]);
+  }, [dealVisible, onReady]);
 
   useEffect(() => {
     const readTargets = () => {
@@ -1772,7 +1836,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
     readTargets();
     window.addEventListener('resize', readTargets);
     return () => window.removeEventListener('resize', readTargets);
-  }, [cards]);
+  }, [cards, turnIndex]);
 
   const fallbackTargets = players.length === 2
     ? [{ x: -220, y: -120 }, { x: 220, y: 160 }]
@@ -1781,51 +1845,38 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
       : [{ x: -260, y: -130 }, { x: 260, y: -130 }, { x: -260, y: 180 }, { x: 260, y: 180 }];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[80] overflow-hidden">
-      <div className="initial-deal-caption absolute left-1/2 top-5 z-30 max-w-[min(92vw,620px)] -translate-x-1/2 rounded-[22px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(220,252,231,0.78))] px-4 py-2.5 text-left text-[#12352a] shadow-[0_14px_32px_-24px_rgba(6,95,70,0.72)] backdrop-blur-[14px]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
-          <div>
-            <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-800/62">사회자</div>
-            <div className="font-board text-[clamp(16px,2vw,22px)] font-extrabold leading-tight">먼저 권리증을 나눠드릴게요</div>
+    <div className={cn('pointer-events-none fixed inset-0 z-[80] overflow-hidden', phase === 'start' && 'bg-[#eef1ed]')}>
+      {phase === 'start' && (
+        <>
+          <img src="/backgrounds/initial-start.png" alt="" className="absolute inset-0 h-full w-full object-contain" draggable={false} aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => setPhase('intro')}
+            className="pointer-events-auto absolute left-1/2 top-[calc(62%+30px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]"
+          >
+            시작하기
+          </button>
+        </>
+      )}
+
+      {introVisible && (
+        <button
+          type="button"
+          onClick={() => setPhase('deal')}
+          className="pointer-events-auto absolute left-1/2 top-[47%] z-30 w-[min(88vw,560px)] -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-emerald-200/80 bg-[linear-gradient(180deg,rgba(236,253,245,0.78),rgba(16,185,129,0.36))] px-5 py-4 text-left text-[#08372b] shadow-[0_18px_42px_-24px_rgba(6,95,70,0.72),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-[16px] transition active:translate-y-[calc(-50%+1px)]"
+        >
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xl text-white">🎙️</span>
+            <div>
+              <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-900/62">사회자</div>
+              <div className="font-board text-[clamp(18px,2.4vw,25px)] font-extrabold leading-tight">자, 첫 판돈은 땅입니다. 권리증 뿌립니다 👀</div>
+              <div className="mt-1 font-board text-[14px] font-extrabold text-emerald-950/54">터치하면 계약서가 펼쳐집니다</div>
+            </div>
           </div>
-        </div>
-      </div>
+        </button>
+      )}
 
-      <div className="pointer-events-auto absolute left-1/2 top-1/2 z-30 w-[min(92vw,680px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/75 bg-white/78 p-4 text-center shadow-[0_20px_48px_-28px_rgba(36,57,74,0.72)] backdrop-blur-[16px]">
-        <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-emerald-700/70">game ready</div>
-        <div className="mt-1 font-board text-[28px] font-extrabold leading-none text-[#182a35]">참여자 준비</div>
-        <div className="mt-2 font-board text-[16px] leading-snug text-[#182a35]/66" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>권리증을 확인한 플레이어가 차례대로 준비완료를 눌러주세요.</div>
-        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-          {players.map((player, idx) => {
-            const base = CHAR_META[player.character] ?? { name: `${idx + 1}P`, color: '#d83b2f', emoji: '🎭' };
-            const name = displayPlayerName(player, base.name);
-            const img = getCharacterImg(player.character);
-            const ready = readyPlayers.has(idx);
-            return (
-              <button
-                key={`${idx}-${player.character}`}
-                type="button"
-                onClick={() => markReady(idx)}
-                disabled={ready}
-                className="min-h-[138px] rounded-2xl border bg-white/70 px-2 py-3 text-center shadow-[0_12px_24px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:opacity-85"
-                style={{ borderColor: `${base.color}77`, background: ready ? `linear-gradient(180deg, #ffffff 0%, ${base.color}24 100%)` : 'rgba(255,255,255,0.72)' }}
-              >
-                <div className="mx-auto h-14 w-14 rounded-full border-2 bg-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_18px_-14px_rgba(36,57,74,0.8)]" style={{ borderColor: base.color, backgroundImage: img ? `url(${img})` : undefined, backgroundSize: AVATAR_SIZE[player.character] ?? '155%', backgroundPosition: AVATAR_POSITION[player.character] ?? 'center 22%', backgroundRepeat: 'no-repeat', backgroundColor: `${base.color}22` }}>
-                  {!img && <span className="grid h-full place-items-center text-2xl">{base.emoji ?? '🎭'}</span>}
-                </div>
-                <div className="mt-2 truncate font-board text-[16px] font-extrabold leading-none text-[#182a35]">{name}</div>
-                <div className="mt-3 rounded-xl border px-2 py-2 font-board text-[16px] font-extrabold leading-none" style={{ borderColor: `${base.color}77`, color: ready ? '#065f46' : base.color, background: ready ? '#dcfce7' : `${base.color}14` }}>
-                  {ready ? '준비완료 ✓' : '준비완료'}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-3 font-board text-[15px] font-extrabold text-[#182a35]/64">{readyPlayers.size}/{players.length} 준비 완료</div>
-      </div>
-
-      {cards.map((card, dealIndex) => {
+      {dealVisible && cards.map((card, dealIndex) => {
         const targetKey = `${card.playerIndex}-${card.cardIndex}`;
         const fallback = fallbackTargets[card.playerIndex] ?? fallbackTargets[0];
         const target = targets[targetKey] ?? { ...fallback, w: 68, h: 96 };
@@ -1855,7 +1906,6 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
           </div>
         );
       })}
-
     </div>
   );
 }
