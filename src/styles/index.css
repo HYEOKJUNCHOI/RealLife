@@ -2649,8 +2649,13 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 
 
 /* Subtle start button blink */
+.initial-start-button-loading {
+  filter: brightness(0.82) saturate(0.82);
+  opacity: 0.86;
+}
+
 .initial-start-button-pulse {
-  animation: initial-start-button-ignite 5.2s ease-out both, initial-start-button-pulse 1.35s ease-in-out 5.2s infinite;
+  animation: initial-start-button-ready-pop 0.34s ease-out both, initial-start-button-pulse 1.35s ease-in-out 0.34s infinite;
 }
 
 @keyframes initial-start-button-pulse {
@@ -2702,9 +2707,9 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 .initial-start-loading-percent { font-size: 0; }
 .initial-start-loading-percent::before { font-size: 8px; }
 
-@keyframes initial-start-button-ignite {
-  0%, 86% { filter: brightness(0.82) saturate(0.82); opacity: 0.86; }
-  100% { filter: brightness(1.18) saturate(1.1); opacity: 1; }
+@keyframes initial-start-button-ready-pop {
+  0% { filter: brightness(0.88) saturate(0.9); opacity: 0.9; transform: translateX(-50%) scale(0.98); }
+  100% { filter: brightness(1.18) saturate(1.1); opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 @keyframes initial-start-loading-fill {

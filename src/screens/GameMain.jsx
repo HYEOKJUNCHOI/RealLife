@@ -1818,6 +1818,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
   const [targets, setTargets] = useState({});
   const [phase, setPhase] = useState('start');
   const [startImageReady, setStartImageReady] = useState(false);
+  const [portalCharged, setPortalCharged] = useState(false);
   const introVisible = phase === 'intro';
   const dealVisible = phase === 'deal';
 
@@ -1835,6 +1836,13 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
     const timer = window.setTimeout(() => onReady?.(), 1900);
     return () => window.clearTimeout(timer);
   }, [dealVisible, onReady]);
+
+  useEffect(() => {
+    if (phase !== 'start' || !startImageReady) return undefined;
+    setPortalCharged(false);
+    const timer = window.setTimeout(() => setPortalCharged(true), 5200);
+    return () => window.clearTimeout(timer);
+  }, [phase, startImageReady]);
 
   useEffect(() => {
     const readTargets = () => {
@@ -1893,10 +1901,10 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
             <>
               <button
                 type="button"
-                onClick={() => setPhase('intro')}
-                className="initial-start-button-pulse pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]"
+                onClick={() => portalCharged && setPhase('intro')}
+                className={cn('pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]', portalCharged ? 'initial-start-button-pulse' : 'initial-start-button-loading cursor-wait')}
               >
-                시작하기
+                {portalCharged ? '시작하기' : '로딩중...'}
               </button>
               <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+150px)] z-30 w-[min(58vw,420px)] -translate-x-1/2 px-3 py-2 text-center">
                 <div className="flex items-center justify-between font-display text-[8px] font-black uppercase tracking-[0.22em] text-[#9ff6ff]/90">
