@@ -1833,16 +1833,6 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
             />
           </div>
           <div className="absolute inset-0 rounded-[18px] bg-[linear-gradient(180deg,rgba(12,14,16,0.06),rgba(12,14,16,0.16))] mix-blend-multiply" aria-hidden="true" />
-          <div className="initial-start-summon-layer absolute inset-0 rounded-[18px]" aria-hidden="true">
-            <div className="initial-start-residue initial-start-residue--left" />
-            <div className="initial-start-residue initial-start-residue--center-left" />
-            <div className="initial-start-residue initial-start-residue--center-right" />
-            <div className="initial-start-residue initial-start-residue--right" />
-            <div className="initial-start-materialize initial-start-materialize--left" />
-            <div className="initial-start-materialize initial-start-materialize--center-left" />
-            <div className="initial-start-materialize initial-start-materialize--center-right" />
-            <div className="initial-start-materialize initial-start-materialize--right" />
-          </div>
 
           {!startImageReady ? (
             <div className="pointer-events-auto absolute inset-0 z-30 grid place-items-center rounded-[18px] bg-[#eef1ed]/72 backdrop-blur-[6px]">
