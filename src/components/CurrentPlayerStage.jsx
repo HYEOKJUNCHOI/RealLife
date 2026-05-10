@@ -1113,33 +1113,39 @@ function Group({ label, children }) {
 }
 
 function StatusBadges({ player }) {
-  const items = [];
-  // 감옥/휴식 턴 수 뱃지는 메인 쉬는 중 오버레이와 중복되어 숨긴다.
-  if (player.creditDebt > 0) items.push({ tone: 'amber', text: `신용 ${fmt(player.creditDebt)}만` });
-  if (player.loansharkDebt > 0) items.push({ tone: 'red', text: `고리 ${fmt(player.loansharkDebt)}만` });
-  if (player.bankrupt) items.push({ tone: 'black', text: '파산' });
-  if (items.length === 0) return null;
+  const items = [
+    { tone: 'blue', text: `방어 ${(player.defenseCards ?? 0)}장` },
+    { tone: 'violet', text: (player.lifeChangeReady || player.pendingLifeChange) ? '체인지 가능' : '체인지 0' },
+    { tone: 'amber', text: `신용 ${fmt(player.creditDebt ?? 0)}만` },
+    { tone: 'red', text: `고리 ${fmt(player.loansharkDebt ?? 0)}만` },
+    { tone: player.inJail ? 'black' : 'slate', text: player.inJail ? `감옥 ${player.jailTurns ?? 0}` : '감옥 0' },
+    { tone: (player.skipTurns ?? 0) > 0 ? 'black' : 'slate', text: (player.skipTurns ?? 0) > 0 ? `휴식 ${player.skipTurns}` : '휴식 0' },
+    { tone: player.bankrupt ? 'black' : 'slate', text: player.bankrupt ? '파산' : '정상' },
+  ];
 
   const toneCls = {
     amber: 'border-monopoly-gold bg-amber-100 text-amber-900',
     red: 'border-monopoly-deep bg-red-100 text-monopoly-deep',
     black: 'border-ink-line bg-ink text-white',
+    blue: 'border-blue-700 bg-blue-100 text-blue-900',
+    violet: 'border-violet-700 bg-violet-100 text-violet-900',
+    slate: 'border-slate-400 bg-slate-100 text-slate-600',
   };
 
   return (
-    <>
+    <div className="flex max-w-[310px] flex-wrap items-center gap-0.5 overflow-visible">
       {items.map((it, i) => (
         <span
           key={i}
           className={cn(
-            'inline-flex rounded-sm border px-1 py-0.5 font-display text-[8px] font-bold uppercase tracking-wider',
+            'inline-flex shrink-0 rounded-sm border px-1 py-0.5 font-display text-[8px] font-bold uppercase tracking-wider leading-none',
             toneCls[it.tone],
           )}
         >
           {it.text}
         </span>
       ))}
-    </>
+    </div>
   );
 }
 
