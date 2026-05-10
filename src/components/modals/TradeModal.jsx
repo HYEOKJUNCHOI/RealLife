@@ -53,46 +53,62 @@ const cleanMoney = (value, max = 999999) => {
 };
 
 function MoneyKeypad({ value, max = 0, onChange, disabled = false }) {
+  const current = Number.parseInt(value || '0', 10) || 0;
   const setAmount = (next) => onChange?.(cleanMoney(next, max));
   const append = (digit) => {
     if (disabled) return;
-    setAmount(`${Number.parseInt(value || '0', 10) || 0}${digit}`);
+    setAmount(`${current}${digit}`);
   };
   const quickAdd = (amount) => {
     if (disabled) return;
-    const current = Number.parseInt(value || '0', 10) || 0;
     setAmount(current + amount);
+  };
+  const quickSub = (amount) => {
+    if (disabled) return;
+    setAmount(Math.max(0, current - amount));
   };
 
   return (
-    <div className={cn('mt-1.5 grid gap-1', disabled && 'pointer-events-none opacity-45')}>
-      <div className="grid grid-cols-3 gap-1">
+    <div className={cn('mt-2 grid gap-2', disabled && 'pointer-events-none opacity-45')}>
+      <div className="grid grid-cols-5 gap-1.5">
+        {[10, 50, 100, 500].map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => quickAdd(amount)}
+            className="h-11 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_56%,#e9bd56_100%)] font-board text-[15px] text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
+          >
+            +{amount}
+          </button>
+        ))}
+        <button type="button" onClick={() => setAmount(max)} className="h-11 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#f0fff6_0%,#9de8c8_58%,#44b990_100%)] font-board text-[14px] text-emerald-950 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">최대</button>
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {[10, 50, 100].map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => quickSub(amount)}
+            className="h-10 rounded-lg border-2 border-ink-line bg-white font-board text-[14px] text-ink/70 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
+          >
+            -{amount}
+          </button>
+        ))}
+        <button type="button" onClick={() => setAmount('0')} className="h-10 rounded-lg border-2 border-ink-line bg-red-50 font-board text-[14px] text-red-700 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">0원</button>
+        <button type="button" onClick={() => setAmount(String(value ?? '0').slice(0, -1) || '0')} className="h-10 rounded-lg border-2 border-ink-line bg-slate-50 font-board text-[14px] text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">⌫</button>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
           <button
             key={num}
             type="button"
             onClick={() => append(num)}
-            className="h-8 rounded border border-ink-line/40 bg-white font-display text-[15px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
+            className="h-9 rounded-lg border border-ink-line/35 bg-white font-display text-[15px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
           >
             {num}
           </button>
         ))}
-        <button type="button" onClick={() => setAmount('0')} className="h-8 rounded border border-ink-line/40 bg-red-50 font-board text-[12px] text-red-700 shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">C</button>
-        <button type="button" onClick={() => append(0)} className="h-8 rounded border border-ink-line/40 bg-white font-display text-[15px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">0</button>
-        <button type="button" onClick={() => setAmount(String(value ?? '0').slice(0, -1) || '0')} className="h-8 rounded border border-ink-line/40 bg-slate-50 font-board text-[13px] text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">⌫</button>
-      </div>
-      <div className="grid grid-cols-3 gap-1">
-        {[100, 500].map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            onClick={() => quickAdd(amount)}
-            className="h-7 rounded border border-ink-line/35 bg-amber-50 font-board text-[11px] text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
-          >
-            +{amount}
-          </button>
-        ))}
-        <button type="button" onClick={() => setAmount(max)} className="h-7 rounded border border-ink-line/35 bg-emerald-50 font-board text-[11px] text-emerald-800 shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">최대</button>
+        <button type="button" onClick={() => append(0)} className="col-span-3 h-9 rounded-lg border border-ink-line/35 bg-white font-display text-[15px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">0</button>
       </div>
     </div>
   );
@@ -108,6 +124,7 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
   const [giveCash, setGiveCash] = useState(0);
   const [getCash, setGetCash] = useState(0);
   const [retryUsed, setRetryUsed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   // 모달 열릴 때 초기화 (미니맵에서 미리 선택된 부동산 있으면 반영)
   useEffect(() => {
@@ -118,6 +135,7 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
       setGiveCash(0);
       setGetCash(0);
       setRetryUsed(false);
+      setConfirming(false);
     }
   }, [open, initialToId, initialGetPos]);
 
@@ -144,8 +162,15 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
   const toggleGet = (pos) =>
     setGetPos((prev) => (prev.includes(pos) ? prev.filter((p) => p !== pos) : [...prev, pos]));
 
+  const tradeEmpty = givePos.length === 0 && getPos.length === 0 && +giveCash === 0 && +getCash === 0;
+  const describeList = (positions) => positions.map((pos) => state.board.tiles[pos]?.names?.ko ?? pos).join(', ') || '없음';
+
   const onSubmit = () => {
-    if (toId == null) return;
+    if (toId == null || tradeEmpty) return;
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
     handleSubmit?.({
       fromId,
       toId,
@@ -269,12 +294,24 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
           </div>
         </div>
 
-        {/* NPC 정보 (시세만) */}
-        <div className="bg-gray-50 rounded p-2 text-xs text-gray-600">
-          💬 NPC: 시세 정보 (균형 판단은 직접) —{' '}
-          {givePos.map((p) => `${state.board.tiles[p].names.ko} ${currentPrice(state, p)}만`).join(' / ') || '내가 줄 부동산 없음'}
-          {' ↔ '}
-          {getPos.map((p) => `${state.board.tiles[p].names.ko} ${currentPrice(state, p)}만`).join(' / ') || '받을 부동산 없음'}
+        {/* 거래 요약 */}
+        <div className={cn('rounded-xl border-2 p-3 text-sm shadow-[0_2px_0_#0F0C0A]', confirming ? 'border-emerald-700 bg-emerald-50 text-emerald-950' : 'border-ink-line/20 bg-gray-50 text-gray-600')}>
+          <div className="mb-2 font-board text-lg text-ink">{confirming ? '마지막 확인' : '거래 요약'}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-white/80 p-2">
+              <div className="font-bold text-red-700">내가 주는 것</div>
+              <div>권리증: {describeList(givePos)}</div>
+              <div>현금: {Number(giveCash || 0).toLocaleString('ko-KR')}만</div>
+            </div>
+            <div className="rounded-lg bg-white/80 p-2">
+              <div className="font-bold text-emerald-700">내가 받는 것</div>
+              <div>권리증: {describeList(getPos)}</div>
+              <div>현금: {Number(getCash || 0).toLocaleString('ko-KR')}만</div>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            💬 시세 참고 — {givePos.map((p) => `${state.board.tiles[p].names.ko} ${currentPrice(state, p)}만`).join(' / ') || '내가 줄 부동산 없음'} ↔ {getPos.map((p) => `${state.board.tiles[p].names.ko} ${currentPrice(state, p)}만`).join(' / ') || '받을 부동산 없음'}
+          </div>
         </div>
 
         {/* 액션 */}
@@ -294,9 +331,9 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
             type="button"
             className="flex-1 py-2 rounded bg-matrix-green text-black font-bold hover:bg-green-400 text-sm"
             onClick={onSubmit}
-            disabled={toId == null || (givePos.length === 0 && getPos.length === 0 && +giveCash === 0 && +getCash === 0)}
+            disabled={toId == null || tradeEmpty}
           >
-            ✅ 거래 보내기
+            {confirming ? '✅ 확정해서 보내기' : '👀 요약 확인'}
           </button>
           <button
             type="button"
