@@ -1601,10 +1601,10 @@ function IveRenewalLayout({
         : '주사위를 굴려 다음 인생 칸으로 이동하세요.';
 
   return (
-    <section className="relative grid h-full w-full grid-cols-[220px_minmax(0,1fr)_246px] grid-rows-[minmax(0,1fr)_104px] gap-1.5 overflow-hidden rounded-[18px] border-2 border-[#24394a] bg-[#f4f7fb] p-1.5 shadow-[0_5px_0_#24394a,0_18px_40px_-34px_rgba(0,0,0,0.35)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_26%,rgba(255,255,255,0.72),transparent_32%),linear-gradient(135deg,rgba(210,228,244,0.56),transparent_44%,rgba(245,241,232,0.72))]" />
+    <section className="relative grid h-full w-full grid-cols-[196px_minmax(0,1fr)_220px] grid-rows-[minmax(0,1fr)_146px] gap-2 overflow-hidden rounded-[22px] border border-white/70 bg-[#f7fbff] p-2 shadow-[0_18px_48px_-34px_rgba(36,57,74,0.55)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.95),transparent_30%),radial-gradient(circle_at_15%_88%,rgba(199,231,221,0.52),transparent_34%),linear-gradient(135deg,rgba(219,237,252,0.82),rgba(250,247,239,0.78))]" />
 
-      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 rounded-2xl border border-[#24394a]/18 bg-white/62 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-[10px]">
+      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 rounded-3xl border border-white/70 bg-white/42 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_-24px_rgba(36,57,74,0.7)] backdrop-blur-[18px]">
         <div className="rounded-xl border border-[#24394a]/16 bg-white/78 p-2.5">
           <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-ink/48">current player</div>
           <div className="mt-2 flex items-center gap-2.5">
@@ -1622,7 +1622,7 @@ function IveRenewalLayout({
             <div className="rounded-lg border border-red-700/22 bg-red-50 px-2 py-1.5"><div className="text-[12px] text-ink/48">부채</div><div className="text-[20px] text-red-700">{Number(totalDebt).toLocaleString('ko-KR')}만</div></div>
           </div>
         </div>
-        <div className="min-h-0 flex-1 rounded-xl border border-[#24394a]/18 bg-[#f8fbf7] p-1.5 text-ink shadow-[0_3px_0_#24394a]">
+        <div className="min-h-0 flex-1 rounded-2xl border border-white/70 bg-white/48 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-[14px]">
           <div className="mb-2 flex items-center justify-between">
             <span className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-ink/50">title deeds</span>
             <span className="font-board text-sm text-ink/60">{owned.length}/8</span>
@@ -1637,7 +1637,7 @@ function IveRenewalLayout({
         </div>
       </aside>
 
-      <main className="relative z-10 min-h-0 overflow-hidden rounded-2xl border border-[#24394a]/20 bg-[radial-gradient(circle_at_50%_45%,#d9edf7_0%,#b9d8ee_54%,#91bad6_100%)] p-2 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.12),0_3px_0_#0F0C0A]">
+      <main className="relative z-10 min-h-0 overflow-hidden rounded-[28px] border border-white/70 bg-[radial-gradient(circle_at_50%_45%,#eef8ff_0%,#d7edf9_48%,#bad8e9_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_40px_-30px_rgba(36,57,74,0.72)] backdrop-blur-[16px]">
         <div className="absolute left-3 top-3 z-20 rounded-full border border-[#24394a]/18 bg-white/86 px-3 py-1.5 font-display text-[9px] font-black uppercase tracking-[0.22em] text-ink/62 shadow-[0_2px_0_rgba(15,12,10,0.18)] backdrop-blur">board</div>
         <div className="absolute right-3 top-3 z-20 rounded-full border border-[#24394a]/18 bg-white/86 px-3 py-1.5 font-board text-[15px] text-ink/82 shadow-[0_2px_0_rgba(15,12,10,0.18)]">{activeName}</div>
         {isInlineMove && (
@@ -1675,7 +1675,7 @@ function IveRenewalLayout({
         </motion.div>
       </main>
 
-      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-2xl border border-[#24394a]/18 bg-white/62 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-[10px] no-scrollbar">
+      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-3xl border border-white/70 bg-white/42 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_-24px_rgba(36,57,74,0.7)] backdrop-blur-[18px] no-scrollbar">
         <div className="rounded-xl border-2 border-[#24394a]/18 bg-white/78 p-3">
           <div className="flex items-center gap-3">
             <img src="/ui/host-mic.jpg" alt="" className="h-16 w-16 rounded-2xl border-2 border-[#6f8fab]/35 object-cover object-top shadow-[0_4px_0_#24394a]" draggable={false} />
@@ -1701,22 +1701,35 @@ function IveRenewalLayout({
         </div>
       </aside>
 
-      <div className="relative z-10 col-span-3 grid grid-cols-[1fr_150px_170px_170px] items-center gap-2 rounded-2xl border border-[#24394a]/18 bg-white/72 p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-[10px]">
-        <div className="min-w-0">
-          <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-ink/42">action deck</div>
-          <div className="mt-1 truncate font-board text-[26px] leading-none">{prompt}</div>
-          <div className="mt-1 flex gap-1.5 overflow-hidden">
-            {nearbySignals.slice(0, 2).map((signal, idx) => <span key={`${signal.label}-${idx}`} className="rounded-full border border-[#24394a]/18 bg-white/74 px-2 py-0.5 font-board text-[13px] text-ink/68">{signal.icon} {signal.label}</span>)}
+      <div className="relative z-10 col-span-3 grid grid-cols-[210px_minmax(0,1fr)_142px_250px] items-center gap-2 rounded-[28px] border border-white/72 bg-white/48 p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_38px_-30px_rgba(36,57,74,0.72)] backdrop-blur-[20px]">
+        <div className="rounded-2xl border border-white/74 bg-white/58 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+          <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-[#476b87]/72">my money</div>
+          <div className="mt-1 font-board text-[30px] font-extrabold leading-none text-[#15352a]">{Number(player.cash ?? 0).toLocaleString('ko-KR')}만</div>
+          <div className="mt-1 font-board text-[14px] font-extrabold text-[#7a332d]">부채 {Number(totalDebt).toLocaleString('ko-KR')}만</div>
+        </div>
+        <div className="min-w-0 rounded-2xl border border-white/74 bg-white/38 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-[#476b87]/72">my table</span>
+            <span className="font-board text-[14px] font-extrabold text-[#24394a]/64">권리증 {owned.length}/8</span>
+          </div>
+          <div className="grid grid-cols-6 gap-1.5">
+            {Array.from({ length: 6 }).map((_, slot) => owned[slot] != null ? (
+              <div key={`table-${owned[slot]}`} className="h-[78px] overflow-hidden rounded-xl border border-white/72 bg-white/74 shadow-[0_8px_18px_-16px_rgba(36,57,74,0.8)]"><PropertyDeedMini pos={owned[slot]} /></div>
+            ) : (
+              <div key={`table-empty-${slot}`} className="grid h-[78px] place-items-center rounded-xl border border-dashed border-[#476b87]/26 bg-white/28 font-display text-[8px] font-black uppercase tracking-[0.14em] text-[#476b87]/34">empty</div>
+            ))}
           </div>
         </div>
-        <div className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#24394a]/18 bg-white/74 p-2">
-          <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceA))}.svg`} alt="" className="h-12 w-12" draggable={false} />
-          <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceB))}.svg`} alt="" className="h-12 w-12" draggable={false} />
+        <div className="grid h-[104px] place-items-center rounded-2xl border border-white/74 bg-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+          <div className="flex items-center justify-center gap-1.5">
+            <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceA))}.svg`} alt="" className="h-12 w-12 drop-shadow-sm" draggable={false} />
+            <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceB))}.svg`} alt="" className="h-12 w-12 drop-shadow-sm" draggable={false} />
+          </div>
         </div>
-        <button type="button" onClick={onAppDiceRoll} disabled={disabled || diceLocked} className="h-[60px] rounded-2xl border-[3px] border-[#24394a] bg-[linear-gradient(180deg,#ffffff_0%,#dff0ff_52%,#a9d0ef_100%)] font-board text-[23px] text-ink shadow-[0_5px_0_#24394a] active:translate-y-1 active:shadow-none disabled:opacity-45">주사위</button>
-        <div className="grid h-[60px] grid-cols-2 gap-2">
-          <button type="button" onClick={onOpenBoard} className="rounded-2xl border-2 border-[#24394a]/20 bg-white/78 font-board text-[19px] text-ink shadow-[0_4px_0_#24394a] active:translate-y-1 active:shadow-none">보드</button>
-          <button type="button" onClick={onEndTurn} disabled={!diceLocked} className="rounded-2xl border-2 border-[#9b4a4a] bg-[linear-gradient(180deg,#fff3f0,#f2a49c)] font-board text-[19px] text-white shadow-[0_4px_0_#24394a] active:translate-y-1 active:shadow-none disabled:opacity-45">턴끝</button>
+        <div className="grid h-[104px] grid-cols-2 gap-2">
+          <button type="button" onClick={onAppDiceRoll} disabled={disabled || diceLocked} className="col-span-2 rounded-2xl border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(222,241,255,0.92)_100%)] font-board text-[26px] font-extrabold text-[#15324a] shadow-[0_10px_22px_-16px_rgba(36,57,74,0.9)] active:translate-y-1 active:shadow-none disabled:opacity-45">주사위 던지기</button>
+          <button type="button" onClick={onOpenBoard} className="rounded-2xl border border-white/80 bg-white/58 font-board text-[18px] font-extrabold text-[#24394a] shadow-[0_8px_18px_-16px_rgba(36,57,74,0.9)] active:translate-y-1 active:shadow-none">시선</button>
+          <button type="button" onClick={onEndTurn} disabled={!diceLocked} className="rounded-2xl border border-white/80 bg-[#fff0ed]/86 font-board text-[18px] font-extrabold text-[#7a332d] shadow-[0_8px_18px_-16px_rgba(122,51,45,0.7)] active:translate-y-1 active:shadow-none disabled:opacity-45">턴끝</button>
         </div>
       </div>
     </section>
