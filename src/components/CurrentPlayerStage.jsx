@@ -392,7 +392,6 @@ export default function CurrentPlayerStage({
                 player={player}
                 forceAllPassives
               />
-              <RentIncomeChip value={aptIncome || 80} />
             </div>
 
           <div className="col-span-2 -mt-1 flex min-w-0 items-center gap-1.5 overflow-visible">
