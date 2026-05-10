@@ -1839,14 +1839,15 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
     <div className={cn('pointer-events-none fixed inset-0 z-[80] overflow-hidden', phase === 'start' && 'bg-[#eef1ed]')}>
       {phase === 'start' && (
         <>
-          <img
-            src="/backgrounds/initial-start.png"
-            alt=""
-            className="absolute inset-0 h-full w-full object-contain"
-            onLoad={() => setStartImageReady(true)}
-            draggable={false}
-            aria-hidden="true"
-          />
+          <div className="absolute inset-[10px] overflow-hidden rounded-[30px] bg-[#eef1ed]" aria-hidden="true">
+            <img
+              src="/backgrounds/initial-start.png"
+              alt=""
+              className="h-full w-full scale-[1.035] object-cover object-center"
+              onLoad={() => setStartImageReady(true)}
+              draggable={false}
+            />
+          </div>
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,14,16,0.06),rgba(12,14,16,0.16))] mix-blend-multiply" aria-hidden="true" />
           <motion.div className="absolute left-[21%] top-[30%] h-28 w-28 rounded-full border border-emerald-200/44 bg-[radial-gradient(circle,rgba(110,231,183,0.36),rgba(110,231,183,0.08)_48%,transparent_70%)] blur-[1px]" animate={{ scale: [0.88, 1.18, 0.88], opacity: [0.24, 0.62, 0.24], y: [0, -5, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
           <motion.div className="absolute left-[43%] top-[28%] h-32 w-32 rounded-full border border-amber-100/42 bg-[radial-gradient(circle,rgba(251,191,36,0.32),rgba(251,191,36,0.08)_52%,transparent_72%)] blur-[1px]" animate={{ scale: [0.9, 1.16, 0.9], opacity: [0.2, 0.56, 0.2], y: [0, 6, 0] }} transition={{ duration: 3.1, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
