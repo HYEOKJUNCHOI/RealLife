@@ -573,7 +573,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
   const isAction = result?.kind === 'buy' || result?.kind === 'card' || result?.kind === 'rent';
   const showCardResult = result?.kind === 'card';
   const isRent = result?.kind === 'rent';
-  const isJail = result?.kind === 'jail';
+  const isJail = result?.kind === 'jail' || result?.kind === 'jail_sent';
   const showNumberPad = !showCardResult && !isJail;
   const [cardFlipped, setCardFlipped] = useState(false);
 

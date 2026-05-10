@@ -1755,7 +1755,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
             <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
                 {replay.phase === 'arrived' ? (
-                  <BoardArrivalCard state={state} pos={replay.endPos ?? pos} playerColor={playerColor} />
+                  <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} playerColor={playerColor} />
                 ) : replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
@@ -1779,9 +1779,11 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   );
 }
 
-function BoardArrivalCard({ state, pos, playerColor = '#d83b2f' }) {
+function BoardArrivalCard({ state, pos, event, playerColor = '#d83b2f' }) {
+  const isJailArrival = event?.kind === 'go_to_jail' || event?.kind === 'three_doubles_jail';
+  if (isJailArrival) return <JailArrivalCard reason={event.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸'} />;
   const tile = state?.board?.tiles?.[pos];
-  if (!tile) return null;
+  if (!tile) return <FallbackArrivalCard title="도착 처리" icon="📍" text="도착 정보를 확인했습니다." />;
   const ts = state.tileState?.[pos] ?? {};
   const owner = Number.isInteger(ts.owner) ? state.players?.[ts.owner] : null;
   const ownerMeta = owner ? CHAR_META[owner.character] : null;
@@ -1826,6 +1828,31 @@ function BoardArrivalCard({ state, pos, playerColor = '#d83b2f' }) {
         )}
       </div>
       <div className="mt-2 font-board text-[18px] leading-none" style={{ color }}>{name}</div>
+      <div className="mt-1 font-display text-[8px] font-black uppercase tracking-[0.18em] text-ink/44">터치하면 닫기</div>
+    </motion.div>
+  );
+}
+
+function JailArrivalCard({ reason = '감옥행' }) {
+  return <FallbackArrivalCard title="감옥 수감" icon="🚓" text={`${reason} · 다음 차례부터 출소 시도`} tone="jail" />;
+}
+
+function FallbackArrivalCard({ title, icon = '📍', text, tone = 'default' }) {
+  const color = tone === 'jail' ? '#2563eb' : '#7c3aed';
+  return (
+    <motion.div
+      className="board-arrival-card-slot mx-auto w-[min(52vw,250px)] rounded-2xl border-[3px] border-[#17120c] bg-[#fff7df] p-2 text-ink shadow-[0_6px_0_#17120c,0_16px_34px_rgba(0,0,0,0.32)]"
+      initial={{ y: 18, scale: 0.84, opacity: 0, rotate: -2 }}
+      animate={{ y: 0, scale: 1, opacity: 1, rotate: 0 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+    >
+      <div className="font-display text-[8px] font-black uppercase tracking-[0.22em] text-ink/42">arrival card</div>
+      <div className="mt-1 flex h-[235px] flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-[#17120c] bg-[linear-gradient(160deg,#f8fafc_0%,#dbeafe_52%,#93c5fd_100%)] p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="grid h-20 w-20 place-items-center rounded-full border-2 border-[#17120c] bg-white text-[42px] shadow-[0_4px_0_#17120c]">{icon}</div>
+        <div className="mt-5 font-board text-[31px] leading-none" style={{ color }}>{title}</div>
+        <div className="mt-3 font-board text-[15px] leading-snug text-ink/68">{text}</div>
+      </div>
+      <div className="mt-2 font-board text-[18px] leading-none" style={{ color }}>{title}</div>
       <div className="mt-1 font-display text-[8px] font-black uppercase tracking-[0.18em] text-ink/44">터치하면 닫기</div>
     </motion.div>
   );
