@@ -495,12 +495,7 @@ export default function CurrentPlayerStage({
             </div>
           </div>
 
-          <div className="mt-2 flex w-full shrink-0 flex-col gap-2" aria-label="사회자와 현재 차례 안내">
-            <NpcGuidePanel content={hostLine || '주사위를 굴려주세요.'} />
-            <TurnGuidePanel name={meta.name} color={meta.color} />
-          </div>
-
-          <div className="mt-2.5 w-full shrink-0 rounded-2xl border border-white/70 bg-white/42 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
+          <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-white/42 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
             <button
               type="button"
               onClick={onOpenBoard}
@@ -780,40 +775,6 @@ function DiceControl({ onStep, disabled }) {
           <span className="font-display text-[24px] leading-none">↻</span>
           <span>턴종료</span>
         </button>
-      </div>
-    </div>
-  );
-}
-
-function NpcGuidePanel({ content }) {
-  return (
-    <div
-      className="flex min-h-[48px] w-full shrink-0 items-center gap-2 rounded-full border-2 border-emerald-300 bg-[linear-gradient(180deg,#f0fdf4_0%,#86efac_100%)] px-3.5 text-left shadow-[inset_0_2px_0_rgba(255,255,255,0.92),0_10px_22px_-17px_rgba(6,95,70,0.72)]"
-      style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}
-    >
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-[15px] text-white shadow-[0_8px_16px_-12px_rgba(6,95,70,0.85)]">🎙️</span>
-      <div className="min-w-0 flex-1">
-        <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-800/66">사회자</div>
-        <div className="font-board text-[15px] font-extrabold leading-tight text-emerald-950">
-          {content}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TurnGuidePanel({ name, color = '#d97706' }) {
-  return (
-    <div
-      className="flex min-h-[46px] w-full shrink-0 items-center justify-center rounded-full border-2 px-4 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.9),0_10px_22px_-17px_rgba(36,57,74,0.65)]"
-      style={{
-        borderColor: `${color}8f`,
-        background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}34 100%)`,
-        boxShadow: `inset 0 2px 0 rgba(255,255,255,0.9), 0 10px 22px -17px ${color}`,
-      }}
-    >
-      <div className="font-board text-[20px] font-extrabold leading-none text-[#182a35]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
-        {name} 차례
       </div>
     </div>
   );
