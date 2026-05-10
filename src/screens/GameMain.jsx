@@ -1838,10 +1838,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
   }, [dealVisible, onReady]);
 
   useEffect(() => {
-    if (phase !== 'start' || !startImageReady) return undefined;
-    setPortalCharged(false);
-    const timer = window.setTimeout(() => setPortalCharged(true), 5200);
-    return () => window.clearTimeout(timer);
+    if (phase === 'start' && startImageReady) setPortalCharged(false);
   }, [phase, startImageReady]);
 
   useEffect(() => {
@@ -1912,7 +1909,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
                   <span className="initial-start-loading-percent">100%</span>
                 </div>
                 <div className="initial-start-loading-bar mt-1.5 h-[14px] overflow-hidden rounded-[3px] border border-[#103849] bg-[#061018] shadow-[inset_0_1px_3px_rgba(0,0,0,0.78),0_1px_0_rgba(166,245,255,0.22)]">
-                  <div className="initial-start-loading-fill h-full" />
+                  <div className="initial-start-loading-fill h-full" onAnimationEnd={() => setPortalCharged(true)} />
                 </div>
               </div>
             </>
