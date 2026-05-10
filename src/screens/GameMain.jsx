@@ -27,6 +27,7 @@ import RecoveryModal from '@/components/modals/RecoveryModal.jsx';
 import LoanModal from '@/components/modals/LoanModal.jsx';
 import { useGameDialog } from '@/components/GameDialog.jsx';
 import { cn } from '@/lib/cn.js';
+import { getBgmPreference, pauseBgm, playBgm } from '@/lib/bgm.js';
 import { getCharacterImg } from '@/lib/assets.js';
 
 const AVATAR_POSITION = {
@@ -118,11 +119,7 @@ export default function GameMain({ onExit }) {
   const [diceLocked, setDiceLocked] = useState(false);
   const [diceMode, setDiceMode] = useState('app');
   const [lastDiceRoll, setLastDiceRoll] = useState(null);
-  const audioRef = useRef(null);
-  const [bgmEnabled, setBgmEnabled] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.localStorage?.getItem('reallife:bgmEnabled') === '1';
-  });
+  const [bgmEnabled, setBgmEnabled] = useState(() => getBgmPreference());
   const [globalNotice, setGlobalNotice] = useState(null);
   const [noticeLog, setNoticeLog] = useState([]);
   const [viewPlayerIndex, setViewPlayerIndex] = useState(null);
@@ -194,20 +191,11 @@ export default function GameMain({ onExit }) {
   }, [showTurnCardTouch]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    window.localStorage?.setItem('reallife:bgmEnabled', bgmEnabled ? '1' : '0');
     if (!bgmEnabled) {
-      audioRef.current?.pause();
+      pauseBgm();
       return undefined;
     }
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.preload = 'none';
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.34;
-      audioRef.current.src = '/audio/bgm.mp3';
-    }
-    audioRef.current.play().catch(() => {
+    playBgm().catch(() => {
       setBgmEnabled(false);
       addToast?.({ message: 'BGM 버튼을 한 번 더 눌러주세요.', tone: 'warn' });
     });
@@ -216,18 +204,11 @@ export default function GameMain({ onExit }) {
 
   const handleToggleBgm = useCallback(() => {
     if (bgmEnabled) {
-      audioRef.current?.pause();
+      pauseBgm();
       setBgmEnabled(false);
       return;
     }
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.preload = 'none';
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.34;
-      audioRef.current.src = '/audio/bgm.mp3';
-    }
-    audioRef.current.play().then(() => {
+    playBgm().then(() => {
       setBgmEnabled(true);
     }).catch(() => {
       setBgmEnabled(false);

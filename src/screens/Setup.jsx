@@ -5,6 +5,7 @@ import { useCustomCharacterStore } from '@/stores/customCharacterStore.js';
 import { DEFAULT_OPTIONS } from '@/engine/gameState.js';
 import { cn } from '@/lib/cn.js';
 import { getAvailableCharacters } from '@/lib/characterRoster.js';
+import { getBgmPreference, pauseBgm, playBgm } from '@/lib/bgm.js';
 import AssetFrame from '@/components/AssetFrame.jsx';
 
 const PLAYER_COLORS = ['#E12D39', '#2F75C9', '#F27A1A', '#238B45'];
@@ -57,6 +58,7 @@ export default function Setup({ onStart }) {
   const [names, setNames] = useState({});
   const [numberPad, setNumberPad] = useState(null);
   const [preloading, setPreloading] = useState(false);
+  const [bgmEnabled, setBgmEnabled] = useState(() => getBgmPreference());
   const rosterScrollerRef = useRef(null);
   const rosterDragRef = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false, raf: null, nextScrollLeft: 0 });
 
@@ -97,6 +99,15 @@ export default function Setup({ onStart }) {
     const parsed = Math.max(0, Number.parseInt(numberPad.value || '0', 10) || 0);
     updateOption(numberPad.key, parsed);
     setNumberPad(null);
+  };
+
+  const toggleBgm = () => {
+    if (bgmEnabled) {
+      pauseBgm();
+      setBgmEnabled(false);
+      return;
+    }
+    playBgm().then(() => setBgmEnabled(true)).catch(() => setBgmEnabled(false));
   };
 
   const start = () => {
@@ -314,6 +325,7 @@ export default function Setup({ onStart }) {
               <span className="rounded-full border border-white/30 bg-white/12 px-2.5 py-1 font-display text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#087652] backdrop-blur-[8px]">Switch</span>
             </div>
             <div className="grid gap-2">
+              <TogglePill icon="🎵" label="BGM" description={bgmEnabled ? '배경음악 재생 중' : '시작 전 배경음악 끄기'} checked={bgmEnabled} onClick={toggleBgm} />
               <TogglePill icon="🎲" label="이벤트" description="1년 결산/데스매치 이벤트 카드" checked={options.eventCards} onClick={() => updateOption('eventCards', !options.eventCards)} />
               <TogglePill icon="🏦" label="대출" description="신용대출/사채 회생 시스템" checked={options.credit} onClick={() => updateOption('credit', !options.credit)} />
               <TogglePill icon="📈" label="물가" description="매년 시세 4% 복리 상승" checked={options.inflation} onClick={() => updateOption('inflation', !options.inflation)} />
