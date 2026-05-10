@@ -5,7 +5,7 @@
 
 
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore.js';
@@ -209,9 +209,30 @@ export default function GameMain({ onExit }) {
     }
     audioRef.current.play().catch(() => {
       setBgmEnabled(false);
-      addToast?.({ message: 'BGM 파일을 찾을 수 없거나 재생이 차단되었습니다.', tone: 'warn' });
+      addToast?.({ message: 'BGM 버튼을 한 번 더 눌러주세요.', tone: 'warn' });
     });
     return undefined;
+  }, [bgmEnabled, addToast]);
+
+  const handleToggleBgm = useCallback(() => {
+    if (bgmEnabled) {
+      audioRef.current?.pause();
+      setBgmEnabled(false);
+      return;
+    }
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.preload = 'none';
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.34;
+      audioRef.current.src = '/audio/bgm.mp3';
+    }
+    audioRef.current.play().then(() => {
+      setBgmEnabled(true);
+    }).catch(() => {
+      setBgmEnabled(false);
+      addToast?.({ message: 'BGM 재생이 차단되었습니다. 버튼을 다시 눌러주세요.', tone: 'warn' });
+    });
   }, [bgmEnabled, addToast]);
 
 
@@ -693,7 +714,7 @@ export default function GameMain({ onExit }) {
       if (pendingBuy || jailNotice || isCardArrival) {
         pushGlobalNotice({
           kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : 'card_arrival',
-          speaker: pendingBuy ? '중개 NPC' : '사회자',
+          speaker: '사회자',
           title: pendingBuy ? '구매할까요?' : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
           text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?` : isCardArrival ? '무슨 카드가 나올까요? 두근두근합니다 👀' : (toastMessage ?? '감옥으로 이동합니다 😭'),
           icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : '💡',
@@ -907,7 +928,7 @@ export default function GameMain({ onExit }) {
             pendingPurchase={pendingPurchase}
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
-            onToggleBgm={() => setBgmEnabled((enabled) => !enabled)}
+            onToggleBgm={handleToggleBgm}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
@@ -940,7 +961,7 @@ export default function GameMain({ onExit }) {
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
-            onToggleBgm={() => setBgmEnabled((enabled) => !enabled)}
+            onToggleBgm={handleToggleBgm}
           />
         </div>
 
