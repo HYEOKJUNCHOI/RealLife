@@ -349,19 +349,23 @@ h1, h2, h3, h4, .font-display {
 @keyframes initial-deal-card-flight {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x) - 14px), calc(var(--deal-y) + var(--deal-stack-y) - 2px)) rotate(calc(var(--deal-rot) - 2deg)) scale(0.72);
+    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x) - 22px), calc(var(--deal-y) + var(--deal-stack-y) - 8px)) rotate(calc(var(--deal-rot) - 3deg)) scale(0.68);
   }
-  38% {
+  28% {
     opacity: 1;
-    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x) - 5px), calc(var(--deal-y) + var(--deal-stack-y) - 5px)) rotate(calc(var(--deal-rot) - 1deg)) scale(1.02);
+    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x) - 10px), calc(var(--deal-y) + var(--deal-stack-y) - 8px)) rotate(calc(var(--deal-rot) - 1deg)) scale(1.02);
   }
-  72% {
+  68% {
     opacity: 1;
-    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x)), calc(var(--deal-y) + var(--deal-stack-y))) rotate(var(--deal-rot)) scale(0.96);
+    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x)), calc(var(--deal-y) + var(--deal-stack-y))) rotate(var(--deal-rot)) scale(0.98);
+  }
+  86% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x)), calc(var(--deal-y) + var(--deal-stack-y))) rotate(var(--deal-rot)) scale(0.98);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x)), calc(var(--deal-y) + var(--deal-stack-y))) rotate(var(--deal-rot)) scale(0.88);
+    transform: translate(-50%, -50%) translate(calc(var(--deal-x) + var(--deal-stack-x)), calc(var(--deal-y) + var(--deal-stack-y))) rotate(var(--deal-rot)) scale(0.9);
   }
 }
 
@@ -491,7 +495,7 @@ html.initial-deal-live [data-player-strip-index="2"] { animation-delay: 0.56s; }
 html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 
 .initial-deal-card {
-  animation: initial-deal-card-flight 0.64s cubic-bezier(0.18, 0.9, 0.18, 1) var(--deal-delay) both;
+  animation: initial-deal-card-flight 1.05s cubic-bezier(0.18, 0.82, 0.22, 1) var(--deal-delay) both;
   transform-origin: center;
   will-change: transform, opacity;
 }
