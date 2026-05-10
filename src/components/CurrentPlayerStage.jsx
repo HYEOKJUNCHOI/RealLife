@@ -539,21 +539,25 @@ const EVENT_SLOT_IMAGES = {
   lottery_estate: '/cards/event/subscription.png',
 };
 
-function DiceFace({ value = 1, rolling = false }) {
+function DiceFace({ value = 1, rolling = false, ready = false }) {
   const safeValue = Math.max(1, Math.min(6, value));
   return (
     <motion.div
-      className="relative h-[78px] w-[78px] overflow-visible rounded-[20px]"
+      className="relative grid h-[78px] w-[78px] place-items-center overflow-visible rounded-[20px]"
       animate={rolling ? { scale: [1, 1.035, 1.01], y: [0, -1, 0] } : { scale: [1.03, 1] }}
       transition={rolling ? { duration: 0.18, ease: 'linear' } : { duration: 0.22, ease: 'easeOut' }}
     >
-      <img
-        key={safeValue}
-        src={`/ui/dice-face-${safeValue}.svg`}
-        alt={`${safeValue}`}
-        draggable={false}
-        className="h-full w-full select-none object-contain drop-shadow-[0_8px_0_#0F0C0A]"
-      />
+      {ready ? (
+        <span className="select-none text-[58px] leading-none drop-shadow-[0_7px_0_rgba(15,12,10,0.72)]" aria-label="ready dice">🎲</span>
+      ) : (
+        <img
+          key={safeValue}
+          src={`/ui/dice-face-${safeValue}.svg`}
+          alt={`${safeValue}`}
+          draggable={false}
+          className="h-full w-full select-none object-contain drop-shadow-[0_8px_0_#0F0C0A]"
+        />
+      )}
     </motion.div>
   );
 }
@@ -643,9 +647,9 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
           {diceMode === 'app' ? (
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-3 rounded-xl border border-white/70 bg-white/42 px-2 py-3 backdrop-blur-[12px] shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] [perspective:760px]">
-                <DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} />
+                <DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} />
                 <span className="font-display text-[24px] font-black text-ink">+</span>
-                <DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} />
+                <DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} />
               </div>
               <button
                 type="button"
