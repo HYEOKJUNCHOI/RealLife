@@ -1303,13 +1303,14 @@ function GlobalNoticeBand({ notice, onDismiss }) {
     backgroundRepeat: 'no-repeat',
     backgroundColor: `${fallbackColor}22`,
   });
+  const absorbPointer = (event) => { event.preventDefault(); event.stopPropagation(); };
   const dismiss = (event) => { event.preventDefault(); event.stopPropagation(); onDismiss?.(notice); };
   const layer = (
     <div
       className="pointer-events-auto fixed inset-0 flex items-center justify-center px-3"
       style={{ zIndex: 2147483000, touchAction: 'none' }}
-      onPointerDown={dismiss}
-      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+      onPointerDown={absorbPointer}
+      onClick={dismiss}
     >
       <motion.div
         key={`${notice.kind}-${notice.title}-${notice.text}`}
@@ -1497,7 +1498,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
   const destinations = (state.board?.tiles ?? []).filter((tile) => tile.pos !== request.fromPos);
   const fee = request.fee ?? 0;
   return (
-    <div className="fixed inset-0 z-[97] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[5px]">
+    <div className="fixed inset-0 z-[97] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[5px]" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
       <div className="flex max-h-[88vh] w-[min(94vw,720px)] flex-col overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] shadow-[0_6px_0_#0F0C0A,0_24px_52px_-20px_rgba(0,0,0,0.82)]">
         <div className="border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#e9c56f_100%)] px-4 py-3 text-center">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">station transfer</div>
@@ -1546,7 +1547,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
 
 function AiTurnSummaryModal({ summary, onContinue }) {
   return (
-    <div className="fixed inset-0 z-[96] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[4px]">
+    <div className="fixed inset-0 z-[96] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[4px]" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
       <div className="w-[min(94vw,520px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] shadow-[0_6px_0_#0F0C0A,0_22px_44px_-18px_rgba(0,0,0,0.78)]">
         <div className="border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#e9c56f_100%)] px-4 py-3 text-center">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">AI TURN SUMMARY</div>
@@ -1589,7 +1590,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
   const name = displayPlayerName(player, base.name);
   const currentName = displayPlayerName(current, currentBase.name);
   return (
-    <div className="fixed inset-0 z-[86] flex items-center justify-center bg-ink/58 p-2 backdrop-blur-[4px]">
+    <div className="fixed inset-0 z-[86] flex items-center justify-center bg-ink/58 p-2 backdrop-blur-[4px]" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
       <div className="relative flex h-[min(92vh,760px)] w-[min(96vw,1040px)] flex-col overflow-hidden rounded-xl border-[3px] border-ink-line bg-parchment-100 shadow-[0_6px_0_#0F0C0A,0_24px_48px_-18px_rgba(0,0,0,0.75)]">
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff8dc_0%,#f0d48f_100%)] px-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -1684,8 +1685,8 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   return (
     <div
       className="board-turn-layer absolute inset-0 z-[85] flex items-center justify-center bg-transparent p-2"
-      onPointerDown={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.stopPropagation(); }}
-      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
+      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+      onClick={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.preventDefault(); event.stopPropagation(); }}
     >
       <div className="board-turn-shell relative grid h-full w-full grid-rows-[1fr] overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#efe1bb] shadow-[0_5px_0_#17120c,0_20px_40px_-26px_rgba(0,0,0,0.82)]">
         <div className="relative min-h-0 overflow-hidden p-3 md:p-4">
