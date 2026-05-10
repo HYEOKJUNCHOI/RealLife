@@ -376,7 +376,7 @@ export default function CurrentPlayerStage({
               {meta.name}
             </h2>
           </div>
-          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1 overflow-hidden">
+          <div className="flex shrink-0 items-center gap-1">
               <HeaderChip icon={'\uD83D\uDCC5'} value={`${year ?? 0}\uB144`} tone="paper" size="mini" />
               <HeaderChip icon={'\uD83D\uDCC8'} label={'\uBB3C\uAC00'} value={'+' + INFLATION_RATE} unit="%" tone="blue" size="mini" />
               <HeaderChip
@@ -395,10 +395,11 @@ export default function CurrentPlayerStage({
               <RentIncomeChip value={aptIncome || 80} />
             </div>
 
-          <div className="col-span-2 -mt-1 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
+          <div className="col-span-2 -mt-1 flex min-w-0 items-center gap-1.5 overflow-visible">
             <FinanceChip totalWorth={totalWorth} cash={player.cash ?? 0} debt={totalDebt} onLoanClick={() => openLoanModal?.(index)} />
             <HeaderChip icon={'\uD83D\uDED2'} label={'\uC0DD\uD65C'} value={'-' + livingCost} unit={'\uB9CC'} tone="red" size="normal" />
             <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-' + fmt(loanInterest)} unit={'\uB9CC'} tone="red" size="normal" />
+            <RentIncomeChip value={aptIncome || 80} />
             <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * Math.max(stationTiles.length, 4)} sub={`${Math.max(stationTiles.length, 4)}역 · 누적 ${fmt(stationFund || 400)}만`} />
             <IncomeBadge icon="⚡" label="기관 월급" value={institutionIncome || 20} sub={`${Math.max(institutionTiles.length, 2)}곳 보유`} />
           </div>
