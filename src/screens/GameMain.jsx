@@ -387,16 +387,16 @@ export default function GameMain({ onExit }) {
     if (showInitialDeal) return '권리증을 나눠드리는 중입니다.';
     if (pendingPurchase) return `${tileNameForPos(state, pendingPurchase.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`;
     if (turnResult?.kind === 'buy') return `${tileNameForPos(state, turnResult.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`;
-    if (turnResult?.kind === 'rent') return `${turnResult.ownerName ?? '소유자'}님의 땅입니다. 통행료 ${turnResult.amount ?? 0}만을 지불합니다.`;
-    if (turnResult?.kind === 'tax') return `${turnResult.title ?? '세금'} ${turnResult.amount ?? ''}만을 납부합니다.`;
-    if (turnResult?.kind === 'bought') return '매입 완료! 내 권리증 슬롯에 추가됐습니다.';
-    if (turnResult?.kind === 'moving') return '말이 이동하고 있습니다.';
+    if (turnResult?.kind === 'rent') return `아… ${turnResult.ownerName ?? '소유자'}님 땅입니다 😭 통행료 ${turnResult.amount ?? 0}만 나갑니다.`;
+    if (turnResult?.kind === 'tax') return `${turnResult.title ?? '세금'}입니다 😅 ${turnResult.amount ?? ''}만 납부할게요.`;
+    if (turnResult?.kind === 'bought') return '좋습니다 🎉 권리증이 내 카드 슬롯에 들어왔습니다.';
+    if (turnResult?.kind === 'moving') return '말이 이동 중입니다. 어디에 멈출까요? 👀';
     const last = log.length > 0 ? log[log.length - 1] : null;
     if (!last) {
       return '주사위를 굴려주세요.';
     }
     if (last.card && ['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate'].includes(last.kind)) {
-      return '이벤트 카드가 발동했습니다.';
+      return '이벤트 카드 발동! 판이 흔들립니다 ⚡';
     }
     if (turnBriefing) return '이번 턴 정산을 확인하세요.';
     return summarizeEvent(last);
@@ -694,7 +694,7 @@ export default function GameMain({ onExit }) {
           kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : 'card_arrival',
           speaker: pendingBuy ? '중개 NPC' : '사회자',
           title: pendingBuy ? '구매할까요?' : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
-          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?` : isCardArrival ? '무슨 카드가 나올까요?' : (toastMessage ?? '감옥으로 이동합니다.'),
+          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}에 도착했습니다. 주인이 없는 땅인데 구매할까요?` : isCardArrival ? '무슨 카드가 나올까요? 두근두근합니다 👀' : (toastMessage ?? '감옥으로 이동합니다 😭'),
           icon: pendingBuy ? '🏠' : jailNotice ? '🚓' : '💡',
           cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
           previewPos: pendingBuy?.pos,
@@ -1291,20 +1291,20 @@ function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPo
   const tile = state?.board?.tiles?.[endPos ?? arrival?.pos];
   const tileName = tile?.names?.ko ?? tile?.name ?? '도착칸';
   const playerName = state?.players?.[playerId]?.name ?? `${playerId + 1}P`;
-  if (pendingBuy) return `${playerName}님이 ${tileName}에 도착했습니다. 매입 가능!`;
+  if (pendingBuy) return `${tileName}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`;
   const rentEvent = events?.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || (event.kind === 'arrive_hub' && event.type === 'rent_forced') || event.kind === 'rent');
   if (rentEvent) {
     const amount = rentEvent.rent ?? rentEvent.fee ?? rentEvent.amount ?? 0;
     const ownerName = state?.players?.[rentEvent.ownerId]?.name ?? `${(rentEvent.ownerId ?? 0) + 1}P`;
-    return `${playerName}님이 ${ownerName}님의 ${tileName}을 밟고 ${amount}만 지출했습니다.`;
+    return `아… ${ownerName}님 땅을 밟았습니다 😭 ${tileName} 통행료 ${amount}만 나갑니다.`;
   }
-  if (arrival?.kind === 'arrive_station') return `${tileName} 적립금 ${arrival.collected ?? 0}만 수령 · 새 역장 부임`;
-  if (arrival?.kind === 'parking_jackpot') return `무료주차 적립금 ${arrival.amt ?? 0}만 수령`;
-  if (arrival?.kind === 'go_to_jail') return `${playerName}님 감옥 수감 · 다음 차례부터 최대 ${JAIL_TURNS}턴 출소 시도`;
-  if (events?.some((event) => event.kind === 'three_doubles_jail')) return `${playerName}님 3연속 더블 · 감옥 수감 · 최대 ${JAIL_TURNS}턴 출소 시도`;
-  if (arrival?.kind === 'income_tax' || arrival?.kind === 'luxury_tax') return `${tileName} ${arrival.amt ?? 0}만 납부`;
-  if (arrival?.card || arrival?.kind === 'chance_draw' || arrival?.kind === 'welfare_draw' || arrival?.kind === 'event_card') return `${tileName} 카드 도착 · 카드를 뒤집어보세요`;
-  return `${playerName}님 ${tileName} 도착`;
+  if (arrival?.kind === 'arrive_station') return `${tileName} 적립금 ${arrival.collected ?? 0}만 수령! 새 역장 부임입니다 🎉`;
+  if (arrival?.kind === 'parking_jackpot') return `무료주차 대박입니다 🎉 적립금 ${arrival.amt ?? 0}만 챙겨갑니다.`;
+  if (arrival?.kind === 'go_to_jail') return `${playerName}님 감옥행입니다 😭 다음 차례부터 출소 시도합니다.`;
+  if (events?.some((event) => event.kind === 'three_doubles_jail')) return `${playerName}님 3연속 더블… 이건 감옥입니다 😭`;
+  if (arrival?.kind === 'income_tax' || arrival?.kind === 'luxury_tax') return `${tileName}입니다 😅 ${arrival.amt ?? 0}만 납부합니다.`;
+  if (arrival?.card || arrival?.kind === 'chance_draw' || arrival?.kind === 'welfare_draw' || arrival?.kind === 'event_card') return `${tileName} 카드 도착! 결과는 뒤집어봐야 압니다 👀`;
+  return `${playerName}님 ${tileName} 도착했습니다.`;
 }
 
 function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore }) {
@@ -2140,29 +2140,29 @@ function summarizeEvent(e) {
     case 'roll':
       return '\uC8FC\uC0AC\uC704 ' + e.d1 + '+' + e.d2 + '=' + e.sum + (e.isDouble ? ' · \uB354\uBE14!' : '');
     case 'buy_property':
-      return '\uBD80\uB3D9\uC0B0\uC744 ' + e.price + '\uB9CC\uC5D0 \uB9E4\uC785\uD588\uC2B5\uB2C8\uB2E4.';
+      return '매입 완료입니다 🎉 ' + e.price + '만짜리 권리증 챙겼습니다.';
     case 'rent':
-      return '\uD1B5\uD589\uB8CC ' + e.rent + '\uB9CC\uC774 ' + (e.ownerId + 1) + 'P\uC5D0\uAC8C \uC9C0\uCD9C\uB410\uC2B5\uB2C8\uB2E4.';
+      return '아… 통행료 ' + e.rent + '만입니다 😭 ' + (e.ownerId + 1) + 'P에게 지출됐습니다.';
     case 'go_pass':
       return pickLine(['realtor', 'go_pass']) ?? ('\uC6D4\uAE09 ' + e.amt + '\uB9CC\uC744 \uBC1B\uC558\uC2B5\uB2C8\uB2E4.');
     case 'go_exact':
       return pickLine(['realtor', 'go_exact']) ?? ('\uCD9C\uBC1C\uC9C0 \uB3C4\uCC29 \uBCF4\uB108\uC2A4 ' + e.amt + '\uB9CC.');
     case 'event_card':
-      return '\uC0AC\uD68C\uC790 \uC54C\uB9BC: ' + cardLabel(e.card) + ' \uCE74\uB4DC\uAC00 \uC801\uC6A9\uB410\uC2B5\uB2C8\uB2E4.';
+      return '사회자 알림 ⚡ ' + cardLabel(e.card) + ' 카드가 터졌습니다.';
     case 'income_tax':
-      return '\uC18C\uB4DD\uC138 ' + e.amt + '\uB9CC\uC774 \uC9C0\uCD9C\uB410\uC2B5\uB2C8\uB2E4.';
+      return '소득세입니다 😅 ' + e.amt + '만 납부합니다.';
     case 'year_end':
       return e.year + '\uB144\uCC28 \uC815\uC0B0\uC774 \uB05D\uB0AC\uC2B5\uB2C8\uB2E4.';
     case 'parking_jackpot':
-      return '\uBB34\uB8CC\uC8FC\uCC28 \uBCF4\uB108\uC2A4 ' + e.amt + '\uB9CC\uC744 \uBC1B\uC558\uC2B5\uB2C8\uB2E4.';
+      return '무료주차 대박 🎉 보너스 ' + e.amt + '만 받았습니다.';
     case 'arrive_station':
-      return '\uC5ED\uC7A5 \uC790\uB9AC\uC5D0 ' + e.collected + '\uB9CC\uC774 \uC313\uC600\uC2B5\uB2C8\uB2E4.';
+      return '역장 자리입니다 🎉 적립금 ' + e.collected + '만이 쌓였습니다.';
     case 'arrive_hub':
       return '\uD658\uC2B9 \uD5C8\uBE0C\uC5D0 \uB3C4\uCC29\uD588\uC2B5\uB2C8\uB2E4.';
     case 'hub_teleport':
       return '환승 이동을 완료했습니다.';
     case 'go_to_jail':
-      return '\uAC10\uC625\uC73C\uB85C \uC774\uB3D9\uD569\uB2C8\uB2E4.';
+      return '감옥행입니다… 이건 아픕니다 😭';
     case 'deathmatch_start':
       return '\uB370\uC2A4\uB9E4\uCE58\uAC00 \uC2DC\uC791\uB410\uC2B5\uB2C8\uB2E4.';
     case 'game_end':
@@ -2170,7 +2170,7 @@ function summarizeEvent(e) {
     case 'credit_loan':
       return '\uC2E0\uC6A9\uB300\uCD9C 1,000\uB9CC\uC744 \uC2E0\uCCAD\uD588\uC2B5\uB2C8\uB2E4.';
     case 'tax':
-      return '\uC138\uAE08 ' + e.amt + '\uB9CC\uC774 \uC9C0\uCD9C\uB410\uC2B5\uB2C8\uB2E4.';
+      return '세금입니다 😅 ' + e.amt + '만 지출됩니다.';
     default:
       return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
   }
