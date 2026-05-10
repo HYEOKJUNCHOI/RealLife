@@ -308,17 +308,17 @@ export default function CurrentPlayerStage({
           </button>
           <button
             type="button"
-            onClick={onToggleBgm}
-            className={cn('mb-2 w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', bgmEnabled ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink')}
+            onClick={() => setBadgeTestMode((value) => !value)}
+            className={cn('mb-2 w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', badgeTestMode ? 'bg-emerald-100 text-emerald-900' : 'bg-white text-ink')}
           >
-            BGM {bgmEnabled ? '끄기' : '켜기'}
+            뱃지 테스트 {badgeTestMode ? '끄기' : '켜기'}
           </button>
           <button
             type="button"
-            onClick={() => setBadgeTestMode((value) => !value)}
-            className={cn('w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', badgeTestMode ? 'bg-emerald-100 text-emerald-900' : 'bg-white text-ink')}
+            onClick={onToggleBgm}
+            className={cn('w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', bgmEnabled ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink')}
           >
-            뱃지 테스트 {badgeTestMode ? '끄기' : '켜기'}
+            BGM {bgmEnabled ? '끄기' : '켜기'}
           </button>
         </div>
       )}
