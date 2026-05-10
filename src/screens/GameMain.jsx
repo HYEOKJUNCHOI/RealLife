@@ -1978,15 +1978,12 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
               >
                 {portalCharged ? '시작하기' : '로딩중..'}
               </button>
-              <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+130px)] z-30 w-[min(84vw,760px)] -translate-x-1/2 text-center">
+              <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+128px)] z-30 w-[min(82vw,740px)] -translate-x-1/2 text-center">
                 <div className="initial-start-loading-content">
-                  <div className="flex items-center justify-between font-display text-[11px] font-black uppercase tracking-[0.24em] text-[#ffe59a]/95">
-                    <span>Charging portal essence</span>
-                    <span className="initial-start-loading-percent">100%</span>
-                  </div>
-                  <div className="initial-start-loading-bar mt-2 h-[22px] overflow-hidden rounded-[5px] border-2 border-[#2a162f] bg-[#050308] shadow-[inset_0_2px_5px_rgba(0,0,0,0.86),0_1px_0_rgba(255,230,150,0.22)]">
+                  <div className="initial-start-loading-bar h-full overflow-hidden rounded-[3px] bg-[#09050d] shadow-[inset_0_2px_5px_rgba(0,0,0,0.92),0_0_10px_rgba(255,230,150,0.18)]">
                     <div className="initial-start-loading-fill h-full" onAnimationEnd={() => setPortalCharged(true)} />
                   </div>
+                  <span className="initial-start-loading-percent">100%</span>
                 </div>
               </div>
             </>

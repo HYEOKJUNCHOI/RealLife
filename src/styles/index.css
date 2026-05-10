@@ -2693,10 +2693,11 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 
 .initial-start-loading-content {
   position: absolute;
-  left: 22.5%;
-  right: 22.5%;
-  top: 50%;
-  transform: translateY(-42%);
+  left: 20.9%;
+  right: 20.9%;
+  top: 48.9%;
+  height: 15.8%;
+  transform: translateY(-50%);
 }
 
 .initial-start-loading-panel::before,
@@ -2720,12 +2721,24 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   animation: initial-start-loading-fill 1.8s cubic-bezier(0.18, 0.72, 0.22, 1) forwards;
 }
 
+.initial-start-loading-percent {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  font-size: 0;
+}
 .initial-start-loading-percent::before {
   content: '0%';
   animation: initial-start-loading-percent 1.8s step-end forwards;
+  font-family: var(--font-display, inherit);
+  font-size: clamp(7px, 1vw, 10px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: rgba(255, 236, 170, 0.88);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.82);
 }
-.initial-start-loading-percent { font-size: 0; }
-.initial-start-loading-percent::before { font-size: 12px; }
 
 @keyframes initial-start-button-ready-pop {
   0% { filter: brightness(0.88) saturate(0.9); opacity: 0.9; transform: translateX(-50%) scale(0.98); }
