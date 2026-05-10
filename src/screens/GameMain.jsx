@@ -1486,6 +1486,82 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
   );
 }
 
+function getEconomyInsight(state, player) {
+  const cash = player?.cash ?? 0;
+  const debt = (player?.creditLoan?.principal ?? 0) + (player?.loanShark?.principal ?? 0) + Object.values(player?.mortgages ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
+  if (debt > cash && debt > 0) return { tone: 'danger', title: '금리 압박', text: '부채가 현금보다 큽니다. 금리 변화에 취약해요.' };
+  if (cash < 300) return { tone: 'warn', title: '현금 방어', text: '기회가 와도 현금이 부족하면 잡기 어렵습니다.' };
+  if ((state?.year ?? 0) >= 3) return { tone: 'info', title: '경제 후반전', text: '물가와 세금이 누적됩니다. 순자산보다 현금흐름을 보세요.' };
+  return { tone: 'good', title: '기회 탐색', text: '현금 여력이 있습니다. 좋은 자산을 볼 차례예요.' };
+}
+
+function getNearbySignals(state, pos) {
+  const tiles = state?.board?.tiles ?? [];
+  const total = tiles.length || 40;
+  const signals = [];
+  for (let step = 1; step <= 6; step += 1) {
+    const tile = tiles[(pos + step) % total];
+    if (!tile) continue;
+    const ts = state.tileState?.[tile.pos] ?? {};
+    if (tile.type === 'property' && ts.owner == null) signals.push({ step, icon: '📜', label: `${step}칸 뒤 매입기회` });
+    if (tile.type === 'chance') signals.push({ step, icon: '🎴', label: `${step}칸 뒤 찬스` });
+    if (tile.type === 'community_chest') signals.push({ step, icon: '🎁', label: `${step}칸 뒤 복지` });
+    if (tile.type === 'tax') signals.push({ step, icon: '🧾', label: `${step}칸 뒤 세금` });
+    if (tile.type === 'property' && ts.owner != null && ts.owner !== state.turnIndex) signals.push({ step, icon: '⚠️', label: `${step}칸 뒤 통행료` });
+    if (signals.length >= 3) break;
+  }
+  return signals;
+}
+
+function WorldEconomyPanel({ state, player }) {
+  const insight = getEconomyInsight(state, player);
+  const loanRate = Math.round((state?.loanRate ?? 0.02) * 100);
+  const inflation = 4;
+  const toneClass = insight.tone === 'danger'
+    ? 'border-red-300/45 bg-red-400/12 text-red-100'
+    : insight.tone === 'warn'
+      ? 'border-yellow-200/45 bg-yellow-300/12 text-yellow-100'
+      : insight.tone === 'good'
+        ? 'border-emerald-200/45 bg-emerald-300/12 text-emerald-100'
+        : 'border-sky-200/45 bg-sky-300/12 text-sky-100';
+  return (
+    <div className="rounded-xl border-2 border-white/14 bg-black/24 p-3 shadow-[0_4px_0_#0F0C0A]">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-white/42">world economy</div>
+          <div className="font-board text-[23px] leading-none text-white">경제판</div>
+        </div>
+        <div className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 font-display text-[10px] font-black uppercase tracking-[0.14em] text-white/58">{state?.year ?? 0}년차</div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 font-board">
+        <div className="rounded-lg border border-white/14 bg-white/9 px-2 py-2"><div className="text-[11px] text-white/44">물가</div><div className="text-[21px] text-yellow-100">+{inflation}%</div></div>
+        <div className="rounded-lg border border-white/14 bg-white/9 px-2 py-2"><div className="text-[11px] text-white/44">금리</div><div className="text-[21px] text-red-100">{loanRate}%</div></div>
+      </div>
+      <div className={cn('mt-3 rounded-xl border p-2.5', toneClass)}>
+        <div className="font-board text-[18px] leading-none">{insight.title}</div>
+        <div className="mt-1 font-board text-[13px] leading-snug opacity-82">{insight.text}</div>
+      </div>
+    </div>
+  );
+}
+
+function NearbySignalsPanel({ signals }) {
+  return (
+    <div className="rounded-xl border-2 border-white/14 bg-white/10 p-2 shadow-[0_3px_0_#0F0C0A]">
+      <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/42">next 6 tiles</div>
+      <div className="mt-2 grid gap-1.5">
+        {signals.length ? signals.map((signal, idx) => (
+          <div key={`${signal.step}-${idx}`} className="flex items-center gap-2 rounded-lg border border-white/12 bg-black/18 px-2 py-1.5 font-board text-[15px] text-white/84">
+            <span>{signal.icon}</span><span>{signal.label}</span>
+          </div>
+        )) : (
+          <div className="rounded-lg border border-white/12 bg-black/18 px-2 py-2 font-board text-[15px] text-white/60">앞 6칸은 조용합니다.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function IveRenewalLayout({
   player,
   index,
@@ -1515,6 +1591,7 @@ function IveRenewalLayout({
   const activePos = player.position ?? 0;
   const activeTile = state.board.tiles?.[activePos];
   const activeName = activeTile?.names?.ko ?? activeTile?.name ?? '현재 위치';
+  const nearbySignals = getNearbySignals(state, activePos);
   const diceA = lastDiceRoll?.dice?.[0] ?? lastDiceRoll?.d1 ?? 1;
   const diceB = lastDiceRoll?.dice?.[1] ?? lastDiceRoll?.d2 ?? 1;
   const prompt = turnResult?.kind === 'card'
@@ -1601,6 +1678,8 @@ function IveRenewalLayout({
           </div>
           <div className="mt-3 rounded-xl border border-white/14 bg-white/10 p-3 font-board text-[18px] leading-snug text-white/86">{hostLine || prompt}</div>
         </div>
+        <WorldEconomyPanel state={state} player={player} />
+        <NearbySignalsPanel signals={nearbySignals} />
         <div className="rounded-xl border-2 border-white/14 bg-[#fff7df] p-3 text-ink shadow-[0_4px_0_#0F0C0A]">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/45">turn signal</div>
           <div className="mt-2 font-board text-[24px] leading-none">{turnResult?.title ?? '주사위 대기'}</div>
@@ -1618,6 +1697,9 @@ function IveRenewalLayout({
         <div className="min-w-0">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-white/42">action deck</div>
           <div className="mt-1 truncate font-board text-[26px] leading-none">{prompt}</div>
+          <div className="mt-1 flex gap-1.5 overflow-hidden">
+            {nearbySignals.slice(0, 2).map((signal, idx) => <span key={`${signal.label}-${idx}`} className="rounded-full border border-white/18 bg-white/10 px-2 py-0.5 font-board text-[13px] text-white/68">{signal.icon} {signal.label}</span>)}
+          </div>
         </div>
         <div className="flex items-center justify-center gap-2 rounded-xl border-2 border-white/18 bg-white/10 p-2">
           <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceA))}.svg`} alt="" className="h-12 w-12" draggable={false} />
