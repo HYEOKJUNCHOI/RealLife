@@ -583,24 +583,25 @@ function CharacterCard({ character, selected, order, onPick, name, onName, playe
         <span className="portal-card-aura pointer-events-none absolute inset-[-18%] rounded-full bg-sky-400/10 blur-[18px]" />
         <span className="portal-card-flash pointer-events-none absolute inset-[-4%] rounded-full bg-cyan-100/6 blur-[8px]" />
         <img
-          src="/backgrounds/portal-residue.png"
+          src="/effects/portal-gold-blue-cut.webp"
           alt=""
-          className="portal-card-residue pointer-events-none absolute left-1/2 top-1/2 h-[188%] w-[188%] -translate-x-1/2 -translate-y-[58%] object-contain opacity-95 drop-shadow-[0_0_22px_rgba(84,205,255,0.42)]"
+          className="portal-card-portal pointer-events-none absolute left-1/2 top-1/2 h-[218%] w-[218%] -translate-x-1/2 -translate-y-[56%] object-contain opacity-95 drop-shadow-[0_0_18px_rgba(84,205,255,0.36)]"
           draggable={false}
         />
-        <span className="portal-card-summon-light pointer-events-none absolute left-1/2 top-[46%] h-[86%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <span className="portal-card-edge-glow pointer-events-none absolute left-1/2 top-1/2 h-[60%] w-[60%]" />
+        <span className="portal-card-film pointer-events-none absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-[74%] rounded-full border border-sky-100/8 bg-transparent shadow-[inset_0_0_10px_rgba(214,250,255,0.08)] backdrop-blur-[0.4px]" />
 
         {character.imageDataUrl ? (
           <img
             src={character.imageDataUrl}
             alt={character.name}
-            className="character-avatar-idle character-avatar-materialize relative z-[1] max-h-[106%] max-w-[106%] object-contain drop-shadow-[0_10px_10px_rgba(42,25,12,0.28)]"
+            className="character-avatar-idle relative z-[1] max-h-[106%] max-w-[106%] object-contain drop-shadow-[0_10px_10px_rgba(42,25,12,0.28)]"
           />
         ) : (
           <AssetFrame
             slot={character.slot}
             transparent
-            className="character-avatar-idle character-avatar-materialize relative z-[1] max-h-[106%] max-w-[106%] object-contain drop-shadow-[0_10px_10px_rgba(42,25,12,0.28)]"
+            className="character-avatar-idle relative z-[1] max-h-[106%] max-w-[106%] object-contain drop-shadow-[0_10px_10px_rgba(42,25,12,0.28)]"
             fallback={character.emoji ?? '?'}
           />
         )}
