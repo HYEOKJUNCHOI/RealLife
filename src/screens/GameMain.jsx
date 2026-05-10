@@ -1842,15 +1842,16 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
           <img
             src="/backgrounds/initial-start.png"
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
             onLoad={() => setStartImageReady(true)}
             draggable={false}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,14,16,0.10),rgba(12,14,16,0.24))] mix-blend-multiply" aria-hidden="true" />
-          <motion.div className="absolute left-[15%] top-[22%] h-20 w-20 rounded-full bg-emerald-300/18 blur-xl" animate={{ scale: [1, 1.18, 1], opacity: [0.18, 0.34, 0.18] }} transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
-          <motion.div className="absolute left-[67%] top-[18%] h-24 w-24 rounded-full bg-red-300/16 blur-xl" animate={{ scale: [1, 1.15, 1], opacity: [0.14, 0.3, 0.14] }} transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
-          <motion.div className="absolute left-[43%] top-[63%] h-20 w-20 rounded-full bg-amber-200/14 blur-xl" animate={{ scale: [1, 1.2, 1], opacity: [0.12, 0.28, 0.12] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,14,16,0.06),rgba(12,14,16,0.16))] mix-blend-multiply" aria-hidden="true" />
+          <motion.div className="absolute left-[21%] top-[30%] h-28 w-28 rounded-full border border-emerald-200/44 bg-[radial-gradient(circle,rgba(110,231,183,0.36),rgba(110,231,183,0.08)_48%,transparent_70%)] blur-[1px]" animate={{ scale: [0.88, 1.18, 0.88], opacity: [0.24, 0.62, 0.24], y: [0, -5, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          <motion.div className="absolute left-[43%] top-[28%] h-32 w-32 rounded-full border border-amber-100/42 bg-[radial-gradient(circle,rgba(251,191,36,0.32),rgba(251,191,36,0.08)_52%,transparent_72%)] blur-[1px]" animate={{ scale: [0.9, 1.16, 0.9], opacity: [0.2, 0.56, 0.2], y: [0, 6, 0] }} transition={{ duration: 3.1, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          <motion.div className="absolute left-[61%] top-[31%] h-28 w-28 rounded-full border border-red-200/42 bg-[radial-gradient(circle,rgba(248,113,113,0.34),rgba(248,113,113,0.08)_50%,transparent_72%)] blur-[1px]" animate={{ scale: [0.9, 1.2, 0.9], opacity: [0.22, 0.6, 0.22], x: [0, 5, 0] }} transition={{ duration: 2.9, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+          <motion.div className="absolute left-[73%] top-[44%] h-24 w-24 rounded-full border border-sky-100/40 bg-[radial-gradient(circle,rgba(125,211,252,0.3),rgba(125,211,252,0.08)_50%,transparent_72%)] blur-[1px]" animate={{ scale: [0.9, 1.18, 0.9], opacity: [0.2, 0.54, 0.2], y: [0, -4, 0] }} transition={{ duration: 3.3, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
           {!startImageReady ? (
             <div className="pointer-events-auto absolute inset-0 z-30 grid place-items-center bg-[#eef1ed]/72 backdrop-blur-[6px]">
               <div className="rounded-[22px] border border-white/70 bg-white/70 px-6 py-4 text-center shadow-[0_18px_38px_-28px_rgba(0,0,0,0.72)]">
