@@ -495,10 +495,12 @@ export default function CurrentPlayerStage({
             </div>
           </div>
 
-          <NpcGuidePanel content={hostLine || '주사위를 굴려주세요.'} />
-          <TurnGuidePanel name={meta.name} color={meta.color} />
+          <div className="mt-2 flex w-full shrink-0 flex-col gap-2" aria-label="사회자와 현재 차례 안내">
+            <NpcGuidePanel content={hostLine || '주사위를 굴려주세요.'} />
+            <TurnGuidePanel name={meta.name} color={meta.color} />
+          </div>
 
-          <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-white/42 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
+          <div className="mt-2.5 w-full shrink-0 rounded-2xl border border-white/70 bg-white/42 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
             <button
               type="button"
               onClick={onOpenBoard}
@@ -785,7 +787,10 @@ function DiceControl({ onStep, disabled }) {
 
 function NpcGuidePanel({ content }) {
   return (
-    <div className="mt-2 flex min-h-[42px] w-full shrink-0 items-center justify-center rounded-full border border-emerald-300/70 bg-[linear-gradient(180deg,rgba(236,253,245,0.94),rgba(167,243,208,0.78))] px-4 text-center font-board text-[16px] font-extrabold leading-tight text-emerald-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_12px_26px_-22px_rgba(6,95,70,0.62)] backdrop-blur-[14px]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
+    <div
+      className="flex min-h-[46px] w-full shrink-0 items-center justify-center rounded-full border-2 border-emerald-300 bg-[linear-gradient(180deg,#f0fdf4_0%,#86efac_100%)] px-4 text-center font-board text-[16px] font-extrabold leading-tight text-emerald-950 shadow-[inset_0_2px_0_rgba(255,255,255,0.92),0_10px_22px_-17px_rgba(6,95,70,0.72)]"
+      style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}
+    >
       {content}
     </div>
   );
@@ -794,8 +799,12 @@ function NpcGuidePanel({ content }) {
 function TurnGuidePanel({ name, color = '#d97706' }) {
   return (
     <div
-      className="mt-1.5 w-full shrink-0 rounded-full border px-4 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.84),0_10px_22px_-20px_rgba(36,57,74,0.6)] backdrop-blur-[14px]"
-      style={{ borderColor: `${color}66`, background: `linear-gradient(180deg, rgba(255,255,255,0.9) 0%, ${color}24 100%)` }}
+      className="flex min-h-[46px] w-full shrink-0 items-center justify-center rounded-full border-2 px-4 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.9),0_10px_22px_-17px_rgba(36,57,74,0.65)]"
+      style={{
+        borderColor: `${color}8f`,
+        background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}34 100%)`,
+        boxShadow: `inset 0 2px 0 rgba(255,255,255,0.9), 0 10px 22px -17px ${color}`,
+      }}
     >
       <div className="font-board text-[20px] font-extrabold leading-none text-[#182a35]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
         {name} 차례
