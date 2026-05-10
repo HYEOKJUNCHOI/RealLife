@@ -1833,10 +1833,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
             />
           </div>
           <div className="absolute inset-0 rounded-[18px] bg-[linear-gradient(180deg,rgba(12,14,16,0.06),rgba(12,14,16,0.16))] mix-blend-multiply" aria-hidden="true" />
-          <motion.div className="initial-start-portal initial-start-portal--floor absolute left-[19%] top-[67%]" animate={{ scale: [0.92, 1.08, 0.92], opacity: [0.16, 0.34, 0.16], rotate: [0, 10, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
-          <motion.div className="initial-start-portal initial-start-portal--stand initial-start-portal--gold absolute left-[40%] top-[48%]" animate={{ scale: [0.9, 1.08, 0.9], opacity: [0.34, 0.78, 0.34], rotate: [0, 18, 0] }} transition={{ duration: 3.1, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
-          <motion.div className="initial-start-portal initial-start-portal--stand initial-start-portal--red absolute left-[61%] top-[49%]" animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.36, 0.82, 0.36], rotate: [0, -18, 0] }} transition={{ duration: 2.9, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
-          <motion.div className="initial-start-portal initial-start-portal--floor initial-start-portal--blue absolute left-[78%] top-[70%]" animate={{ scale: [0.92, 1.1, 0.92], opacity: [0.14, 0.32, 0.14], rotate: [0, -12, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }} aria-hidden="true" />
+
           {!startImageReady ? (
             <div className="pointer-events-auto absolute inset-0 z-30 grid place-items-center rounded-[18px] bg-[#eef1ed]/72 backdrop-blur-[6px]">
               <div className="rounded-[22px] border border-white/70 bg-white/70 px-6 py-4 text-center shadow-[0_18px_38px_-28px_rgba(0,0,0,0.72)]">
