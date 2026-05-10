@@ -613,6 +613,12 @@ export default function GameMain({ onExit }) {
     }
     const taxEvent = events.find((event) => event.kind === 'income_tax' || event.kind === 'luxury_tax');
     if (taxEvent) return { kind: 'tax', title: taxEvent.kind === 'luxury_tax' ? '사치세' : '소득세', text: `${taxEvent.amt ?? taxEvent.amount ?? 0}만 납부`, icon: taxEvent.kind === 'luxury_tax' ? '💎' : '🧾' };
+    const stationEvent = events.find((event) => event.kind === 'arrive_station');
+    if (stationEvent) {
+      const tileName = tileNameForPos(state, stationEvent.pos);
+      const collected = stationEvent.collected ?? 0;
+      return { kind: 'station', title: `${tileName} 역장 부임`, text: `적립금 ${collected}만을 받고 새 역장이 되었습니다.`, icon: '🚉', pos: stationEvent.pos, amount: collected, cash: state.players?.[playerId]?.cash };
+    }
     const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'pay_rent' || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
     if (rentEvent) {
       const amount = rentEvent.rent ?? rentEvent.fee ?? rentEvent.amt ?? rentEvent.amount ?? 0;
@@ -684,7 +690,25 @@ export default function GameMain({ onExit }) {
       if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
       const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
       const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
+      const stationEvent = events.find((event) => event.kind === 'arrive_station');
       const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
+      if (stationEvent && !pendingBuy && !isCardArrival && !jailNotice) {
+        const stationName = tileNameForPos(state, stationEvent.pos ?? endPos);
+        const collected = stationEvent.collected ?? 0;
+        pushGlobalNotice({
+          kind: 'station',
+          speaker: '사회자',
+          hostText: `${playerName}님, ${stationName}에 도착했습니다. 오늘부터 새 역장입니다 🚉`,
+          title: `${stationName}\n역장 부임!`,
+          text: collected > 0 ? `쌓여 있던 역 적립금 ${collected}만을 수령했습니다.` : '아직 적립금은 없지만, 역장 자리는 접수했습니다.',
+          icon: '🚉',
+          amount: collected,
+          cash: state.players?.[playerId]?.cash,
+          previewPos: stationEvent.pos ?? endPos,
+          color: '#2f75c9',
+          cta: collected > 0 ? `+${fmt(collected)}만 수령 · 터치해서 닫기` : '역장 부임 · 터치해서 닫기',
+        });
+      }
       if (rentEvent && !pendingBuy && !isCardArrival && !jailNotice) {
         const ownerId = rentEvent.ownerId;
         const owner = state.players?.[ownerId];
@@ -1245,6 +1269,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   const showAmount = Number.isFinite(amount) && amount !== 0;
   const accent = notice.color ?? '#22c55e';
   const isBuy = notice.kind === 'buy' && notice.previewPos != null;
+  const isStationNotice = notice.kind === 'station' && notice.previewPos != null;
   const isRent = notice.kind === 'rent';
   const hostText = notice.hostText ?? notice.text;
   const noticeStyle = notice.color ? {
@@ -1286,7 +1311,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
           className={cn('mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
           style={noticeStyle}
         >
-          {isBuy ? (
+          {isBuy || isStationNotice ? (
             <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
               <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
                 <PropertyDeedMini pos={notice.previewPos} />
@@ -1297,10 +1322,16 @@ function GlobalNoticeBand({ notice, onDismiss }) {
                   <div className="whitespace-pre-line font-board text-[clamp(30px,4.5vw,54px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
                 </div>
                 <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">{notice.text}</div>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
-                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
-                </div>
+                {isBuy ? (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
+                    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-xl border border-white/28 bg-white/12 px-4 py-3 font-board text-[22px] leading-tight text-white/90">
+                    {notice.cta ?? '터치해서 닫기'}
+                  </div>
+                )}
               </div>
             </div>
           ) : isRent ? (
