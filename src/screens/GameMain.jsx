@@ -28,6 +28,7 @@ import RecoveryModal from '@/components/modals/RecoveryModal.jsx';
 import LoanModal from '@/components/modals/LoanModal.jsx';
 import { useGameDialog } from '@/components/GameDialog.jsx';
 import { cn } from '@/lib/cn.js';
+import { getCharacterImg } from '@/lib/assets.js';
 
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
 const displayPlayerName = (player, fallback) => {
@@ -1533,7 +1534,7 @@ function WorldEconomyPanel({ state, player }) {
         </div>
         <div className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 font-display text-[10px] font-black uppercase tracking-[0.14em] text-white/58">{state?.year ?? 0}년차</div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 font-board">
+      <div className="mt-2 grid grid-cols-2 gap-1.5 font-board">
         <div className="rounded-lg border border-white/14 bg-white/9 px-2 py-2"><div className="text-[11px] text-white/44">물가</div><div className="text-[21px] text-yellow-100">+{inflation}%</div></div>
         <div className="rounded-lg border border-white/14 bg-white/9 px-2 py-2"><div className="text-[11px] text-white/44">금리</div><div className="text-[21px] text-red-100">{loanRate}%</div></div>
       </div>
@@ -1585,6 +1586,7 @@ function IveRenewalLayout({
 }) {
   if (!player || !state) return null;
   const meta = CHAR_META[player.character] ?? { name: `${index + 1}P`, color: '#d83b2f', emoji: '🎭' };
+  const characterImg = getCharacterImg(player.character);
   const name = displayPlayerName(player, meta.name ?? `${index + 1}P`);
   const owned = state.board.tiles.filter((tile) => tile.type === 'property' && state.tileState?.[tile.pos]?.owner === index).map((tile) => tile.pos);
   const totalDebt = (player.creditLoan?.principal ?? 0) + (player.loanShark?.principal ?? 0) + Object.values(player.mortgages ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
@@ -1603,25 +1605,28 @@ function IveRenewalLayout({
         : '주사위를 굴려 다음 인생 칸으로 이동하세요.';
 
   return (
-    <section className="relative grid h-full w-full grid-cols-[250px_minmax(0,1fr)_270px] grid-rows-[1fr_126px] gap-2 overflow-hidden rounded-[22px] border-[3px] border-[#17120c] bg-[#09131f] p-2 shadow-[0_8px_0_#17120c,0_26px_60px_-32px_rgba(0,0,0,0.95)]">
+    <section className="relative grid h-full w-full grid-cols-[220px_minmax(0,1fr)_246px] grid-rows-[minmax(0,1fr)_104px] gap-1.5 overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#09131f] p-1.5 shadow-[0_6px_0_#17120c,0_22px_50px_-34px_rgba(0,0,0,0.95)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(80,170,255,0.16),transparent_34%),linear-gradient(135deg,rgba(255,216,120,0.08),transparent_42%,rgba(14,116,144,0.1))]" />
 
-      <aside className="relative z-10 flex min-h-0 flex-col gap-2 rounded-2xl border-2 border-white/16 bg-white/9 p-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-[10px]">
-        <div className="rounded-xl border-2 border-white/18 bg-black/24 p-3">
-          <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-white/48">current player</div>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="grid h-16 w-16 place-items-center rounded-2xl border-2 border-white/55 text-3xl shadow-[0_4px_0_#0F0C0A]" style={{ background: `linear-gradient(135deg, ${meta.color} 0%, rgba(255,255,255,0.18) 100%)` }}>{meta.emoji ?? '🎭'}</div>
+      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 rounded-2xl border border-white/14 bg-white/8 p-1.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-[10px]">
+        <div className="rounded-xl border border-white/16 bg-black/24 p-2.5">
+          <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/48">current player</div>
+          <div className="mt-2 flex items-center gap-2.5">
+            <div className="relative grid h-[74px] w-[74px] shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-white/48 bg-white/10 text-3xl shadow-[0_4px_0_#0F0C0A]" style={{ backgroundColor: `${meta.color}22` }}>
+              {characterImg ? <img src={characterImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : (meta.emoji ?? '🎭')}
+              <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22),inset_0_-20px_30px_rgba(0,0,0,0.2)]" />
+            </div>
             <div className="min-w-0">
-              <div className="truncate font-board text-[28px] leading-none">{name}</div>
-              <div className="mt-1 font-display text-[10px] font-black uppercase tracking-[0.18em] text-white/50">{index + 1}P · {activeName}</div>
+              <div className="truncate font-board text-[25px] leading-none">{name}</div>
+              <div className="mt-1 font-display text-[9px] font-black uppercase tracking-[0.18em] text-white/50">{index + 1}P · {activeName}</div>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 font-board">
-            <div className="rounded-lg border border-emerald-200/30 bg-emerald-300/12 px-2 py-2"><div className="text-[12px] text-white/48">예금</div><div className="text-[22px] text-emerald-200">{Number(player.cash ?? 0).toLocaleString('ko-KR')}만</div></div>
-            <div className="rounded-lg border border-red-200/30 bg-red-300/12 px-2 py-2"><div className="text-[12px] text-white/48">부채</div><div className="text-[22px] text-red-200">{Number(totalDebt).toLocaleString('ko-KR')}만</div></div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5 font-board">
+            <div className="rounded-lg border border-emerald-200/25 bg-emerald-300/10 px-2 py-1.5"><div className="text-[12px] text-white/48">예금</div><div className="text-[20px] text-emerald-200">{Number(player.cash ?? 0).toLocaleString('ko-KR')}만</div></div>
+            <div className="rounded-lg border border-red-200/25 bg-red-300/10 px-2 py-1.5"><div className="text-[12px] text-white/48">부채</div><div className="text-[20px] text-red-200">{Number(totalDebt).toLocaleString('ko-KR')}만</div></div>
           </div>
         </div>
-        <div className="min-h-0 flex-1 rounded-xl border-2 border-white/14 bg-[#fff7df] p-2 text-ink shadow-[0_4px_0_#0F0C0A]">
+        <div className="min-h-0 flex-1 rounded-xl border border-white/14 bg-[#fff7df] p-1.5 text-ink shadow-[0_3px_0_#0F0C0A]">
           <div className="mb-2 flex items-center justify-between">
             <span className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-ink/50">title deeds</span>
             <span className="font-board text-sm text-ink/60">{owned.length}/8</span>
@@ -1636,10 +1641,10 @@ function IveRenewalLayout({
         </div>
       </aside>
 
-      <main className="relative z-10 min-h-0 overflow-hidden rounded-2xl border-2 border-white/16 bg-[radial-gradient(circle_at_50%_45%,#214b3b_0%,#143427_52%,#091c18_100%)] p-3 shadow-[inset_0_0_0_5px_rgba(255,255,255,0.06),0_4px_0_#0F0C0A]">
-        <div className="absolute left-4 top-4 z-20 rounded-full border border-white/22 bg-black/42 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.24em] text-white/70 backdrop-blur">board cinema</div>
-        <div className="absolute right-4 top-4 z-20 rounded-full border border-yellow-200/35 bg-yellow-300/12 px-4 py-2 font-board text-[16px] text-yellow-100 shadow-[0_2px_0_#0F0C0A]">{activeName}</div>
-        <div className="mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-1 rounded-[24px] border-[4px] border-[#17120c] bg-[#4e8b62] p-2 shadow-[inset_0_0_0_5px_rgba(255,255,255,0.12),0_16px_42px_rgba(0,0,0,0.35)]">
+      <main className="relative z-10 min-h-0 overflow-hidden rounded-2xl border border-white/14 bg-[radial-gradient(circle_at_50%_45%,#214b3b_0%,#143427_52%,#091c18_100%)] p-2 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.05),0_3px_0_#0F0C0A]">
+        <div className="absolute left-3 top-3 z-20 rounded-full border border-white/18 bg-black/38 px-3 py-1.5 font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/62 backdrop-blur">board</div>
+        <div className="absolute right-3 top-3 z-20 rounded-full border border-white/18 bg-black/38 px-3 py-1.5 font-board text-[15px] text-white/82 shadow-[0_2px_0_#0F0C0A]">{activeName}</div>
+        <div className="mx-auto grid h-full max-h-full max-w-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[18px] border-[3px] border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.1),0_14px_34px_rgba(0,0,0,0.32)]">
           {state.board.tiles.map((tile) => {
             const grid = boardGridStyle(tile.pos);
             const isHere = tile.pos === activePos;
@@ -1648,26 +1653,28 @@ function IveRenewalLayout({
             const ownerColor = owner ? (CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
             const special = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax'].includes(tile.type);
             return (
-              <div key={tile.pos} className={cn('relative overflow-hidden rounded-lg border-2 border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_2px_0_rgba(0,0,0,0.5)]', isHere && 'ring-4 ring-yellow-300 ring-offset-2 ring-offset-[#4e8b62]')} style={grid}>
+              <div key={tile.pos} className={cn('relative overflow-hidden rounded-md border border-[#17120c] bg-[#fff7df] p-0.5 text-center shadow-[0_1px_0_rgba(0,0,0,0.45)]', isHere && 'ring-2 ring-white ring-offset-2 ring-offset-[#4e8b62]')} style={grid}>
                 {owner && <div className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-white/70" style={{ backgroundColor: ownerColor }} />}
                 {!special && <div className="mb-1 h-2 rounded" style={{ backgroundColor: tile.color ?? '#d6b15d' }} />}
                 <div className="font-board text-[clamp(9px,1vw,13px)] leading-none text-ink">{special ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
-                {isHere && <motion.div className="absolute inset-0 rounded-lg border-[3px] border-yellow-300" animate={{ opacity: [0.25, 1, 0.25] }} transition={{ duration: 1.1, repeat: Infinity }} />}
-                {isHere && <div className="absolute bottom-1 left-1/2 grid h-7 w-7 -translate-x-1/2 place-items-center rounded-full border-2 border-white text-[12px] font-black text-white shadow-[0_2px_0_#0F0C0A]" style={{ backgroundColor: meta.color }}>{index + 1}</div>}
+                {isHere && <motion.div className="absolute inset-0 rounded-md border-2 border-white" animate={{ opacity: [0.28, 0.85, 0.28] }} transition={{ duration: 1.1, repeat: Infinity }} />}
+                {isHere && <div className="absolute bottom-0.5 left-1/2 grid h-8 w-8 -translate-x-1/2 place-items-center overflow-hidden rounded-full border-2 border-white bg-black/20 text-[12px] font-black text-white shadow-[0_2px_0_#0F0C0A]" style={{ backgroundColor: characterImg ? '#fffaf0' : meta.color }}>
+                  {characterImg ? <img src={characterImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : index + 1}
+                </div>}
               </div>
             );
           })}
-          <div className="col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[24px] border-[4px] border-[#17120c] bg-[radial-gradient(circle_at_50%_35%,#fff7df_0%,#e2bd66_52%,#93652d_100%)] p-4 text-center shadow-[inset_0_4px_0_rgba(255,255,255,0.55)]">
-            <div>
-              <div className="font-display text-[12px] font-black uppercase tracking-[0.32em] text-ink/42">The RealLife</div>
-              <div className="mt-2 font-board text-[44px] leading-none text-ink">한 턴 더</div>
-              <div className="mt-2 font-board text-[18px] text-ink/60">{prompt}</div>
+          <div className="col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-2 border-white/18 bg-[linear-gradient(135deg,rgba(7,18,24,0.72),rgba(19,48,42,0.64))] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-[1px]">
+            <div className="max-w-[80%]">
+              <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-white/42">economy board</div>
+              <div className="mt-2 font-board text-[34px] leading-none text-white">{name}의 차례</div>
+              <div className="mt-2 font-board text-[16px] leading-snug text-white/64">{prompt}</div>
             </div>
           </div>
         </div>
       </main>
 
-      <aside className="relative z-10 flex min-h-0 flex-col gap-2 rounded-2xl border-2 border-white/16 bg-white/9 p-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-[10px]">
+      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-2xl border border-white/14 bg-white/8 p-1.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-[10px] no-scrollbar">
         <div className="rounded-xl border-2 border-white/18 bg-black/24 p-3">
           <div className="flex items-center gap-3">
             <img src="/ui/host-mic.jpg" alt="" className="h-16 w-16 rounded-2xl border-2 border-yellow-100/60 object-cover object-top shadow-[0_4px_0_#0F0C0A]" draggable={false} />
@@ -1693,7 +1700,7 @@ function IveRenewalLayout({
         </div>
       </aside>
 
-      <div className="relative z-10 col-span-3 grid grid-cols-[1fr_190px_190px_190px] items-center gap-3 rounded-2xl border-2 border-white/16 bg-black/34 p-3 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-[10px]">
+      <div className="relative z-10 col-span-3 grid grid-cols-[1fr_150px_170px_170px] items-center gap-2 rounded-2xl border border-white/14 bg-black/34 p-2 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-[10px]">
         <div className="min-w-0">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-white/42">action deck</div>
           <div className="mt-1 truncate font-board text-[26px] leading-none">{prompt}</div>
@@ -1705,8 +1712,8 @@ function IveRenewalLayout({
           <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceA))}.svg`} alt="" className="h-12 w-12" draggable={false} />
           <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceB))}.svg`} alt="" className="h-12 w-12" draggable={false} />
         </div>
-        <button type="button" onClick={onAppDiceRoll} disabled={disabled || diceLocked} className="h-[70px] rounded-2xl border-[3px] border-[#17120c] bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_48%,#f1b84d_100%)] font-board text-[26px] text-ink shadow-[0_5px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45">주사위</button>
-        <div className="grid h-[70px] grid-cols-2 gap-2">
+        <button type="button" onClick={onAppDiceRoll} disabled={disabled || diceLocked} className="h-[60px] rounded-2xl border-[3px] border-[#17120c] bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_48%,#f1b84d_100%)] font-board text-[23px] text-ink shadow-[0_5px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45">주사위</button>
+        <div className="grid h-[60px] grid-cols-2 gap-2">
           <button type="button" onClick={onOpenBoard} className="rounded-2xl border-2 border-white/22 bg-white/12 font-board text-[19px] text-white shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">보드</button>
           <button type="button" onClick={onEndTurn} disabled={!diceLocked} className="rounded-2xl border-2 border-red-950 bg-[linear-gradient(180deg,#ff7474,#e12d39)] font-board text-[19px] text-white shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45">턴끝</button>
         </div>
