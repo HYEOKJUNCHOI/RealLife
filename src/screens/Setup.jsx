@@ -325,10 +325,10 @@ export default function Setup({ onStart }) {
               <span className="rounded-full border border-white/30 bg-white/12 px-2.5 py-1 font-display text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#087652] backdrop-blur-[8px]">Switch</span>
             </div>
             <div className="grid gap-2">
-              <TogglePill icon="🎵" label="BGM" description={bgmEnabled ? '배경음악 재생 중' : '시작 전 배경음악 끄기'} checked={bgmEnabled} onClick={toggleBgm} />
               <TogglePill icon="🎲" label="이벤트" description="1년 결산/데스매치 이벤트 카드" checked={options.eventCards} onClick={() => updateOption('eventCards', !options.eventCards)} />
               <TogglePill icon="🏦" label="대출" description="신용대출/사채 회생 시스템" checked={options.credit} onClick={() => updateOption('credit', !options.credit)} />
               <TogglePill icon="📈" label="물가" description="매년 시세 4% 복리 상승" checked={options.inflation} onClick={() => updateOption('inflation', !options.inflation)} />
+              <TogglePill icon="🎵" label="BGM" description={bgmEnabled ? '배경음악 재생 중' : '시작 전 배경음악 끄기'} checked={bgmEnabled} onClick={toggleBgm} />
             </div>
           </div>
 
