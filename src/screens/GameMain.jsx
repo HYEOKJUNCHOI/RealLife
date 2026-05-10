@@ -196,20 +196,21 @@ export default function GameMain({ onExit }) {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     window.localStorage?.setItem('reallife:bgmEnabled', bgmEnabled ? '1' : '0');
+    if (!bgmEnabled) {
+      audioRef.current?.pause();
+      return undefined;
+    }
     if (!audioRef.current) {
-      audioRef.current = new Audio('/audio/bgm.mp3');
+      audioRef.current = new Audio();
+      audioRef.current.preload = 'none';
       audioRef.current.loop = true;
       audioRef.current.volume = 0.34;
+      audioRef.current.src = '/audio/bgm.mp3';
     }
-    const audio = audioRef.current;
-    if (bgmEnabled) {
-      audio.play().catch(() => {
-        setBgmEnabled(false);
-        addToast?.({ message: 'BGM 파일을 찾을 수 없거나 재생이 차단되었습니다.', tone: 'warn' });
-      });
-    } else {
-      audio.pause();
-    }
+    audioRef.current.play().catch(() => {
+      setBgmEnabled(false);
+      addToast?.({ message: 'BGM 파일을 찾을 수 없거나 재생이 차단되었습니다.', tone: 'warn' });
+    });
     return undefined;
   }, [bgmEnabled, addToast]);
 
