@@ -684,8 +684,6 @@ export default function GameMain({ onExit }) {
         const summary = buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore: cashBeforeMove });
         setAiTurnSummary(summary);
         setBoardTurn(null);
-      } else {
-        window.setTimeout(() => setBoardTurn(null), 900);
       }
     }, arrivalDelay + 520);
   };
@@ -839,27 +837,34 @@ export default function GameMain({ onExit }) {
       <div className="relative flex h-full min-h-dvh flex-col gap-1.5 overflow-hidden p-1.5 md:min-h-full md:gap-1.5 md:p-2">
         {/* === STAGE === */}
         <div className="hidden flex-1 min-h-0 md:flex">
-          <IveRenewalLayout
+          <CurrentPlayerStage
             player={turnPlayer}
             index={turnIndex}
             state={state}
             hostLine={hostLine}
             turnBriefing={turnBriefing}
-            turnResult={turnResult}
-            pendingPurchase={pendingPurchase}
-            lastDiceRoll={lastDiceRoll}
-            boardTurn={boardTurn}
-            diceLocked={diceInputLocked}
+            activeEvent={modalEvent && showEventModal ? modalEvent : null}
+            onCloseEvent={confirmEvent}
+            year={state.year}
+            loanRate={state.loanRate}
+            onStep={handleStep}
+            onDiceRoll={runManualDiceMove}
+            diceMode={diceMode}
+            onDiceModeChange={setDiceMode}
             onAppDiceRoll={rollAppDice}
-            onOpenBoard={() => {}}
-            onOpenResultCard={handleOpenResultCard}
-            onEndTurn={handleEndTurn}
+            lastDiceRoll={lastDiceRoll}
             onShowNoticeLog={showNoticeLog}
             hasNoticeLog={noticeLog.length > 0}
+            diceLocked={diceInputLocked}
+            onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
+            turnResult={turnResult}
+            onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
+            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            pendingPurchase={pendingPurchase}
+            hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
             onToggleBgm={() => setBgmEnabled((enabled) => !enabled)}
-            disabled={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
@@ -887,7 +892,7 @@ export default function GameMain({ onExit }) {
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
             onOpenLoan={openLoanModal}
-            onOpenBoard={() => {}}
+            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             pendingPurchase={pendingPurchase}
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
@@ -917,11 +922,20 @@ export default function GameMain({ onExit }) {
             onDiceRoll={runManualDiceMove}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             onOpenResultCard={handleOpenResultCard}
-            onOpenBoard={() => {}}
+            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
             onBack={() => setViewPlayerIndex(null)}
             onOpenLoan={openLoanModal}
             canLifeChange={state.pendingLifeChange?.playerId != null && viewPlayerIndex !== state.pendingLifeChange.playerId}
             onLifeChange={() => handleLifeChange(viewPlayerIndex)}
+          />
+        )}
+
+        {!state.finished && boardTurn && (
+          <BoardTurnOverlay
+            state={state}
+            replay={boardTurn}
+            onRoll={handleBoardDiceRoll}
+            onClose={closeBoardToStatus}
           />
         )}
 
@@ -1035,7 +1049,7 @@ function CardRevealOverlay({ card, onReveal }) {
       onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
-      <div className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#f8fbf7] p-4 text-center shadow-[0_6px_0_#0F0C0A,0_24px_52px_rgba(0,0,0,0.55)]">
+      <div className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] p-4 text-center shadow-[0_6px_0_#0F0C0A,0_24px_52px_rgba(0,0,0,0.55)]">
         <div className="font-display text-[10px] font-black uppercase tracking-[0.26em] text-ink/46">card reveal</div>
         <div className="mt-1 font-board text-[28px] leading-none text-ink">카드를 뒤집어주세요</div>
         <div className="mt-1 font-board text-[15px] text-ink/58">무슨 카드가 나올까요?</div>
@@ -1050,36 +1064,36 @@ function CardRevealOverlay({ card, onReveal }) {
             transition={{ rotateY: { type: 'spring', stiffness: 210, damping: 22 }, y: { duration: 0.9, repeat: flipped ? 0 : Infinity }, rotate: { duration: 1.1, repeat: flipped ? 0 : Infinity } }}
           >
             <div
-              className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border-[4px] border-ink-line text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden]"
+              className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border-[4px] border-ink-line text-white shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden]"
               style={{
                 background: `radial-gradient(circle at 50% 24%, rgba(255,255,255,0.28) 0%, transparent 23%), linear-gradient(145deg, ${tone.from} 0%, ${tone.mid} 52%, ${tone.to} 100%)`,
                 boxShadow: `0 8px 0 #0F0C0A, 0 20px 42px rgba(0,0,0,0.42), 0 0 42px ${tone.glow}`,
               }}
             >
               <div className="absolute inset-3 rounded-[22px] border-2 border-white/28" />
-              <div className="absolute inset-6 rounded-[18px] border border-[#24394a]/18" />
+              <div className="absolute inset-6 rounded-[18px] border border-white/18" />
               <div className="absolute -left-16 top-10 h-44 w-44 rounded-full border-[18px] border-white/8" />
               <div className="absolute -right-14 bottom-8 h-40 w-40 rounded-full border-[16px] border-black/10" />
               <div className="relative grid h-[250px] w-[184px] place-items-center rounded-2xl border-[3px] border-white/45 bg-black/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_8px_rgba(255,255,255,0.05)]">
                 <div className="text-center">
                   <div className="mx-auto grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/52 bg-white/13 font-display text-[32px] font-black tracking-[-0.12em] shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_7px_0_rgba(15,12,10,0.35)]">RL</div>
-                  <div className="mt-5 font-display text-[11px] font-black uppercase tracking-[0.34em] text-ink/70">The RealLife</div>
+                  <div className="mt-5 font-display text-[11px] font-black uppercase tracking-[0.34em] text-white/70">The RealLife</div>
                   <div className="mt-2 font-board text-[36px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
                   <div className="mx-auto mt-4 h-px w-24 bg-white/35" />
-                  <div className="mt-3 font-display text-[9px] font-black uppercase tracking-[0.22em] text-ink/64">tap to reveal</div>
+                  <div className="mt-3 font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/64">tap to reveal</div>
                 </div>
               </div>
             </div>
-            <div className="absolute inset-0 overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[#f8fbf7] text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+            <div className="absolute inset-0 overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[#fffaf0] text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
               {card?.cardKind ? (
                 <CardArtwork type={card.cardKind} id={String(card.cardId ?? card.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
               ) : (
-                <div className="absolute inset-0 grid place-items-center bg-[#f8fbf7] text-[84px]">{card.icon ?? '🎴'}</div>
+                <div className="absolute inset-0 grid place-items-center bg-[#fffaf0] text-[84px]">{card.icon ?? '🎴'}</div>
               )}
-              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.94)_100%)] px-4 pb-4 pt-16 text-ink">
-                <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/66">{card.cardKind ?? 'card'}</div>
+              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.94)_100%)] px-4 pb-4 pt-16 text-white">
+                <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/66">{card.cardKind ?? 'card'}</div>
                 <div className="mt-1 font-board text-[30px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{card.cardName ?? card.title ?? '카드 공개'}</div>
-                <div className="mt-2 font-board text-[16px] leading-snug text-ink/88">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
+                <div className="mt-2 font-board text-[16px] leading-snug text-white/88">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
               </div>
             </div>
           </motion.div>
@@ -1088,7 +1102,7 @@ function CardRevealOverlay({ card, onReveal }) {
           type="button"
           onClick={onReveal}
           disabled={!flipped}
-          className="mt-5 h-13 min-h-[52px] w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_55%,#f1b84d_100%)] font-board text-[22px] text-ink shadow-[0_4px_0_#24394a] active:translate-y-1 active:shadow-none disabled:opacity-45 disabled:grayscale"
+          className="mt-5 h-13 min-h-[52px] w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_55%,#f1b84d_100%)] font-board text-[22px] text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45 disabled:grayscale"
         >
           {flipped ? '카드 확인 · 정산 공개' : '먼저 카드를 뒤집어주세요'}
         </button>
@@ -1111,7 +1125,7 @@ function PropertyShatterOverlay({ effect, state }) {
   });
   const layer = (
     <div className="pointer-events-none fixed inset-0 flex items-center justify-center" style={{ zIndex: 2147483200 }}>
-      <div className="absolute inset-0 bg-white/68 backdrop-blur-[1px]" />
+      <div className="absolute inset-0 bg-black/18 backdrop-blur-[1px]" />
       <motion.div
         initial={{ scale: 0.96, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -1119,7 +1133,7 @@ function PropertyShatterOverlay({ effect, state }) {
         className="relative h-[240px] w-[190px]"
       >
         <motion.div
-          className="absolute left-1/2 top-1/2 z-10 w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-xl border-[4px] border-red-950 bg-red-600 px-4 py-2 text-center font-board text-3xl text-ink shadow-[0_5px_0_#0F0C0A,0_0_30px_rgba(220,38,38,0.62)]"
+          className="absolute left-1/2 top-1/2 z-10 w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-xl border-[4px] border-red-950 bg-red-600 px-4 py-2 text-center font-board text-3xl text-white shadow-[0_5px_0_#0F0C0A,0_0_30px_rgba(220,38,38,0.62)]"
           initial={{ scale: 0.7, rotate: -8, opacity: 0 }}
           animate={{ scale: [0.7, 1.12, 1], rotate: [-8, 3, -2], opacity: [0, 1, 1, 0] }}
           transition={{ duration: 0.95, times: [0, 0.18, 0.7, 1] }}
@@ -1128,7 +1142,7 @@ function PropertyShatterOverlay({ effect, state }) {
           <div className="mt-1 truncate font-display text-[10px] font-black uppercase tracking-[0.18em]">{title}</div>
         </motion.div>
         <motion.div
-          className="absolute inset-0 overflow-hidden rounded-xl border-[3px] border-ink-line bg-white shadow-[0_5px_0_#24394a]"
+          className="absolute inset-0 overflow-hidden rounded-xl border-[3px] border-ink-line bg-white shadow-[0_5px_0_#0F0C0A]"
           initial={{ opacity: 1, scale: 1 }}
           animate={{ opacity: [1, 1, 0], scale: [1, 0.98, 0.9] }}
           transition={{ duration: 0.38, times: [0, 0.5, 1] }}
@@ -1177,12 +1191,12 @@ function GlobalNoticeBand({ notice, onDismiss }) {
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
       >
         <div
-          className={cn('mx-auto grid overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-ink shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[38px_1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[30vh] max-w-[980px] grid-rows-[42px_1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
+          className={cn('mx-auto grid overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[38px_1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[30vh] max-w-[980px] grid-rows-[42px_1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
           style={notice.kind === 'dice' && notice.color ? { boxShadow: `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${notice.color}aa, 0 0 42px ${notice.color}99, inset 0 0 28px ${notice.color}22` } : undefined}
         >
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-[#24394a]/18 bg-black/22 px-3 font-board text-[clamp(14px,2vw,22px)] leading-none text-ink/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-white/18 bg-black/22 px-3 font-board text-[clamp(14px,2vw,22px)] leading-none text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
             {notice.kind === 'buy' ? <img src="/ui/host-mic.jpg" alt="" className="h-10 w-10 rounded-full border border-emerald-200/70 object-cover object-top shadow-[0_0_18px_rgba(80,255,160,0.45)]" draggable={false} /> : <span className="text-[1.15em]">🎙️</span>}
-            <span className={cn('font-display text-[10px] font-black uppercase tracking-[0.24em]', notice.kind === 'buy' ? 'text-emerald-700' : 'text-monopoly-gold/86')}>{notice.speaker ?? 'NPC'}</span>
+            <span className={cn('font-display text-[10px] font-black uppercase tracking-[0.24em]', notice.kind === 'buy' ? 'text-emerald-200' : 'text-monopoly-gold/86')}>{notice.speaker ?? 'NPC'}</span>
             <span className="truncate">{notice.text}</span>
           </div>
           {notice.kind === 'buy' && notice.previewPos != null ? (
@@ -1195,10 +1209,10 @@ function GlobalNoticeBand({ notice, onDismiss }) {
                   <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🏠'}</motion.span>
                   <div className="font-board text-[clamp(30px,5vw,62px)] leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
                 </div>
-                <div className="mt-2 font-board text-[clamp(17px,2.4vw,28px)] leading-tight text-ink/92">{notice.text}</div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,28px)] leading-tight text-white/92">{notice.text}</div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#bff7d8_48%,#22c55e_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#24394a] active:translate-y-1 active:shadow-none">매입</button>
-                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#24394a] active:translate-y-1 active:shadow-none">스킵</button>
+                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#bff7d8_48%,#22c55e_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
+                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
                 </div>
               </div>
             </div>
@@ -1212,7 +1226,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
             </div>
           )}
           <div className={cn('flex items-start justify-center gap-3 font-board', notice.subtle ? 'hidden' : 'text-[clamp(18px,3vw,34px)]')}>
-            {showAmount && <span className={amount >= 0 ? 'text-emerald-700' : 'text-red-700'}>{signedMoney(amount)}</span>}
+            {showAmount && <span className={amount >= 0 ? 'text-emerald-200' : 'text-red-200'}>{signedMoney(amount)}</span>}
             {notice.cash != null && <span className="text-monopoly-gold">내 예금 {Number(notice.cash).toLocaleString('ko-KR')}만</span>}
           </div>
         </div>
@@ -1328,7 +1342,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
   const fee = request.fee ?? 0;
   return (
     <div className="fixed inset-0 z-[97] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[5px]">
-      <div className="flex max-h-[88vh] w-[min(94vw,720px)] flex-col overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#f8fbf7] shadow-[0_6px_0_#0F0C0A,0_24px_52px_-20px_rgba(0,0,0,0.82)]">
+      <div className="flex max-h-[88vh] w-[min(94vw,720px)] flex-col overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] shadow-[0_6px_0_#0F0C0A,0_24px_52px_-20px_rgba(0,0,0,0.82)]">
         <div className="border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#e9c56f_100%)] px-4 py-3 text-center">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">station transfer</div>
           <div className="font-board text-[25px] leading-none text-ink">🚉 {request.title ?? '환승 선택'}</div>
@@ -1348,7 +1362,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
                   key={tile.pos}
                   type="button"
                   onClick={() => onSelect?.(tile.pos)}
-                  className="min-h-[78px] rounded-xl border-2 border-ink-line bg-white px-2 py-2 text-left font-board text-ink shadow-[0_3px_0_#24394a] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-1 active:shadow-none"
+                  className="min-h-[78px] rounded-xl border-2 border-ink-line bg-white px-2 py-2 text-left font-board text-ink shadow-[0_3px_0_#0F0C0A] transition hover:-translate-y-0.5 hover:brightness-105 active:translate-y-1 active:shadow-none"
                 >
                   <div className="mb-1 h-2 rounded-full" style={{ backgroundColor: tile.color ?? (tile.type === 'railroad' ? '#3b3b3b' : tile.type === 'tax' ? '#d83b2f' : '#d6b15d') }} />
                   <div className="text-[16px] leading-tight">{tile.names?.ko ?? tile.name ?? `${tile.pos}번`}</div>
@@ -1362,10 +1376,10 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
           </div>
         </div>
         <div className="flex gap-2 border-t-2 border-ink-line bg-[#f0e0b6] p-3">
-          <button type="button" onClick={onStay} className="h-12 flex-1 rounded-xl border-2 border-ink-line bg-white font-board text-[18px] text-ink shadow-[0_3px_0_#24394a] active:translate-y-1 active:shadow-none">
+          <button type="button" onClick={onStay} className="h-12 flex-1 rounded-xl border-2 border-ink-line bg-white font-board text-[18px] text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none">
             여기 머무르기
           </button>
-          <div className="flex flex-[1.2] items-center justify-center rounded-xl border-2 border-ink-line bg-[#f8fbf7] px-3 text-center font-board text-[15px] leading-snug text-ink/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+          <div className="flex flex-[1.2] items-center justify-center rounded-xl border-2 border-ink-line bg-[#fffaf0] px-3 text-center font-board text-[15px] leading-snug text-ink/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
             원하는 목적지를 고른 뒤 실제 말을 해당 칸으로 옮겨주세요
           </div>
         </div>
@@ -1377,17 +1391,17 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
 function AiTurnSummaryModal({ summary, onContinue }) {
   return (
     <div className="fixed inset-0 z-[96] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[4px]">
-      <div className="w-[min(94vw,520px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#f8fbf7] shadow-[0_6px_0_#0F0C0A,0_22px_44px_-18px_rgba(0,0,0,0.78)]">
+      <div className="w-[min(94vw,520px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] shadow-[0_6px_0_#0F0C0A,0_22px_44px_-18px_rgba(0,0,0,0.78)]">
         <div className="border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#e9c56f_100%)] px-4 py-3 text-center">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">AI TURN SUMMARY</div>
           <div className="font-board text-[22px] leading-none text-ink" style={{ color: summary.color }}>{summary.playerName} 턴 요약</div>
         </div>
         <div className="space-y-2 p-4 font-board text-ink">
-          <div className="rounded-xl border-2 border-ink-line bg-white px-3 py-2 shadow-[0_2px_0_#24394a]">🎲 주사위: <b>{summary.roll}</b></div>
-          <div className="rounded-xl border-2 border-ink-line bg-white px-3 py-2 shadow-[0_2px_0_#24394a]">📍 도착: <b>{summary.arrival}</b><div className="mt-0.5 text-[13px] text-ink/62">{summary.arrivalText}</div></div>
-          {summary.card && <div className="rounded-xl border-2 border-ink-line bg-[#f5ecff] px-3 py-2 shadow-[0_2px_0_#24394a]">🎴 카드: <b>{summary.card}</b></div>}
-          {summary.bought && <div className="rounded-xl border-2 border-ink-line bg-[#e9fff4] px-3 py-2 shadow-[0_2px_0_#24394a]">🏠 매입: <b>{summary.bought.name}</b> · {summary.bought.price}만</div>}
-          <div className="rounded-xl border-2 border-ink-line bg-white px-3 py-2 shadow-[0_2px_0_#24394a]">
+          <div className="rounded-xl border-2 border-ink-line bg-white px-3 py-2 shadow-[0_2px_0_#0F0C0A]">🎲 주사위: <b>{summary.roll}</b></div>
+          <div className="rounded-xl border-2 border-ink-line bg-white px-3 py-2 shadow-[0_2px_0_#0F0C0A]">📍 도착: <b>{summary.arrival}</b><div className="mt-0.5 text-[13px] text-ink/62">{summary.arrivalText}</div></div>
+          {summary.card && <div className="rounded-xl border-2 border-ink-line bg-[#f5ecff] px-3 py-2 shadow-[0_2px_0_#0F0C0A]">🎴 카드: <b>{summary.card}</b></div>}
+          {summary.bought && <div className="rounded-xl border-2 border-ink-line bg-[#e9fff4] px-3 py-2 shadow-[0_2px_0_#0F0C0A]">🏠 매입: <b>{summary.bought.name}</b> · {summary.bought.price}만</div>}
+          <div className="rounded-xl border-2 border-ink-line bg-white px-3 py-2 shadow-[0_2px_0_#0F0C0A]">
             <div className="mb-1 font-board text-[15px] text-ink/72">돈 흐름</div>
             {summary.moneyRows.length ? summary.moneyRows.map((row, index) => (
               <div key={`${row.label}-${index}`} className="flex items-center justify-between gap-3 text-[15px]">
@@ -1402,7 +1416,7 @@ function AiTurnSummaryModal({ summary, onContinue }) {
           </div>
         </div>
         <div className="border-t-2 border-ink-line bg-[#f0e0b6] p-3">
-          <button type="button" onClick={onContinue} className="h-12 w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_52%,#f1b84d_100%)] font-board text-[20px] text-ink shadow-[0_3px_0_#24394a] active:translate-y-1 active:shadow-none">
+          <button type="button" onClick={onContinue} className="h-12 w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_52%,#f1b84d_100%)] font-board text-[20px] text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none">
             확인 · 다음 턴
           </button>
         </div>
@@ -1423,12 +1437,12 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
       <div className="relative flex h-[min(92vh,760px)] w-[min(96vw,1040px)] flex-col overflow-hidden rounded-xl border-[3px] border-ink-line bg-parchment-100 shadow-[0_6px_0_#0F0C0A,0_24px_48px_-18px_rgba(0,0,0,0.75)]">
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff8dc_0%,#f0d48f_100%)] px-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <div className="rounded-md border-2 border-ink-line bg-white px-2.5 py-1 shadow-[0_2px_0_#24394a]">
+            <div className="rounded-md border-2 border-ink-line bg-white px-2.5 py-1 shadow-[0_2px_0_#0F0C0A]">
               <div className="font-display text-[8px] font-extrabold uppercase tracking-[0.16em] text-ink/45">현재 턴</div>
               <div className="font-board text-[15px] font-extrabold leading-none text-ink">{currentIndex + 1}P · {currentName}</div>
             </div>
             <div className="font-display text-[18px] font-extrabold text-ink/35">→</div>
-            <div className="rounded-md border-2 border-ink-line bg-[#fff2b8] px-2.5 py-1 shadow-[0_2px_0_#24394a]">
+            <div className="rounded-md border-2 border-ink-line bg-[#fff2b8] px-2.5 py-1 shadow-[0_2px_0_#0F0C0A]">
               <div className="font-display text-[8px] font-extrabold uppercase tracking-[0.16em] text-ink/45">보유 카드슬롯</div>
               <div className="font-board text-[15px] font-extrabold leading-none text-ink">{playerIndex + 1}P · {name}</div>
             </div>
@@ -1438,7 +1452,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
               <button
                 type="button"
                 onClick={onLifeChange}
-                className="rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#ffcf4a_100%)] px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-ink shadow-[0_2px_0_#24394a] transition active:translate-y-1 active:shadow-none"
+                className="rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#ffcf4a_100%)] px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-ink shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
               >
                 체인지
               </button>
@@ -1446,7 +1460,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
             <button
               type="button"
               onClick={onBack}
-              className="rounded-md border-2 border-ink-line bg-monopoly-red px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-ink shadow-[0_2px_0_#24394a] transition active:translate-y-1 active:shadow-none"
+              className="rounded-md border-2 border-ink-line bg-monopoly-red px-4 py-2 font-display text-[12px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_2px_0_#0F0C0A] transition active:translate-y-1 active:shadow-none"
             >
               돌아가기
             </button>
@@ -1475,264 +1489,6 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
         </div>
       </div>
     </div>
-  );
-}
-
-function getEconomyInsight(state, player) {
-  const cash = player?.cash ?? 0;
-  const debt = (player?.creditLoan?.principal ?? 0) + (player?.loanShark?.principal ?? 0) + Object.values(player?.mortgages ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
-  if (debt > cash && debt > 0) return { tone: 'danger', title: '금리 압박', text: '부채가 현금보다 큽니다. 금리 변화에 취약해요.' };
-  if (cash < 300) return { tone: 'warn', title: '현금 방어', text: '기회가 와도 현금이 부족하면 잡기 어렵습니다.' };
-  if ((state?.year ?? 0) >= 3) return { tone: 'info', title: '경제 후반전', text: '물가와 세금이 누적됩니다. 순자산보다 현금흐름을 보세요.' };
-  return { tone: 'good', title: '기회 탐색', text: '현금 여력이 있습니다. 좋은 자산을 볼 차례예요.' };
-}
-
-function getNearbySignals(state, pos) {
-  const tiles = state?.board?.tiles ?? [];
-  const total = tiles.length || 40;
-  const signals = [];
-  for (let step = 1; step <= 6; step += 1) {
-    const tile = tiles[(pos + step) % total];
-    if (!tile) continue;
-    const ts = state.tileState?.[tile.pos] ?? {};
-    if (tile.type === 'property' && ts.owner == null) signals.push({ step, icon: '📜', label: `${step}칸 뒤 매입기회` });
-    if (tile.type === 'chance') signals.push({ step, icon: '🎴', label: `${step}칸 뒤 찬스` });
-    if (tile.type === 'community_chest') signals.push({ step, icon: '🎁', label: `${step}칸 뒤 복지` });
-    if (tile.type === 'tax') signals.push({ step, icon: '🧾', label: `${step}칸 뒤 세금` });
-    if (tile.type === 'property' && ts.owner != null && ts.owner !== state.turnIndex) signals.push({ step, icon: '⚠️', label: `${step}칸 뒤 통행료` });
-    if (signals.length >= 3) break;
-  }
-  return signals;
-}
-
-function WorldEconomyPanel({ state, player }) {
-  const insight = getEconomyInsight(state, player);
-  const loanRate = Math.round((state?.loanRate ?? 0.02) * 100);
-  const inflation = 4;
-  const toneClass = insight.tone === 'danger'
-    ? 'border-red-300 bg-red-50 text-[#7a332d]'
-    : insight.tone === 'warn'
-      ? 'border-amber-300 bg-amber-50 text-amber-800'
-      : insight.tone === 'good'
-        ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-        : 'border-sky-300 bg-sky-50 text-sky-800';
-  return (
-    <div className="rounded-xl border-2 border-[#24394a]/18 bg-white/78 p-3 shadow-[0_4px_0_#24394a]">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/42">world economy</div>
-          <div className="font-board text-[23px] leading-none text-ink">경제판</div>
-        </div>
-        <div className="rounded-full border border-white/20 bg-white/74 px-2.5 py-1 font-display text-[10px] font-black uppercase tracking-[0.14em] text-ink/58">{state?.year ?? 0}년차</div>
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-1.5 font-board">
-        <div className="rounded-lg border border-[#24394a]/18 bg-white/9 px-2 py-2"><div className="text-[11px] text-ink/44">물가</div><div className="text-[21px] text-amber-800">+{inflation}%</div></div>
-        <div className="rounded-lg border border-[#24394a]/18 bg-white/9 px-2 py-2"><div className="text-[11px] text-ink/44">금리</div><div className="text-[21px] text-[#7a332d]">{loanRate}%</div></div>
-      </div>
-      <div className={cn('mt-3 rounded-xl border p-2.5', toneClass)}>
-        <div className="font-board text-[18px] leading-none">{insight.title}</div>
-        <div className="mt-1 font-board text-[13px] leading-snug opacity-82">{insight.text}</div>
-      </div>
-    </div>
-  );
-}
-
-function NearbySignalsPanel({ signals }) {
-  return (
-    <div className="rounded-xl border-2 border-[#24394a]/18 bg-white/74 p-2 shadow-[0_3px_0_#24394a]">
-      <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/42">next 6 tiles</div>
-      <div className="mt-2 grid gap-1.5">
-        {signals.length ? signals.map((signal, idx) => (
-          <div key={`${signal.step}-${idx}`} className="flex items-center gap-2 rounded-lg border border-white/12 bg-white/68 px-2 py-1.5 font-board text-[15px] text-ink/84">
-            <span>{signal.icon}</span><span>{signal.label}</span>
-          </div>
-        )) : (
-          <div className="rounded-lg border border-white/12 bg-white/68 px-2 py-2 font-board text-[15px] text-ink/60">앞 6칸은 조용합니다.</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function IveRenewalLayout({
-  player,
-  index,
-  state,
-  hostLine,
-  turnBriefing,
-  turnResult,
-  pendingPurchase,
-  lastDiceRoll,
-  boardTurn,
-  diceLocked,
-  onAppDiceRoll,
-  onOpenBoard,
-  onOpenResultCard,
-  onEndTurn,
-  onShowNoticeLog,
-  hasNoticeLog,
-  onExit,
-  bgmEnabled,
-  onToggleBgm,
-  disabled,
-}) {
-  if (!player || !state) return null;
-  const meta = CHAR_META[player.character] ?? { name: `${index + 1}P`, color: '#d83b2f', emoji: '🎭' };
-  const characterImg = getCharacterImg(player.character);
-  const name = displayPlayerName(player, meta.name ?? `${index + 1}P`);
-  const owned = state.board.tiles.filter((tile) => tile.type === 'property' && state.tileState?.[tile.pos]?.owner === index).map((tile) => tile.pos);
-  const totalDebt = (player.creditLoan?.principal ?? 0) + (player.loanShark?.principal ?? 0) + Object.values(player.mortgages ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
-  const rawPos = player.position ?? 0;
-  const isInlineMove = boardTurn?.playerId === index && ['rolling', 'moving', 'arrived'].includes(boardTurn?.phase);
-  const activePos = isInlineMove ? (boardTurn.displayPos ?? rawPos) : rawPos;
-  const activeTile = state.board.tiles?.[activePos];
-  const activeName = activeTile?.names?.ko ?? activeTile?.name ?? '현재 위치';
-  const nearbySignals = getNearbySignals(state, activePos);
-  const startName = isInlineMove ? tileNameForPos(state, boardTurn.startPos) : null;
-  const endName = isInlineMove && boardTurn.endPos != null ? tileNameForPos(state, boardTurn.endPos) : null;
-  const diceA = lastDiceRoll?.dice?.[0] ?? lastDiceRoll?.d1 ?? 1;
-  const diceB = lastDiceRoll?.dice?.[1] ?? lastDiceRoll?.d2 ?? 1;
-  const prompt = turnResult?.kind === 'card'
-    ? '카드를 뒤집어 결과를 확인하세요.'
-    : pendingPurchase
-      ? '계약할지 스킵할지 결정하세요.'
-      : diceLocked
-        ? '정산을 확인하고 턴을 넘기세요.'
-        : '주사위를 굴려 다음 인생 칸으로 이동하세요.';
-
-  return (
-    <section className="relative grid h-full w-full grid-cols-[196px_minmax(0,1fr)_220px] grid-rows-[minmax(0,1fr)_146px] gap-2 overflow-hidden rounded-[22px] border border-white/70 bg-[#f7fbff] p-2 shadow-[0_18px_48px_-34px_rgba(36,57,74,0.55)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.95),transparent_30%),radial-gradient(circle_at_15%_88%,rgba(199,231,221,0.52),transparent_34%),linear-gradient(135deg,rgba(219,237,252,0.82),rgba(250,247,239,0.78))]" />
-
-      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 rounded-3xl border border-white/70 bg-white/42 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_-24px_rgba(36,57,74,0.7)] backdrop-blur-[18px]">
-        <div className="rounded-xl border border-[#24394a]/16 bg-white/78 p-2.5">
-          <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-ink/48">current player</div>
-          <div className="mt-2 flex items-center gap-2.5">
-            <div className="relative grid h-[74px] w-[74px] shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-[#24394a]/28 bg-white/74 text-3xl shadow-[0_4px_0_#24394a]" style={{ backgroundColor: `${meta.color}22` }}>
-              {characterImg ? <img src={characterImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : (meta.emoji ?? '🎭')}
-              <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22),inset_0_-20px_30px_rgba(0,0,0,0.2)]" />
-            </div>
-            <div className="min-w-0">
-              <div className="truncate font-board text-[27px] font-extrabold leading-none text-[#12221c]">{name}</div>
-              <div className="mt-1 font-display text-[9px] font-black uppercase tracking-[0.18em] text-ink/50">{index + 1}P · {activeName}</div>
-            </div>
-          </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 font-board">
-            <div className="rounded-lg border border-emerald-700/22 bg-emerald-50 px-2 py-1.5"><div className="text-[12px] text-ink/48">예금</div><div className="text-[20px] text-emerald-700">{Number(player.cash ?? 0).toLocaleString('ko-KR')}만</div></div>
-            <div className="rounded-lg border border-red-700/22 bg-red-50 px-2 py-1.5"><div className="text-[12px] text-ink/48">부채</div><div className="text-[20px] text-red-700">{Number(totalDebt).toLocaleString('ko-KR')}만</div></div>
-          </div>
-        </div>
-        <div className="min-h-0 flex-1 rounded-2xl border border-white/70 bg-white/48 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur-[14px]">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-ink/50">title deeds</span>
-            <span className="font-board text-sm text-ink/60">{owned.length}/8</span>
-          </div>
-          <div className="grid h-[calc(100%-24px)] grid-cols-2 grid-rows-4 gap-1.5">
-            {Array.from({ length: 8 }).map((_, slot) => owned[slot] != null ? (
-              <div key={owned[slot]} className="overflow-hidden rounded-md"><PropertyDeedMini pos={owned[slot]} /></div>
-            ) : (
-              <div key={`empty-${slot}`} className="grid place-items-center rounded-md border-2 border-dashed border-ink/18 bg-black/5 font-display text-[8px] font-black uppercase tracking-[0.16em] text-ink/24">empty</div>
-            ))}
-          </div>
-        </div>
-      </aside>
-
-      <main className="relative z-10 min-h-0 overflow-hidden rounded-[28px] border border-white/70 bg-[radial-gradient(circle_at_50%_45%,#eef8ff_0%,#d7edf9_48%,#bad8e9_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_40px_-30px_rgba(36,57,74,0.72)] backdrop-blur-[16px]">
-        <div className="absolute left-3 top-3 z-20 rounded-full border border-[#24394a]/18 bg-white/86 px-3 py-1.5 font-display text-[9px] font-black uppercase tracking-[0.22em] text-ink/62 shadow-[0_2px_0_rgba(15,12,10,0.18)] backdrop-blur">board</div>
-        <div className="absolute right-3 top-3 z-20 rounded-full border border-[#24394a]/18 bg-white/86 px-3 py-1.5 font-board text-[15px] text-ink/82 shadow-[0_2px_0_rgba(15,12,10,0.18)]">{activeName}</div>
-        {isInlineMove && (
-          <div className="pointer-events-none absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded-full border border-[#24394a]/18 bg-white/90 px-4 py-1.5 font-board text-[17px] font-extrabold text-[#12221c] shadow-[0_3px_14px_rgba(0,0,0,0.16)]">
-            {startName}{endName ? ` → ${endName}` : ' · 주사위 굴림'}
-          </div>
-        )}
-        <motion.div animate={{ scale: boardTurn?.phase === 'moving' ? 1.075 : boardTurn?.phase === 'arrived' ? 1.035 : 1 }} transition={{ duration: boardTurn?.phase === 'arrived' ? 0.85 : 0.28, ease: 'easeOut' }} className="mx-auto grid h-full max-h-full max-w-full aspect-square origin-center grid-cols-11 grid-rows-11 gap-0.5 rounded-[18px] border-[3px] border-[#24394a] bg-[#9fc6dc] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.14),0_14px_34px_rgba(0,0,0,0.28)]">
-          {state.board.tiles.map((tile) => {
-            const grid = boardGridStyle(tile.pos);
-            const isHere = tile.pos === activePos;
-            const ownerId = state.tileState?.[tile.pos]?.owner;
-            const owner = typeof ownerId === 'number' ? state.players?.[ownerId] : null;
-            const ownerColor = owner ? (CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
-            const special = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax'].includes(tile.type);
-            return (
-              <div key={tile.pos} className={cn('relative overflow-hidden rounded-md border border-[#24394a] bg-[#f8fbf7] p-0.5 text-center shadow-[0_1px_0_rgba(0,0,0,0.45)]', isHere && 'ring-2 ring-white ring-offset-2 ring-offset-[#9fc6dc]')} style={grid}>
-                {owner && <div className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-white/70" style={{ backgroundColor: ownerColor }} />}
-                {!special && <div className="mb-1 h-2 rounded" style={{ backgroundColor: tile.color ?? '#d6b15d' }} />}
-                <div className="font-board text-[clamp(10px,1.05vw,14px)] font-extrabold leading-none text-[#12221c]">{special ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
-                {isHere && <motion.div className="absolute inset-0 rounded-md border-2 border-white" animate={{ opacity: [0.28, 0.85, 0.28] }} transition={{ duration: 1.1, repeat: Infinity }} />}
-                {isHere && <div className="absolute bottom-0.5 left-1/2 grid h-8 w-8 -translate-x-1/2 place-items-center overflow-hidden rounded-full border-2 border-white bg-white/80 text-[12px] font-black text-ink shadow-[0_2px_0_#24394a]" style={{ backgroundColor: characterImg ? '#fffaf0' : meta.color }}>
-                  {characterImg ? <img src={characterImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : index + 1}
-                </div>}
-              </div>
-            );
-          })}
-          <div className="col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-2 border-[#24394a]/18 bg-[linear-gradient(135deg,rgba(255,250,240,0.94),rgba(232,245,232,0.86))] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[1px]">
-            <div className="max-w-[80%]">
-              <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-ink/42">economy board</div>
-              <div className="mt-2 font-board text-[36px] font-extrabold leading-none text-[#12221c]">{name}의 차례</div>
-              <div className="mt-2 font-board text-[17px] font-extrabold leading-snug text-[#263a32]">{prompt}</div>
-            </div>
-          </div>
-        </motion.div>
-      </main>
-
-      <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-3xl border border-white/70 bg-white/42 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_30px_-24px_rgba(36,57,74,0.7)] backdrop-blur-[18px] no-scrollbar">
-        <div className="rounded-xl border-2 border-[#24394a]/18 bg-white/78 p-3">
-          <div className="flex items-center gap-3">
-            <img src="/ui/host-mic.jpg" alt="" className="h-16 w-16 rounded-2xl border-2 border-[#6f8fab]/35 object-cover object-top shadow-[0_4px_0_#24394a]" draggable={false} />
-            <div>
-              <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-[#476b87]/75">host booth</div>
-              <div className="font-board text-[24px] leading-none">사회자 부스</div>
-            </div>
-          </div>
-          <div className="mt-3 rounded-xl border border-[#24394a]/18 bg-white/74 p-3 font-board text-[18px] leading-snug text-ink/86">{hostLine || prompt}</div>
-        </div>
-        <WorldEconomyPanel state={state} player={player} />
-        <NearbySignalsPanel signals={nearbySignals} />
-        <div className="rounded-xl border-2 border-[#24394a]/18 bg-[#f8fbf7] p-3 text-ink shadow-[0_4px_0_#24394a]">
-          <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/45">turn signal</div>
-          <div className="mt-2 font-board text-[24px] leading-none">{turnResult?.title ?? '주사위 대기'}</div>
-          <div className="mt-2 font-board text-[15px] leading-snug text-ink/62">{turnResult?.text ?? prompt}</div>
-          {turnResult?.kind === 'card' && <button type="button" onClick={() => onOpenResultCard?.(turnResult)} className="mt-3 w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff,#ffd978)] px-3 py-3 font-board text-xl text-ink shadow-[0_3px_0_#24394a] active:translate-y-1 active:shadow-none">카드 정산 보기</button>}
-        </div>
-        <div className="mt-auto grid grid-cols-2 gap-2">
-          <button type="button" onClick={onShowNoticeLog} disabled={!hasNoticeLog} className="rounded-xl border-2 border-[#24394a]/20 bg-white/78 px-3 py-2 font-board text-[17px] text-ink shadow-[0_3px_0_#24394a] disabled:opacity-35">알림</button>
-          <button type="button" onClick={onToggleBgm} className="rounded-xl border-2 border-[#24394a]/20 bg-white/78 px-3 py-2 font-board text-[17px] text-ink shadow-[0_3px_0_#24394a]">BGM {bgmEnabled ? 'ON' : 'OFF'}</button>
-          <button type="button" onClick={onExit} className="col-span-2 rounded-xl border-2 border-[#b9827b]/45 bg-[#fff0ed] px-3 py-2 font-board text-[17px] text-[#7a332d] shadow-[0_3px_0_#24394a]">나가기</button>
-        </div>
-      </aside>
-
-      <div className="relative z-10 col-span-3 grid grid-cols-[210px_minmax(0,1fr)_142px_250px] items-center gap-2 rounded-[28px] border border-white/72 bg-white/48 p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_38px_-30px_rgba(36,57,74,0.72)] backdrop-blur-[20px]">
-        <div className="rounded-2xl border border-white/74 bg-white/58 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-          <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-[#476b87]/72">my money</div>
-          <div className="mt-1 font-board text-[30px] font-extrabold leading-none text-[#15352a]">{Number(player.cash ?? 0).toLocaleString('ko-KR')}만</div>
-          <div className="mt-1 font-board text-[14px] font-extrabold text-[#7a332d]">부채 {Number(totalDebt).toLocaleString('ko-KR')}만</div>
-        </div>
-        <div className="min-w-0 rounded-2xl border border-white/74 bg-white/38 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-[#476b87]/72">my table</span>
-            <span className="font-board text-[14px] font-extrabold text-[#24394a]/64">권리증 {owned.length}/8</span>
-          </div>
-          <div className="grid grid-cols-6 gap-1.5">
-            {Array.from({ length: 6 }).map((_, slot) => owned[slot] != null ? (
-              <div key={`table-${owned[slot]}`} className="h-[78px] overflow-hidden rounded-xl border border-white/72 bg-white/74 shadow-[0_8px_18px_-16px_rgba(36,57,74,0.8)]"><PropertyDeedMini pos={owned[slot]} /></div>
-            ) : (
-              <div key={`table-empty-${slot}`} className="grid h-[78px] place-items-center rounded-xl border border-dashed border-[#476b87]/26 bg-white/28 font-display text-[8px] font-black uppercase tracking-[0.14em] text-[#476b87]/34">empty</div>
-            ))}
-          </div>
-        </div>
-        <div className="grid h-[104px] place-items-center rounded-2xl border border-white/74 bg-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
-          <div className="flex items-center justify-center gap-1.5">
-            <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceA))}.svg`} alt="" className="h-12 w-12 drop-shadow-sm" draggable={false} />
-            <img src={`/ui/dice-face-${Math.max(1, Math.min(6, diceB))}.svg`} alt="" className="h-12 w-12 drop-shadow-sm" draggable={false} />
-          </div>
-        </div>
-        <div className="grid h-[104px] grid-cols-2 gap-2">
-          <button type="button" onClick={onAppDiceRoll} disabled={disabled || diceLocked} className="col-span-2 rounded-2xl border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(222,241,255,0.92)_100%)] font-board text-[26px] font-extrabold text-[#15324a] shadow-[0_10px_22px_-16px_rgba(36,57,74,0.9)] active:translate-y-1 active:shadow-none disabled:opacity-45">주사위 던지기</button>
-          <button type="button" onClick={onOpenBoard} className="rounded-2xl border border-white/80 bg-white/58 font-board text-[18px] font-extrabold text-[#24394a] shadow-[0_8px_18px_-16px_rgba(36,57,74,0.9)] active:translate-y-1 active:shadow-none">시선</button>
-          <button type="button" onClick={onEndTurn} disabled={!diceLocked} className="rounded-2xl border border-white/80 bg-[#fff0ed]/86 font-board text-[18px] font-extrabold text-[#7a332d] shadow-[0_8px_18px_-16px_rgba(122,51,45,0.7)] active:translate-y-1 active:shadow-none disabled:opacity-45">턴끝</button>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -1773,23 +1529,23 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
       onPointerDown={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
-      <div className="board-turn-shell relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border-[3px] border-[#24394a] bg-[#efe1bb] shadow-[0_6px_0_#17120c,0_22px_44px_-24px_rgba(0,0,0,0.85)]">
-        <div className="flex items-center justify-between border-b-[3px] border-[#24394a] bg-[linear-gradient(180deg,#fff7df_0%,#e4c47a_100%)] px-3 py-2">
+      <div className="board-turn-shell relative grid h-full w-full grid-rows-[auto_1fr_auto] overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#efe1bb] shadow-[0_5px_0_#17120c,0_20px_40px_-26px_rgba(0,0,0,0.82)]">
+        <div className="flex items-center justify-between border-b-2 border-[#17120c] bg-[linear-gradient(180deg,#fffaf0_0%,#ead8ad_100%)] px-3 py-2">
           <div>
             <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/55">board turn</div>
             <div className="font-board text-xl leading-none text-ink">{player?.name || `${(replay.playerId ?? 0) + 1}P`} 차례</div>
           </div>
-          <div className="rounded-lg border-2 border-ink-line bg-white/620 px-3 py-1.5 font-board text-base text-ink/70 shadow-[0_2px_0_#24394a]">
+          <div className="rounded-lg border-2 border-ink-line bg-white/80 px-3 py-1.5 font-board text-base text-ink/70 shadow-[0_2px_0_#0F0C0A]">
             {closeOnTouch ? '화면 터치로 닫기' : '중앙 주사위판 선택'}
           </div>
         </div>
 
         <div className="relative min-h-0 overflow-hidden p-2">
-          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border-2 border-ink-line bg-black/62 px-4 py-1.5 font-board text-[18px] text-ink shadow-[0_3px_0_#24394a]">
-            {replay.phase === 'moving' ? '카메라 이동 중' : replay.phase === 'arrived' ? `${endName} 도착` : phaseText}
+          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/25 bg-black/58 px-4 py-1.5 font-board text-[17px] text-white shadow-[0_2px_0_#0F0C0A] backdrop-blur-sm">
+            {replay.phase === 'moving' ? `${startName} → ${endName}` : replay.phase === 'arrived' ? `${endName} 도착` : phaseText}
           </div>
           <div
-            className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-[3px] border-[#24394a] bg-[#9fc6dc] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.18)] will-change-transform"
+            className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-2 border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.13),0_10px_28px_rgba(0,0,0,0.25)] will-change-transform"
             style={{ transform: `translate(${cameraX}%, ${cameraY}%) scale(${cameraZoom})`, transition: replay.phase === 'moving' ? 'transform 190ms cubic-bezier(.2,.8,.2,1)' : 'transform 360ms ease-out' }}
           >
             {tiles.map((tile) => {
@@ -1803,7 +1559,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
               return (
                 <div
                   key={tile.pos}
-                  className={cn('board-turn-tile relative overflow-hidden rounded-md border-2 border-[#24394a] bg-[#f8fbf7] p-1 text-center shadow-[0_2px_0_rgba(0,0,0,0.45)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
+                  className={cn('board-turn-tile relative overflow-hidden rounded-md border border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_1px_0_rgba(0,0,0,0.42)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
                   style={grid}
                 >
                   {owner && <div className="board-turn-owner-bookmark" style={{ backgroundColor: ownerColor }} title={`${owner.name || `${ownerId + 1}P`} 소유`} />}
@@ -1814,14 +1570,15 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                       const renderPos = pieceIndex === replay.playerId ? pos : (piecePlayer.position ?? 0);
                       if (renderPos !== tile.pos || piecePlayer.bankrupt) return null;
                       const pieceColor = CHAR_META[piecePlayer.character]?.color ?? '#d83b2f';
+                      const pieceImg = getCharacterImg(piecePlayer.character);
                       return (
                         <div
                           key={pieceIndex}
-                          className={cn('board-turn-piece', pieceIndex === replay.playerId && 'is-current')}
-                          style={{ '--piece-color': pieceColor, '--piece-index': pieceIndex }}
+                          className={cn('board-turn-piece overflow-hidden', pieceIndex === replay.playerId && 'is-current')}
+                          style={{ '--piece-color': pieceColor, '--piece-index': pieceIndex, backgroundColor: pieceImg ? '#fffaf0' : pieceColor }}
                           title={piecePlayer.name || `${pieceIndex + 1}P`}
                         >
-                          {pieceIndex + 1}
+                          {pieceImg ? <img src={pieceImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : pieceIndex + 1}
                         </div>
                       );
                     })}
@@ -1829,7 +1586,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                 </div>
               );
             })}
-            <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-[3px] border-[#24394a] bg-[radial-gradient(circle_at_50%_35%,#fff7df_0%,#ecd08d_52%,#ba7a36_100%)] p-2 text-center shadow-[inset_0_3px_0_rgba(255,255,255,0.52)]', cameraActive && 'opacity-45')}>
+            <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
                 {replay.phase === 'ready' && <div className="font-board text-2xl text-ink">{phaseText}</div>}
                 {replay.phase === 'ready' ? (
@@ -1852,7 +1609,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t-[3px] border-[#24394a] bg-[#f8fbf7] px-3 py-2 font-board text-base text-ink">
+        <div className="flex items-center justify-between border-t-[3px] border-[#17120c] bg-[#fff7df] px-3 py-2 font-board text-base text-ink">
           <span>현재: {activeTile?.names?.ko ?? activeTile?.name ?? pos}</span>
           <span>{rollSum ? `주사위 ${rollSum}` : '확인중'}</span>
         </div>
@@ -1964,7 +1721,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards }) {
         return (
           <div
             key={`${card.playerIndex}-${card.cardIndex}-${card.pos}`}
-            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg border-[3px] border-[#24394a] bg-[#f8fbf7] shadow-[0_4px_0_#17120c,0_16px_22px_-15px_rgba(0,0,0,0.72)]"
+            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg border-[3px] border-[#17120c] bg-[#fff7df] shadow-[0_4px_0_#17120c,0_16px_22px_-15px_rgba(0,0,0,0.72)]"
             style={{
               width: `${target.w}px`,
               height: `${target.h}px`,
@@ -1978,7 +1735,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards }) {
             }}
           >
             <div className="flex h-full w-full flex-col overflow-hidden rounded-[5px] border border-white/70 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.92),transparent_34%),linear-gradient(180deg,#fffdf5_0%,#f2e3bd_100%)] text-center">
-              <div className="h-[24%] border-b-2 border-[#24394a]" style={{ backgroundColor: card.color }} />
+              <div className="h-[24%] border-b-2 border-[#17120c]" style={{ backgroundColor: card.color }} />
               <div className="flex flex-1 flex-col items-center justify-center px-1">
                 <div className="font-display text-[9px] font-black uppercase tracking-[0.16em] text-[#17120c]/52">TITLE DEED</div>
                 <div className="mt-0.5 max-w-full truncate font-board text-[11px] leading-none text-[#17120c]">{card.title}</div>
@@ -2033,7 +1790,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
         transition={{ type: 'spring', stiffness: 360, damping: 28 }}
         className="flex max-h-[94dvh] w-[min(94vw,620px)] flex-col overflow-hidden rounded-lg border-[3px] border-ink-line bg-parchment-50 shadow-[0_5px_0_0_#0F0C0A,0_18px_38px_-12px_rgba(0,0,0,0.7)]"
       >
-        <div className="bg-[linear-gradient(180deg,#d83b2f_0%,#a61f1a_100%)] px-5 py-4 text-center text-ink">
+        <div className="bg-[linear-gradient(180deg,#d83b2f_0%,#a61f1a_100%)] px-5 py-4 text-center text-white">
           <div className="font-display text-[10px] font-extrabold uppercase tracking-[0.32em] opacity-80">
             최종 결과
           </div>
@@ -2084,7 +1841,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
                 )}
               >
                 <span
-                  className="grid h-8 w-8 place-items-center rounded-full border-2 border-ink-line font-display text-[13px] font-extrabold text-ink"
+                  className="grid h-8 w-8 place-items-center rounded-full border-2 border-ink-line font-display text-[13px] font-extrabold text-white"
                   style={{ backgroundColor: idx === 0 ? '#D32F2F' : base.color }}
                 >
                   {idx === 0 ? '??' : idx + 1}
@@ -2098,7 +1855,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
                       {name}
                     </span>
                     {idx === 0 && (
-                      <span className="rounded-full bg-monopoly-red px-2 py-0.5 font-display text-[8px] font-extrabold uppercase tracking-[0.12em] text-ink">
+                      <span className="rounded-full bg-monopoly-red px-2 py-0.5 font-display text-[8px] font-extrabold uppercase tracking-[0.12em] text-white">
                         우승
                       </span>
                     )}
@@ -2127,7 +1884,7 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
           <button
             type="button"
             onClick={onRestart}
-            className="rounded-md border-2 border-ink-line bg-monopoly-red px-4 py-3 font-display text-[12px] font-extrabold uppercase tracking-[0.18em] text-ink shadow-[0_3px_0_0_#0F0C0A] transition hover:bg-monopoly-deep active:translate-y-px"
+            className="rounded-md border-2 border-ink-line bg-monopoly-red px-4 py-3 font-display text-[12px] font-extrabold uppercase tracking-[0.18em] text-white shadow-[0_3px_0_0_#0F0C0A] transition hover:bg-monopoly-deep active:translate-y-px"
           >
             다시하기
           </button>
