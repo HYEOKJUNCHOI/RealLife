@@ -106,7 +106,7 @@ export default function BoardView() {
                   {COLOR_LABEL[g.color]}
                 </span>
                 {isMonopoly && (
-                  <span className="rounded-sm border border-ink-line bg-white/90 px-1 py-0.5 font-display text-[8px] font-bold uppercase tracking-widest text-ink">
+                  <span className="rounded-sm border border-ink-line bg-white/90 px-1 py-0.5 font-display text-[8px] font-bold uppercase tracking-widest text-ink shadow-[0_2px_0_rgba(15,12,10,0.42),0_5px_9px_rgba(15,12,10,0.22)]">
                     독점
                   </span>
                 )}

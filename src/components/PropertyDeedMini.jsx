@@ -219,15 +219,17 @@ export default function PropertyDeedMini({ pos, className }) {
       </div>
 
       {/* ?? 2. ?꾩떆紐??? */}
-      <div className="shrink-0 border-b-2 border-ink-line bg-parchment-50 px-1 py-1 text-center">
-        <h3 className="font-board font-extrabold text-[17px] leading-none text-ink tracking-tight">
-          {tile.names.ko}
-        </h3>
-        {tile.names.region && (
-          <div className="mt-0.5 font-display text-[6.5px] font-semibold uppercase tracking-[0.14em] text-ink/55">
-            {tile.names.region}
-          </div>
-        )}
+      <div className="shrink-0 border-b-2 border-ink-line bg-parchment-50 px-1.5 py-1.5 text-center">
+        <div className="rounded-full border-2 border-ink-line bg-white/92 px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_2px_0_#0F0C0A,0_5px_10px_rgba(15,12,10,0.22)]">
+          <h3 className="font-board font-extrabold text-[17px] leading-none text-ink tracking-tight">
+            {tile.names.ko}
+          </h3>
+          {tile.names.region && (
+            <div className="mt-0.5 font-display text-[6.5px] font-semibold uppercase tracking-[0.14em] text-ink/55">
+              {tile.names.region}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 border-b-2 border-ink-line bg-parchment-100 px-1 py-1">
@@ -266,6 +268,7 @@ export default function PropertyDeedMini({ pos, className }) {
             </div>
           </div>
         </div>
+        <div className="mt-1 h-2 rounded-full border border-ink-line/55 bg-[#80848c] shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_1px_0_#0F0C0A]" aria-hidden="true" />
       </div>
 
       {/* 같은 색상 그룹의 보유 상태를 표시한다. */}
@@ -291,11 +294,11 @@ export default function PropertyDeedMini({ pos, className }) {
                       ? cn(
                           COLOR_HEADER_BG[tile.color] || 'bg-neutral-500',
                           COLOR_HEADER_TEXT[tile.color] || 'text-white',
-                          'border-ink-line shadow-[0_1px_0_0_#0F0C0A]',
+                          'border-ink-line shadow-[0_2px_0_0_#0F0C0A,0_4px_8px_rgba(15,12,10,0.28)]',
                         )
                       : isUnowned
-                        ? 'border-neutral-300 bg-neutral-100 text-neutral-400'
-                        : 'border-ink-line/40 bg-neutral-300 text-ink',
+                        ? 'border-neutral-400 bg-[#d6d8dc] text-neutral-600 shadow-[0_2px_0_rgba(15,12,10,0.32),0_4px_8px_rgba(15,12,10,0.16)]'
+                        : 'border-ink-line/50 bg-[#aeb3ba] text-ink shadow-[0_2px_0_rgba(15,12,10,0.35),0_4px_8px_rgba(15,12,10,0.18)]',
                   )}
                 >
                   {/* ?ㅻⅨ ?щ엺 蹂댁쑀 ?쒖떆 ????以묒븰 ??(?섑뙣??8 ?꾩튂) */}
