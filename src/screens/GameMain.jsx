@@ -1893,7 +1893,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
             <button
               type="button"
               onClick={() => setPhase('intro')}
-              className="pointer-events-auto absolute left-1/2 top-[calc(62%+30px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]"
+              className="pointer-events-auto absolute left-1/2 top-[calc(62%+56px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none text-white shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]"
             >
               시작하기
             </button>
