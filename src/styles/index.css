@@ -2650,14 +2650,14 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 
 /* Subtle start button blink */
 .initial-start-button-loading {
-  filter: brightness(0.86) saturate(0.9);
-  opacity: 0.9;
-  border-color: rgba(255, 216, 112, 0.72) !important;
+  filter: brightness(1.02) saturate(1.06);
+  opacity: 0.96;
+  border-color: rgba(255, 236, 153, 0.86) !important;
   box-shadow:
-    0 20px 42px -20px rgba(118,13,20,0.9),
-    0 0 18px rgba(255, 198, 67, 0.28),
-    inset 0 1px 0 rgba(255,255,255,0.58),
-    inset 0 -10px 24px rgba(96,0,10,0.28) !important;
+    0 20px 42px -20px rgba(110,61,0,0.9),
+    0 0 20px rgba(255, 198, 67, 0.42),
+    inset 0 1px 0 rgba(255,255,255,0.72),
+    inset 0 -10px 24px rgba(112,55,0,0.28) !important;
 }
 
 .initial-start-button-pulse {
@@ -2679,17 +2679,17 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 /* Portal essence fake loading bar below start button */
 .initial-start-loading-panel {
   position: relative;
-  height: clamp(118px, 16vw, 154px);
+  aspect-ratio: 1965 / 312;
   background: url('/ui/start-loading-frame.png') center / 100% 100% no-repeat;
   filter: drop-shadow(0 18px 24px rgba(0,0,0,0.62)) drop-shadow(0 0 24px rgba(255, 194, 69, 0.32));
 }
 
 .initial-start-loading-content {
   position: absolute;
-  left: 20%;
-  right: 20%;
+  left: 22.5%;
+  right: 22.5%;
   top: 50%;
-  transform: translateY(-40%);
+  transform: translateY(-42%);
 }
 
 .initial-start-loading-panel::before,

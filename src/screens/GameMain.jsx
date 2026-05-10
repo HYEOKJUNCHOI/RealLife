@@ -373,7 +373,6 @@ export default function GameMain({ onExit }) {
     });
     pushGlobalNotice({ kind: 'bought', speaker: '중개 NPC', title: '매입 완료!', text: `${tileName} · ${signedMoney(-(price ?? 0))} 지출`, icon: '🏠', amount: -(price ?? 0), cash: useGameStore.getState().state?.players?.[playerId]?.cash });
     closePropertyModal?.();
-    window.setTimeout(() => setViewPlayerIndex(playerId), 650);
     return true;
   };
 
@@ -660,6 +659,7 @@ export default function GameMain({ onExit }) {
     setGlobalNotice(null);
     setBoardTurn({ phase: 'rolling', playerId, startPos, displayPos: startPos, manualSteps, nonce: Date.now() });
     const events = step({ manualSteps, deferPropertyModal: true, deferAdvance: true, deferCardEffects: !ai });
+    const latestState = useGameStore.getState().state ?? state;
     const turnKey = `${state.round ?? 0}-${playerId}`;
     setTurnMovedKey(turnKey);
     const pendingBuy = events.find((event) => event.kind === 'arrive_property' && event.type === 'unowned');
@@ -668,8 +668,14 @@ export default function GameMain({ onExit }) {
     const roll = events.find((event) => event.kind === 'roll' || event.kind === 'jail_turn');
     const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'income_tax', 'luxury_tax', 'chance_draw', 'welfare_draw', 'parking_jackpot', 'go_to_jail', 'three_doubles_jail'].includes(event.kind));
     const card = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
-    const endPos = state.players[playerId]?.position ?? startPos;
-    const path = Array.from({ length: Math.max(0, manualSteps) }, (_, idx) => (startPos + idx + 1) % (state.board?.tiles?.length ?? 40));
+    const jailNoticeForEnd = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+    const endPos = jailNoticeForEnd
+      ? (latestState.players?.[playerId]?.position ?? jailNoticeForEnd.pos ?? startPos)
+      : Number.isInteger(arrival?.pos)
+        ? arrival.pos
+        : (latestState.players?.[playerId]?.position ?? state.players[playerId]?.position ?? startPos);
+    const safeSteps = Math.max(0, Number(manualSteps) || roll?.sum || 0);
+    const path = Array.from({ length: safeSteps }, (_, idx) => (startPos + idx + 1) % (state.board?.tiles?.length ?? 40));
     window.setTimeout(() => {
       setBoardTurn((prev) => prev ? { ...prev, phase: 'moving', roll, arrival, card, endPos, path } : prev);
       let delay = 0;
@@ -691,7 +697,8 @@ export default function GameMain({ onExit }) {
       if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
       const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
       const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
-      const stationEvent = events.find((event) => event.kind === 'arrive_station');
+      const endTileForNotice = state.board?.tiles?.[endPos];
+      const stationEvent = events.find((event) => event.kind === 'arrive_station') ?? ((endTileForNotice?.type === 'railroad') ? { kind: 'arrive_station', pos: endPos, collected: 0 } : null);
       const propertyEvent = events.find((event) => event.kind === 'arrive_property');
       const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
       if (propertyEvent && !pendingBuy && !rentEvent && !isCardArrival && !jailNotice) {
@@ -1158,51 +1165,46 @@ function CardRevealOverlay({ card, onReveal }) {
       onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
-      <div className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] p-4 text-center shadow-[0_6px_0_#0F0C0A,0_24px_52px_rgba(0,0,0,0.55)]">
-        <div className="font-display text-[10px] font-black uppercase tracking-[0.26em] text-ink/46">card reveal</div>
-        <div className="mt-1 font-board text-[28px] leading-none text-ink">카드를 뒤집어주세요</div>
-        <div className="mt-1 font-board text-[15px] text-ink/58">무슨 카드가 나올까요?</div>
+      <div className="w-[min(90vw,390px)] overflow-hidden rounded-[24px] border border-white/30 bg-white/14 p-3 text-center text-white shadow-[0_18px_54px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-[18px]">
+        <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/58">card reveal</div>
+        <div className="mt-1 font-board text-[24px] leading-none text-white">카드를 뒤집어주세요</div>
+        <div className="mt-1 font-board text-[14px] text-white/62">결과는 뒤집기 전까지 비밀</div>
         <button
           type="button"
           onClick={() => setFlipped(true)}
-          className="mx-auto mt-4 block [perspective:1100px]"
+          className="mx-auto mt-3 block [perspective:1100px]"
         >
           <motion.div
-            className="relative h-[360px] w-[260px] rounded-2xl [transform-style:preserve-3d]"
+            className="relative h-[250px] w-[180px] rounded-2xl [transform-style:preserve-3d]"
             animate={{ rotateY: flipped ? 180 : 0, y: flipped ? 0 : [0, -4, 0], rotate: flipped ? 0 : [-1.2, 1.2, -1.2] }}
             transition={{ rotateY: { type: 'spring', stiffness: 210, damping: 22 }, y: { duration: 0.9, repeat: flipped ? 0 : Infinity }, rotate: { duration: 1.1, repeat: flipped ? 0 : Infinity } }}
           >
             <div
-              className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border-[4px] border-ink-line text-white shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden]"
+              className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border border-white/34 text-white shadow-[0_16px_38px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.24)] [backface-visibility:hidden] backdrop-blur-[10px]"
               style={{
                 background: `radial-gradient(circle at 50% 24%, rgba(255,255,255,0.28) 0%, transparent 23%), linear-gradient(145deg, ${tone.from} 0%, ${tone.mid} 52%, ${tone.to} 100%)`,
                 boxShadow: `0 8px 0 #0F0C0A, 0 20px 42px rgba(0,0,0,0.42), 0 0 42px ${tone.glow}`,
               }}
             >
-              <div className="absolute inset-3 rounded-[22px] border-2 border-white/28" />
-              <div className="absolute inset-6 rounded-[18px] border border-white/18" />
-              <div className="absolute -left-16 top-10 h-44 w-44 rounded-full border-[18px] border-white/8" />
-              <div className="absolute -right-14 bottom-8 h-40 w-40 rounded-full border-[16px] border-black/10" />
-              <div className="relative grid h-[250px] w-[184px] place-items-center rounded-2xl border-[3px] border-white/45 bg-black/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_0_0_8px_rgba(255,255,255,0.05)]">
-                <div className="text-center">
-                  <div className="mx-auto grid h-[76px] w-[76px] place-items-center rounded-full border-[3px] border-white/52 bg-white/13 text-[38px] shadow-[inset_0_2px_0_rgba(255,255,255,0.32),0_7px_0_rgba(15,12,10,0.35)]">{tone.mark}</div>
-                  <div className="mt-5 font-display text-[11px] font-black uppercase tracking-[0.34em] text-white/70">The RealLife</div>
-                  <div className="mt-2 font-board text-[36px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
-                  <div className="mx-auto mt-4 h-px w-24 bg-white/35" />
-                  <div className="mt-3 font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/64">tap to reveal</div>
-                </div>
+              <div className="absolute inset-3 rounded-[18px] border border-white/24" />
+              <div className="relative text-center">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/48 bg-white/16 text-[34px] shadow-[0_0_26px_rgba(255,255,255,0.18)]">{tone.mark}</div>
+                <div className="mt-5 font-display text-[9px] font-black uppercase tracking-[0.28em] text-white/62">The RealLife</div>
+                <div className="mt-2 font-board text-[31px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
+                <div className="mx-auto mt-4 h-px w-20 bg-white/30" />
+                <div className="mt-3 font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/58">tap to reveal</div>
               </div>
             </div>
-            <div className="absolute inset-0 overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[#fffaf0] text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+            <div className="absolute inset-0 overflow-hidden rounded-2xl border border-white/34 bg-white/18 text-ink shadow-[0_16px_38px_rgba(0,0,0,0.36)] [backface-visibility:hidden] [transform:rotateY(180deg)] backdrop-blur-[10px]">
               {card?.cardKind ? (
                 <CardArtwork type={card.cardKind} id={String(card.cardId ?? card.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
               ) : (
-                <div className="absolute inset-0 grid place-items-center bg-[#fffaf0] text-[84px]">{card.icon ?? '🎴'}</div>
+                <div className="absolute inset-0 grid place-items-center bg-white/12 text-[72px]">{card.icon ?? '🎴'}</div>
               )}
-              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.94)_100%)] px-4 pb-4 pt-16 text-white">
-                <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-white/66">{card.cardKind ?? 'card'}</div>
-                <div className="mt-1 font-board text-[30px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{card.cardName ?? card.title ?? '카드 공개'}</div>
-                <div className="mt-2 font-board text-[16px] leading-snug text-white/88">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
+              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.72)_34%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-14 text-white">
+                <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/62">{card.cardKind ?? 'card'}</div>
+                <div className="mt-1 font-board text-[24px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{card.cardName ?? card.title ?? '카드 공개'}</div>
+                <div className="mt-2 line-clamp-2 font-board text-[13px] leading-snug text-white/82">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
               </div>
             </div>
           </motion.div>
@@ -1211,7 +1213,7 @@ function CardRevealOverlay({ card, onReveal }) {
           type="button"
           onClick={onReveal}
           disabled={!flipped}
-          className="mt-5 h-13 min-h-[52px] w-full rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_55%,#f1b84d_100%)] font-board text-[22px] text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-45 disabled:grayscale"
+          className="mt-3 h-11 w-full rounded-xl border border-white/34 bg-white/18 font-board text-[18px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] active:translate-y-0.5 disabled:opacity-45 disabled:grayscale"
         >
           {flipped ? '카드 확인 · 정산 공개' : '먼저 카드를 뒤집어주세요'}
         </button>
@@ -1334,7 +1336,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
           {isBuy || isStationNotice || isPropertyNotice ? (
             <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
               <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
-                <PropertyDeedMini pos={notice.previewPos} />
+                {isStationNotice ? <StationRoleCard notice={notice} /> : <PropertyDeedMini pos={notice.previewPos} />}
               </div>
               <div className="min-w-0 text-center sm:text-left">
                 <div className="flex items-center justify-center gap-3 sm:justify-start">
@@ -1392,6 +1394,23 @@ function GlobalNoticeBand({ notice, onDismiss }) {
     </div>
   );
   return createPortal(layer, document.body);
+}
+
+function StationRoleCard({ notice }) {
+  const title = String(notice?.title ?? '역장 부임!').replace(/\n/g, ' ');
+  const text = notice?.amount > 0 ? `+${fmt(notice.amount)}만` : '역장 부임';
+  return (
+    <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border-2 border-[#0F0C0A] bg-[linear-gradient(160deg,rgba(15,36,78,0.98),rgba(47,117,201,0.92)_52%,rgba(255,217,102,0.92)_100%)] text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(255,255,255,0.28),transparent_36%)]" />
+      <div className="relative border-b-2 border-[#0F0C0A] bg-black/22 px-2 py-1 text-center font-display text-[7px] font-black uppercase tracking-[0.18em] text-white/70">station master</div>
+      <div className="relative flex flex-1 flex-col items-center justify-center px-2 text-center">
+        <div className="grid h-16 w-16 place-items-center rounded-full border-2 border-white/80 bg-white/18 text-[38px] shadow-[0_4px_0_rgba(15,12,10,0.55),0_0_22px_rgba(255,221,102,0.55)]">🚉</div>
+        <div className="mt-3 whitespace-pre-line font-board text-[25px] leading-[0.92] drop-shadow-[0_3px_0_rgba(0,0,0,0.42)]">역장\n부임</div>
+        <div className="mt-2 max-w-full truncate rounded-full border border-white/40 bg-black/18 px-2 py-1 font-board text-[12px] text-white/88">{title}</div>
+      </div>
+      <div className="relative border-t-2 border-[#0F0C0A] bg-black/24 px-2 py-1 text-center font-board text-[14px] text-[#ffe483]">{text}</div>
+    </div>
+  );
 }
 
 function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos }) {
@@ -1768,7 +1787,7 @@ function BoardArrivalCard({ state, pos, playerColor = '#d83b2f' }) {
   const ownerMeta = owner ? CHAR_META[owner.character] : null;
   const name = tile.names?.ko ?? tile.name ?? `${pos}번 칸`;
   const isProperty = tile.type === 'property';
-  const isStation = tile.type === 'railroad' && tile.subType === 'station';
+  const isStation = tile.type === 'railroad';
   const isCard = tile.type === 'chance' || tile.type === 'community_chest';
   const color = tile.color ?? (isStation ? '#2f75c9' : isCard ? '#7c3aed' : playerColor);
   const subtitle = isProperty
@@ -1955,11 +1974,11 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
               <button
                 type="button"
                 onClick={() => portalCharged && setPhase('intro')}
-                className={cn('pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border border-white/55 bg-[linear-gradient(180deg,rgba(255,92,92,0.86),rgba(168,23,31,0.9))] px-12 py-4 font-board text-[26px] font-black leading-none shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]', portalCharged ? 'initial-start-button-pulse text-white' : 'initial-start-button-loading cursor-wait text-[#ffd45c]')}
+                className={cn('pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border border-white/55 px-12 py-4 font-board text-[26px] font-black leading-none shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]', portalCharged ? 'initial-start-button-pulse bg-[linear-gradient(180deg,rgba(255,92,92,0.92),rgba(168,23,31,0.94))] text-white' : 'initial-start-button-loading cursor-wait bg-[linear-gradient(180deg,#ffe682_0%,#f4b72f_56%,#b86a09_100%)] text-[#4a2200]')}
               >
                 {portalCharged ? '시작하기' : '로딩중..'}
               </button>
-              <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+132px)] z-30 w-[min(84vw,760px)] -translate-x-1/2 text-center">
+              <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+130px)] z-30 w-[min(84vw,760px)] -translate-x-1/2 text-center">
                 <div className="initial-start-loading-content">
                   <div className="flex items-center justify-between font-display text-[11px] font-black uppercase tracking-[0.24em] text-[#ffe59a]/95">
                     <span>Charging portal essence</span>
