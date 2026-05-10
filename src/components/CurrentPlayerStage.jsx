@@ -390,7 +390,6 @@ export default function CurrentPlayerStage({
               <StatusBoard
                 activePassives={activePassives}
                 player={player}
-                forceAllPassives
               />
             </div>
 
@@ -398,9 +397,9 @@ export default function CurrentPlayerStage({
             <FinanceChip totalWorth={totalWorth} cash={player.cash ?? 0} debt={totalDebt} onLoanClick={() => openLoanModal?.(index)} />
             <HeaderChip icon={'\uD83D\uDED2'} label={'\uC0DD\uD65C'} value={'-' + livingCost} unit={'\uB9CC'} tone="red" size="normal" />
             <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-' + fmt(loanInterest)} unit={'\uB9CC'} tone="red" size="normal" />
-            <RentIncomeChip value={aptIncome || 80} />
-            <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * Math.max(stationTiles.length, 4)} sub={`${Math.max(stationTiles.length, 4)}역 · 누적 ${fmt(stationFund || 400)}만`} />
-            <IncomeBadge icon="⚡" label="기관 월급" value={institutionIncome || 20} sub={`${Math.max(institutionTiles.length, 2)}곳 보유`} />
+            {aptIncome > 0 && <RentIncomeChip value={aptIncome} />}
+            {stationTiles.length > 0 && <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * stationTiles.length} sub={`${stationTiles.length}역 · 누적 ${fmt(stationFund)}만`} />}
+            {institutionIncome > 0 && <IncomeBadge icon="⚡" label="기관 월급" value={institutionIncome} sub={`${institutionTiles.length}곳 보유`} />}
           </div>
         </div>
 
@@ -921,13 +920,13 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
 // =====================================================
 // 상태 보드
 // =====================================================
-function StatusBoard({ activePassives, player, forceAllPassives = false }) {
+function StatusBoard({ activePassives, player }) {
   return (
     <div className="flex min-w-0 items-center gap-1 overflow-visible">
       <span className="inline-flex h-[32px] shrink-0 items-center rounded-[9px] border-2 border-emerald-700 bg-emerald-50/80 px-1.5 font-display text-[9px] font-bold leading-none text-emerald-950 shadow-[inset_0_2px_0_rgba(255,255,255,0.62),0_2px_0_#0F0C0A]">
         <span className="mr-1 whitespace-nowrap text-[8px] font-extrabold text-emerald-950/70">패시브</span>
         {PASSIVE_SLOTS.map((p, i) => (
-          <PassiveChip key={p.id} passive={p} active={forceAllPassives || activePassives.has(p.id)} compact separated={i > 0} />
+          <PassiveChip key={p.id} passive={p} active={activePassives.has(p.id)} compact separated={i > 0} />
         ))}
       </span>
       {player.creditDebt > 0 && <MiniBadge text={'\uC2E0\uC6A9 -10'} tone="amber" />}
@@ -1114,15 +1113,15 @@ function Group({ label, children }) {
 }
 
 function StatusBadges({ player }) {
-  const items = [];
-  if ((player.defenseCards ?? 0) > 0) items.push({ tone: 'blue', text: `방어 ${player.defenseCards}장` });
-  if (player.lifeChangeReady || player.pendingLifeChange) items.push({ tone: 'violet', text: '체인지 가능' });
-  if (player.creditDebt > 0) items.push({ tone: 'amber', text: `신용 ${fmt(player.creditDebt)}만` });
-  if (player.loansharkDebt > 0) items.push({ tone: 'red', text: `고리 ${fmt(player.loanshDebt ?? player.loansharkDebt)}만` });
-  if (player.inJail) items.push({ tone: 'black', text: `감옥 ${player.jailTurns ?? 0}` });
-  if ((player.skipTurns ?? 0) > 0) items.push({ tone: 'black', text: `휴식 ${player.skipTurns}` });
-  if (player.bankrupt) items.push({ tone: 'black', text: '파산' });
-  if (items.length === 0) return null;
+  const items = [
+    { tone: 'blue', text: `방어 ${(player.defenseCards ?? 0)}장` },
+    { tone: 'violet', text: (player.lifeChangeReady || player.pendingLifeChange) ? '체인지 가능' : '체인지 0' },
+    { tone: 'amber', text: `신용 ${fmt(player.creditDebt ?? 0)}만` },
+    { tone: 'red', text: `고리 ${fmt(player.loansharkDebt ?? 0)}만` },
+    { tone: player.inJail ? 'black' : 'slate', text: player.inJail ? `감옥 ${player.jailTurns ?? 0}` : '감옥 0' },
+    { tone: (player.skipTurns ?? 0) > 0 ? 'black' : 'slate', text: (player.skipTurns ?? 0) > 0 ? `휴식 ${player.skipTurns}` : '휴식 0' },
+    { tone: player.bankrupt ? 'black' : 'slate', text: player.bankrupt ? '파산' : '정상' },
+  ];
 
   const toneCls = {
     amber: 'border-monopoly-gold bg-amber-100 text-amber-900',
@@ -1130,10 +1129,11 @@ function StatusBadges({ player }) {
     black: 'border-ink-line bg-ink text-white',
     blue: 'border-blue-700 bg-blue-100 text-blue-900',
     violet: 'border-violet-700 bg-violet-100 text-violet-900',
+    slate: 'border-slate-400 bg-slate-100 text-slate-600',
   };
 
   return (
-    <div className="flex max-w-[220px] flex-wrap items-center gap-0.5 overflow-visible">
+    <div className="flex max-w-[310px] flex-wrap items-center gap-0.5 overflow-visible">
       {items.map((it, i) => (
         <span
           key={i}
