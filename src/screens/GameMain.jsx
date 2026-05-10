@@ -15,7 +15,6 @@ import voicelines from '@/data/voicelines.json';
 
 import CurrentPlayerStage from '@/components/CurrentPlayerStage.jsx';
 import OtherPlayersStrip from '@/components/OtherPlayersStrip.jsx';
-import MatrixToast from '@/components/MatrixToast.jsx';
 import PropertyModal from '@/components/modals/PropertyModal.jsx';
 import PropertyDeedMini from '@/components/PropertyDeedMini.jsx';
 import CardArtwork from '@/components/CardArtwork.jsx';
@@ -827,7 +826,6 @@ export default function GameMain({ onExit }) {
           }}
           onQuit={onExit}
         />
-        <MatrixToast />
       </>
     );
   }
@@ -1027,7 +1025,6 @@ export default function GameMain({ onExit }) {
           <CardRevealOverlay card={turnResult} onReveal={() => handleOpenResultCard(turnResult)} />
         )}
         <PropertyShatterOverlay effect={propertyShatter} state={state} />
-        <MatrixToast />
       </div>
     </>
   );
