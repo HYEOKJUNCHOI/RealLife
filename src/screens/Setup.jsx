@@ -213,7 +213,7 @@ export default function Setup({ onStart }) {
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,22,36,0.20)_0%,rgba(255,251,238,0.02)_46%,rgba(255,248,226,0.48)_100%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(54,207,255,0.18),transparent_34%),radial-gradient(circle_at_78%_12%,rgba(255,215,106,0.18),transparent_30%),radial-gradient(circle_at_52%_84%,rgba(84,205,255,0.12),transparent_38%)]" />
       <div className="absolute inset-x-0 top-0 h-[30%] bg-gradient-to-b from-white/45 via-cyan-100/10 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-[#081926]/34 via-[#3c2513]/8 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-white/20 via-cyan-50/8 to-transparent" />
 
       <main className="setup-main relative z-10 flex h-full flex-col gap-2 overflow-visible p-3 md:gap-2 md:p-3.5">
         <header className="setup-header shrink-0 px-3 pt-0 pb-0">
