@@ -649,7 +649,8 @@ export default function GameMain({ onExit }) {
     const cashBeforeMove = turnPlayer?.cash ?? 0;
     diceSnapshotRef.current = ai ? null : { state: JSON.parse(JSON.stringify(state)), log: JSON.parse(JSON.stringify(log)), lastTurn: JSON.parse(JSON.stringify(lastTurn)), modal: JSON.parse(JSON.stringify({ property: modalProperty, trade: modalTrade, tradeSelect: modalTradeSelect, event: modalEvent, yearEnd: modalYearEnd, deathmatch: modalDeathmatch, recovery: modalRecovery, loan: modalLoan })) };
     setDiceLocked(true);
-    setTurnResult({ kind: 'moving', title: '이동 중', text: '말을 이동합니다', icon: '🎲' });
+    setTurnResult(null);
+    setGlobalNotice(null);
     setBoardTurn({ phase: 'rolling', playerId, startPos, displayPos: startPos, manualSteps, nonce: Date.now() });
     const events = step({ manualSteps, deferPropertyModal: true, deferAdvance: true, deferCardEffects: !ai });
     const turnKey = `${state.round ?? 0}-${playerId}`;
@@ -677,6 +678,7 @@ export default function GameMain({ onExit }) {
     const arrivalDelay = Math.max(980, 360 + path.length * 175);
     window.setTimeout(() => {
       setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', roll, arrival, card, endPos, displayPos: endPos } : prev);
+      window.setTimeout(() => {
       const toastMessage = buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos });
       const isCardArrival = !!card;
       if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
@@ -722,6 +724,7 @@ export default function GameMain({ onExit }) {
           onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
         });
       }
+      }, 1400);
     }, arrivalDelay);
     window.setTimeout(() => {
       const nextResult = summarizeTurnResult(events, playerId, pendingBuy);
@@ -1618,7 +1621,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
           ? `${endName} 도착`
           : '';
 
-  const closeOnTouch = replay.phase !== 'ready';
+  const closeOnTouch = replay.phase === 'inspect' || replay.phase === 'arrived';
   const cameraGrid = boardGridStyle(pos);
   const cameraCol = Number(cameraGrid.gridColumn) || 6;
   const cameraRow = Number(cameraGrid.gridRow) || 6;
@@ -1631,7 +1634,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
 
   return (
     <div
-      className="board-turn-layer fixed z-[85] flex items-center justify-center bg-transparent p-2"
+      className="board-turn-layer absolute inset-0 z-[85] flex items-center justify-center bg-transparent p-2"
       onPointerDown={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >

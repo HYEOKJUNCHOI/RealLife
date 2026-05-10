@@ -198,6 +198,7 @@ export default function CurrentPlayerStage({
   const loanInterest = mortgageInterest + creditInterest + loansharkInterest;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [badgeTestMode, setBadgeTestMode] = useState(false);
   const [hostVariant, setHostVariant] = useState(() => getRandomHostVariant());
   useEffect(() => {
     setHostVariant(getRandomHostVariant());
@@ -308,9 +309,16 @@ export default function CurrentPlayerStage({
           <button
             type="button"
             onClick={onToggleBgm}
-            className={cn('w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', bgmEnabled ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink')}
+            className={cn('mb-2 w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', bgmEnabled ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink')}
           >
             BGM {bgmEnabled ? '끄기' : '켜기'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setBadgeTestMode((value) => !value)}
+            className={cn('w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', badgeTestMode ? 'bg-emerald-100 text-emerald-900' : 'bg-white text-ink')}
+          >
+            뱃지 테스트 {badgeTestMode ? '끄기' : '켜기'}
           </button>
         </div>
       )}
@@ -508,6 +516,8 @@ export default function CurrentPlayerStage({
           </div>
 
           {/* 중복 정산 패널 제거: 도착 후 사회자창+알림창만 사용 */}
+
+          {badgeTestMode && <BadgeLayoutTestPanel />}
 
           <RealDiceTurnPanel
             color={meta.color}
@@ -978,6 +988,32 @@ function RentIncomeChip({ value }) {
   return <IncomeBadge icon="🏢" label="아파트 월세" value={value} />;
 }
 
+function BadgeLayoutTestPanel() {
+  const fakePassives = new Set(PASSIVE_SLOTS.map((item) => item.id));
+  const fakePlayer = {
+    creditDebt: 300,
+    loansharkDebt: 200,
+    defenseCards: 1,
+    pendingLifeChange: true,
+  };
+  return (
+    <div className="mb-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_10px_22px_-18px_rgba(36,57,74,0.62)] backdrop-blur-[14px]">
+      <div className="mb-1 font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-900/55">Badge Test</div>
+      <div className="flex max-w-full flex-wrap items-center gap-1 overflow-hidden">
+        <StatusBoard activePassives={fakePassives} player={fakePlayer} />
+        <RentIncomeChip value={80} />
+      </div>
+      <div className="mt-1 flex max-w-full flex-wrap items-center gap-1 overflow-hidden">
+        <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-25'} unit={'\uB9CC'} tone="red" size="normal" />
+        <IncomeBadge icon="🚉" label="역장 적립" value={40} sub="4역 · 누적 400만" />
+        <IncomeBadge icon="⚡" label="기관 월급" value={20} sub="2곳 보유" />
+        <MiniBadge text="방어 1" tone="green" />
+        <MiniBadge text="체인지" tone="amber" />
+      </div>
+    </div>
+  );
+}
+
 function IncomeBadge({ icon, label, value, sub }) {
   return (
     <span className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-[9px] border-2 border-emerald-700 bg-emerald-100 px-2 font-display text-[9px] font-bold leading-none text-emerald-900 shadow-[inset_0_2px_0_rgba(255,255,255,0.62),0_2px_0_#0F0C0A]" title={sub ?? `${label} +${fmt(value)}만`}>
@@ -1115,6 +1151,8 @@ function Group({ label, children }) {
 function StatusBadges({ player }) {
   const items = [];
   // 감옥/휴식 턴 수 뱃지는 메인 쉬는 중 오버레이와 중복되어 숨긴다.
+  if ((player.defenseCards ?? 0) > 0) items.push({ tone: 'green', text: `방어 ${player.defenseCards}` });
+  if (player.pendingLifeChange) items.push({ tone: 'amber', text: '체인지' });
   if (player.creditDebt > 0) items.push({ tone: 'amber', text: `신용 ${fmt(player.creditDebt)}만` });
   if (player.loansharkDebt > 0) items.push({ tone: 'red', text: `고리 ${fmt(player.loansharkDebt)}만` });
   if (player.bankrupt) items.push({ tone: 'black', text: '파산' });
@@ -1124,6 +1162,7 @@ function StatusBadges({ player }) {
     amber: 'border-monopoly-gold bg-amber-100 text-amber-900',
     red: 'border-monopoly-deep bg-red-100 text-monopoly-deep',
     black: 'border-ink-line bg-ink text-white',
+    green: 'border-emerald-700 bg-emerald-100 text-emerald-900',
   };
 
   return (
