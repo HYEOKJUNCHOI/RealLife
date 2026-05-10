@@ -684,6 +684,8 @@ export default function GameMain({ onExit }) {
         const summary = buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore: cashBeforeMove });
         setAiTurnSummary(summary);
         setBoardTurn(null);
+      } else {
+        window.setTimeout(() => setBoardTurn(null), 900);
       }
     }, arrivalDelay + 520);
   };
@@ -846,9 +848,10 @@ export default function GameMain({ onExit }) {
             turnResult={turnResult}
             pendingPurchase={pendingPurchase}
             lastDiceRoll={lastDiceRoll}
+            boardTurn={boardTurn}
             diceLocked={diceInputLocked}
             onAppDiceRoll={rollAppDice}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenBoard={() => {}}
             onOpenResultCard={handleOpenResultCard}
             onEndTurn={handleEndTurn}
             onShowNoticeLog={showNoticeLog}
@@ -884,7 +887,7 @@ export default function GameMain({ onExit }) {
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
             onOpenLoan={openLoanModal}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenBoard={() => {}}
             pendingPurchase={pendingPurchase}
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
@@ -914,20 +917,11 @@ export default function GameMain({ onExit }) {
             onDiceRoll={runManualDiceMove}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             onOpenResultCard={handleOpenResultCard}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenBoard={() => {}}
             onBack={() => setViewPlayerIndex(null)}
             onOpenLoan={openLoanModal}
             canLifeChange={state.pendingLifeChange?.playerId != null && viewPlayerIndex !== state.pendingLifeChange.playerId}
             onLifeChange={() => handleLifeChange(viewPlayerIndex)}
-          />
-        )}
-
-        {!state.finished && boardTurn && (
-          <BoardTurnOverlay
-            state={state}
-            replay={boardTurn}
-            onRoll={handleBoardDiceRoll}
-            onClose={closeBoardToStatus}
           />
         )}
 
@@ -1041,7 +1035,7 @@ function CardRevealOverlay({ card, onReveal }) {
       onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
-      <div className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] p-4 text-center shadow-[0_6px_0_#0F0C0A,0_24px_52px_rgba(0,0,0,0.55)]">
+      <div className="w-[min(94vw,560px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#f8fbf7] p-4 text-center shadow-[0_6px_0_#0F0C0A,0_24px_52px_rgba(0,0,0,0.55)]">
         <div className="font-display text-[10px] font-black uppercase tracking-[0.26em] text-ink/46">card reveal</div>
         <div className="mt-1 font-board text-[28px] leading-none text-ink">카드를 뒤집어주세요</div>
         <div className="mt-1 font-board text-[15px] text-ink/58">무슨 카드가 나올까요?</div>
@@ -1076,11 +1070,11 @@ function CardRevealOverlay({ card, onReveal }) {
                 </div>
               </div>
             </div>
-            <div className="absolute inset-0 overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[#fffaf0] text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+            <div className="absolute inset-0 overflow-hidden rounded-2xl border-[4px] border-ink-line bg-[#f8fbf7] text-ink shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
               {card?.cardKind ? (
                 <CardArtwork type={card.cardKind} id={String(card.cardId ?? card.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
               ) : (
-                <div className="absolute inset-0 grid place-items-center bg-[#fffaf0] text-[84px]">{card.icon ?? '🎴'}</div>
+                <div className="absolute inset-0 grid place-items-center bg-[#f8fbf7] text-[84px]">{card.icon ?? '🎴'}</div>
               )}
               <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.94)_100%)] px-4 pb-4 pt-16 text-ink">
                 <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/66">{card.cardKind ?? 'card'}</div>
@@ -1334,7 +1328,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
   const fee = request.fee ?? 0;
   return (
     <div className="fixed inset-0 z-[97] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[5px]">
-      <div className="flex max-h-[88vh] w-[min(94vw,720px)] flex-col overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] shadow-[0_6px_0_#0F0C0A,0_24px_52px_-20px_rgba(0,0,0,0.82)]">
+      <div className="flex max-h-[88vh] w-[min(94vw,720px)] flex-col overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#f8fbf7] shadow-[0_6px_0_#0F0C0A,0_24px_52px_-20px_rgba(0,0,0,0.82)]">
         <div className="border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#e9c56f_100%)] px-4 py-3 text-center">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">station transfer</div>
           <div className="font-board text-[25px] leading-none text-ink">🚉 {request.title ?? '환승 선택'}</div>
@@ -1371,7 +1365,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
           <button type="button" onClick={onStay} className="h-12 flex-1 rounded-xl border-2 border-ink-line bg-white font-board text-[18px] text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none">
             여기 머무르기
           </button>
-          <div className="flex flex-[1.2] items-center justify-center rounded-xl border-2 border-ink-line bg-[#fffaf0] px-3 text-center font-board text-[15px] leading-snug text-ink/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+          <div className="flex flex-[1.2] items-center justify-center rounded-xl border-2 border-ink-line bg-[#f8fbf7] px-3 text-center font-board text-[15px] leading-snug text-ink/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
             원하는 목적지를 고른 뒤 실제 말을 해당 칸으로 옮겨주세요
           </div>
         </div>
@@ -1383,7 +1377,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
 function AiTurnSummaryModal({ summary, onContinue }) {
   return (
     <div className="fixed inset-0 z-[96] flex items-center justify-center bg-ink/62 p-3 backdrop-blur-[4px]">
-      <div className="w-[min(94vw,520px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#fff7df] shadow-[0_6px_0_#0F0C0A,0_22px_44px_-18px_rgba(0,0,0,0.78)]">
+      <div className="w-[min(94vw,520px)] overflow-hidden rounded-2xl border-[3px] border-ink-line bg-[#f8fbf7] shadow-[0_6px_0_#0F0C0A,0_22px_44px_-18px_rgba(0,0,0,0.78)]">
         <div className="border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff7df_0%,#e9c56f_100%)] px-4 py-3 text-center">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">AI TURN SUMMARY</div>
           <div className="font-board text-[22px] leading-none text-ink" style={{ color: summary.color }}>{summary.playerName} 턴 요약</div>
@@ -1569,6 +1563,7 @@ function IveRenewalLayout({
   turnResult,
   pendingPurchase,
   lastDiceRoll,
+  boardTurn,
   diceLocked,
   onAppDiceRoll,
   onOpenBoard,
@@ -1587,10 +1582,14 @@ function IveRenewalLayout({
   const name = displayPlayerName(player, meta.name ?? `${index + 1}P`);
   const owned = state.board.tiles.filter((tile) => tile.type === 'property' && state.tileState?.[tile.pos]?.owner === index).map((tile) => tile.pos);
   const totalDebt = (player.creditLoan?.principal ?? 0) + (player.loanShark?.principal ?? 0) + Object.values(player.mortgages ?? {}).reduce((sum, value) => sum + (value ?? 0), 0);
-  const activePos = player.position ?? 0;
+  const rawPos = player.position ?? 0;
+  const isInlineMove = boardTurn?.playerId === index && ['rolling', 'moving', 'arrived'].includes(boardTurn?.phase);
+  const activePos = isInlineMove ? (boardTurn.displayPos ?? rawPos) : rawPos;
   const activeTile = state.board.tiles?.[activePos];
   const activeName = activeTile?.names?.ko ?? activeTile?.name ?? '현재 위치';
   const nearbySignals = getNearbySignals(state, activePos);
+  const startName = isInlineMove ? tileNameForPos(state, boardTurn.startPos) : null;
+  const endName = isInlineMove && boardTurn.endPos != null ? tileNameForPos(state, boardTurn.endPos) : null;
   const diceA = lastDiceRoll?.dice?.[0] ?? lastDiceRoll?.d1 ?? 1;
   const diceB = lastDiceRoll?.dice?.[1] ?? lastDiceRoll?.d2 ?? 1;
   const prompt = turnResult?.kind === 'card'
@@ -1602,8 +1601,8 @@ function IveRenewalLayout({
         : '주사위를 굴려 다음 인생 칸으로 이동하세요.';
 
   return (
-    <section className="relative grid h-full w-full grid-cols-[220px_minmax(0,1fr)_246px] grid-rows-[minmax(0,1fr)_104px] gap-1.5 overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#f5ead2] p-1.5 shadow-[0_6px_0_#17120c,0_22px_50px_-34px_rgba(0,0,0,0.45)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(255,255,255,0.48),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.34),transparent_42%,rgba(90,150,130,0.12))]" />
+    <section className="relative grid h-full w-full grid-cols-[220px_minmax(0,1fr)_246px] grid-rows-[minmax(0,1fr)_104px] gap-1.5 overflow-hidden rounded-[18px] border-2 border-[#17251f] bg-[#eef6f2] p-1.5 shadow-[0_6px_0_#17251f,0_22px_50px_-34px_rgba(0,0,0,0.42)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_26%,rgba(255,255,255,0.72),transparent_32%),linear-gradient(135deg,rgba(189,222,211,0.44),transparent_44%,rgba(244,238,226,0.62))]" />
 
       <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 rounded-2xl border border-[#17120c]/18 bg-white/62 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-[10px]">
         <div className="rounded-xl border border-[#17120c]/16 bg-white/78 p-2.5">
@@ -1614,7 +1613,7 @@ function IveRenewalLayout({
               <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22),inset_0_-20px_30px_rgba(0,0,0,0.2)]" />
             </div>
             <div className="min-w-0">
-              <div className="truncate font-board text-[25px] leading-none">{name}</div>
+              <div className="truncate font-board text-[27px] font-extrabold leading-none text-[#12221c]">{name}</div>
               <div className="mt-1 font-display text-[9px] font-black uppercase tracking-[0.18em] text-ink/50">{index + 1}P · {activeName}</div>
             </div>
           </div>
@@ -1623,7 +1622,7 @@ function IveRenewalLayout({
             <div className="rounded-lg border border-red-700/22 bg-red-50 px-2 py-1.5"><div className="text-[12px] text-ink/48">부채</div><div className="text-[20px] text-red-700">{Number(totalDebt).toLocaleString('ko-KR')}만</div></div>
           </div>
         </div>
-        <div className="min-h-0 flex-1 rounded-xl border border-[#17120c]/18 bg-[#fff7df] p-1.5 text-ink shadow-[0_3px_0_#0F0C0A]">
+        <div className="min-h-0 flex-1 rounded-xl border border-[#17120c]/18 bg-[#f8fbf7] p-1.5 text-ink shadow-[0_3px_0_#0F0C0A]">
           <div className="mb-2 flex items-center justify-between">
             <span className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-ink/50">title deeds</span>
             <span className="font-board text-sm text-ink/60">{owned.length}/8</span>
@@ -1638,10 +1637,15 @@ function IveRenewalLayout({
         </div>
       </aside>
 
-      <main className="relative z-10 min-h-0 overflow-hidden rounded-2xl border border-[#17120c]/18 bg-[radial-gradient(circle_at_50%_45%,#7fbf8d_0%,#579c69_54%,#37764d_100%)] p-2 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.05),0_3px_0_#0F0C0A]">
+      <main className="relative z-10 min-h-0 overflow-hidden rounded-2xl border border-[#17251f]/20 bg-[radial-gradient(circle_at_50%_45%,#8fd1a2_0%,#66ad7b_54%,#43845b_100%)] p-2 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.12),0_3px_0_#0F0C0A]">
         <div className="absolute left-3 top-3 z-20 rounded-full border border-[#17120c]/18 bg-white/86 px-3 py-1.5 font-display text-[9px] font-black uppercase tracking-[0.22em] text-ink/62 shadow-[0_2px_0_rgba(15,12,10,0.18)] backdrop-blur">board</div>
         <div className="absolute right-3 top-3 z-20 rounded-full border border-[#17120c]/18 bg-white/86 px-3 py-1.5 font-board text-[15px] text-ink/82 shadow-[0_2px_0_rgba(15,12,10,0.18)]">{activeName}</div>
-        <div className="mx-auto grid h-full max-h-full max-w-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[18px] border-[3px] border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.1),0_14px_34px_rgba(0,0,0,0.32)]">
+        {isInlineMove && (
+          <div className="pointer-events-none absolute left-1/2 top-12 z-20 -translate-x-1/2 rounded-full border border-[#17251f]/18 bg-white/90 px-4 py-1.5 font-board text-[17px] font-extrabold text-[#12221c] shadow-[0_3px_14px_rgba(0,0,0,0.16)]">
+            {startName}{endName ? ` → ${endName}` : ' · 주사위 굴림'}
+          </div>
+        )}
+        <motion.div animate={{ scale: boardTurn?.phase === 'moving' ? 1.075 : boardTurn?.phase === 'arrived' ? 1.035 : 1 }} transition={{ duration: boardTurn?.phase === 'arrived' ? 0.85 : 0.28, ease: 'easeOut' }} className="mx-auto grid h-full max-h-full max-w-full aspect-square origin-center grid-cols-11 grid-rows-11 gap-0.5 rounded-[18px] border-[3px] border-[#17251f] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.14),0_14px_34px_rgba(0,0,0,0.28)]">
           {state.board.tiles.map((tile) => {
             const grid = boardGridStyle(tile.pos);
             const isHere = tile.pos === activePos;
@@ -1650,10 +1654,10 @@ function IveRenewalLayout({
             const ownerColor = owner ? (CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
             const special = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax'].includes(tile.type);
             return (
-              <div key={tile.pos} className={cn('relative overflow-hidden rounded-md border border-[#17120c] bg-[#fff7df] p-0.5 text-center shadow-[0_1px_0_rgba(0,0,0,0.45)]', isHere && 'ring-2 ring-white ring-offset-2 ring-offset-[#4e8b62]')} style={grid}>
+              <div key={tile.pos} className={cn('relative overflow-hidden rounded-md border border-[#17120c] bg-[#f8fbf7] p-0.5 text-center shadow-[0_1px_0_rgba(0,0,0,0.45)]', isHere && 'ring-2 ring-white ring-offset-2 ring-offset-[#4e8b62]')} style={grid}>
                 {owner && <div className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-white/70" style={{ backgroundColor: ownerColor }} />}
                 {!special && <div className="mb-1 h-2 rounded" style={{ backgroundColor: tile.color ?? '#d6b15d' }} />}
-                <div className="font-board text-[clamp(9px,1vw,13px)] leading-none text-ink">{special ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
+                <div className="font-board text-[clamp(10px,1.05vw,14px)] font-extrabold leading-none text-[#12221c]">{special ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
                 {isHere && <motion.div className="absolute inset-0 rounded-md border-2 border-white" animate={{ opacity: [0.28, 0.85, 0.28] }} transition={{ duration: 1.1, repeat: Infinity }} />}
                 {isHere && <div className="absolute bottom-0.5 left-1/2 grid h-8 w-8 -translate-x-1/2 place-items-center overflow-hidden rounded-full border-2 border-white bg-white/80 text-[12px] font-black text-ink shadow-[0_2px_0_#0F0C0A]" style={{ backgroundColor: characterImg ? '#fffaf0' : meta.color }}>
                   {characterImg ? <img src={characterImg} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : index + 1}
@@ -1664,11 +1668,11 @@ function IveRenewalLayout({
           <div className="col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[18px] border-2 border-[#17120c]/18 bg-[linear-gradient(135deg,rgba(255,250,240,0.94),rgba(232,245,232,0.86))] p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[1px]">
             <div className="max-w-[80%]">
               <div className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-ink/42">economy board</div>
-              <div className="mt-2 font-board text-[34px] leading-none text-ink">{name}의 차례</div>
-              <div className="mt-2 font-board text-[16px] leading-snug text-ink/64">{prompt}</div>
+              <div className="mt-2 font-board text-[36px] font-extrabold leading-none text-[#12221c]">{name}의 차례</div>
+              <div className="mt-2 font-board text-[17px] font-extrabold leading-snug text-[#263a32]">{prompt}</div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </main>
 
       <aside className="relative z-10 flex min-h-0 flex-col gap-1.5 overflow-y-auto rounded-2xl border border-[#17120c]/18 bg-white/62 p-1.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-[10px] no-scrollbar">
@@ -1684,7 +1688,7 @@ function IveRenewalLayout({
         </div>
         <WorldEconomyPanel state={state} player={player} />
         <NearbySignalsPanel signals={nearbySignals} />
-        <div className="rounded-xl border-2 border-[#17120c]/18 bg-[#fff7df] p-3 text-ink shadow-[0_4px_0_#0F0C0A]">
+        <div className="rounded-xl border-2 border-[#17120c]/18 bg-[#f8fbf7] p-3 text-ink shadow-[0_4px_0_#0F0C0A]">
           <div className="font-display text-[10px] font-black uppercase tracking-[0.22em] text-ink/45">turn signal</div>
           <div className="mt-2 font-board text-[24px] leading-none">{turnResult?.title ?? '주사위 대기'}</div>
           <div className="mt-2 font-board text-[15px] leading-snug text-ink/62">{turnResult?.text ?? prompt}</div>
@@ -1786,7 +1790,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
               return (
                 <div
                   key={tile.pos}
-                  className={cn('board-turn-tile relative overflow-hidden rounded-md border-2 border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_2px_0_rgba(0,0,0,0.45)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
+                  className={cn('board-turn-tile relative overflow-hidden rounded-md border-2 border-[#17120c] bg-[#f8fbf7] p-1 text-center shadow-[0_2px_0_rgba(0,0,0,0.45)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
                   style={grid}
                 >
                   {owner && <div className="board-turn-owner-bookmark" style={{ backgroundColor: ownerColor }} title={`${owner.name || `${ownerId + 1}P`} 소유`} />}
@@ -1835,7 +1839,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t-[3px] border-[#17120c] bg-[#fff7df] px-3 py-2 font-board text-base text-ink">
+        <div className="flex items-center justify-between border-t-[3px] border-[#17120c] bg-[#f8fbf7] px-3 py-2 font-board text-base text-ink">
           <span>현재: {activeTile?.names?.ko ?? activeTile?.name ?? pos}</span>
           <span>{rollSum ? `주사위 ${rollSum}` : '확인중'}</span>
         </div>
@@ -1947,7 +1951,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards }) {
         return (
           <div
             key={`${card.playerIndex}-${card.cardIndex}-${card.pos}`}
-            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg border-[3px] border-[#17120c] bg-[#fff7df] shadow-[0_4px_0_#17120c,0_16px_22px_-15px_rgba(0,0,0,0.72)]"
+            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg border-[3px] border-[#17120c] bg-[#f8fbf7] shadow-[0_4px_0_#17120c,0_16px_22px_-15px_rgba(0,0,0,0.72)]"
             style={{
               width: `${target.w}px`,
               height: `${target.h}px`,
