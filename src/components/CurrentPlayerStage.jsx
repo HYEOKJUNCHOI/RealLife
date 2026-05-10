@@ -618,22 +618,34 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
           )}
         </div>
       ) : isRent ? (
-        <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/50 p-2.5 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.84),0_12px_24px_-20px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
-          <div className="rounded-xl border border-white/75 bg-white/72 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-            <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-red-700/62">정산 안내</div>
-            <div className="mt-1 font-board text-[20px] font-extrabold leading-tight text-ink" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>
-              {result?.ownerName ?? '소유자'}님의 {result?.tileName ?? resultTitle}
+        <div className="overflow-hidden rounded-2xl border border-white/28 bg-[linear-gradient(135deg,rgba(15,12,10,0.84)_0%,rgba(127,29,29,0.66)_58%,rgba(255,255,255,0.16)_100%)] p-2.5 text-white shadow-[0_16px_34px_-22px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-[18px]">
+          <div className="relative overflow-hidden rounded-xl border border-white/24 bg-white/12 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_24px_-20px_rgba(0,0,0,0.8)]">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.22),transparent_42%)]" />
+            <div className="relative font-display text-[8px] font-black uppercase tracking-[0.22em] text-white/58">통행료 정산</div>
+            <div className="relative mt-1 flex items-center justify-center gap-2">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/36 bg-white/14 text-[20px] shadow-[0_4px_10px_rgba(0,0,0,0.24)]">💸</span>
+              <div className="min-w-0 text-left">
+                <div className="truncate font-board text-[19px] font-extrabold leading-none text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">
+                  {result?.tileName ?? resultTitle}
+                </div>
+                <div className="mt-1 truncate font-board text-[13px] text-white/68">
+                  {result?.ownerName ?? '소유자'}님에게 통행료
+                </div>
+              </div>
             </div>
-            <div className="mt-2 inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 px-4 py-1.5 font-board text-[20px] font-extrabold text-red-700 shadow-[0_8px_16px_-14px_rgba(220,38,38,0.72)]">
+            <motion.div
+              className="relative mx-auto mt-2 inline-flex items-center justify-center rounded-full border border-red-200/62 bg-red-500/18 px-4 py-1.5 font-board text-[22px] font-extrabold text-red-100 shadow-[0_0_22px_rgba(248,113,113,0.28),inset_0_1px_0_rgba(255,255,255,0.18)]"
+              animate={{ scale: [1, 1.06, 1] }}
+              transition={{ duration: 0.58, repeat: 1 }}
+            >
               -{fmt(result?.amount)}만 지출
-            </div>
-
+            </motion.div>
           </div>
           {diceLocked && onUnlockDice && (
             <button
               type="button"
               onClick={onUnlockDice}
-              className="mt-2 h-9 w-full rounded-md border border-white/75 bg-white/72 font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
+              className="mt-2 h-9 w-full rounded-md border border-white/30 bg-white/14 font-board text-[14px] font-extrabold text-white whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] active:translate-y-0.5"
             >
               다시 입력
             </button>
