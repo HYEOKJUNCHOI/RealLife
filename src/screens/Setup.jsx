@@ -241,13 +241,6 @@ export default function Setup({ onStart }) {
           </div>
 
           <div className="setup-glass-panel relative min-h-0 flex-1 overflow-hidden rounded-xl border-2 border-cyan-50/36 bg-transparent p-3 shadow-[0_5px_0_#17120c,0_18px_36px_-22px_rgba(7,28,44,0.62),0_0_24px_rgba(54,207,255,0.12)]">
-            <img
-              src="/backgrounds/portal-residue.png"
-              alt=""
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-82 mix-blend-screen saturate-[1.18] brightness-[1.04]"
-              draggable={false}
-            />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.08),transparent_38%),linear-gradient(180deg,rgba(5,16,26,0.08),rgba(5,16,26,0.18))]" />
             <div className="relative z-20 flex h-full min-h-0 flex-col rounded-lg p-2">
               <div className="shrink-0 px-1 pb-1.5">
                 <SectionTitle index="2" title="캐릭터 선택" />
@@ -589,6 +582,12 @@ function CharacterCard({ character, selected, order, onPick, name, onName, playe
       <div className="character-avatar-wrap relative z-[1] mt-1 flex h-[122px] w-[122px] shrink-0 items-end justify-center overflow-visible rounded-xl">
         <span className="portal-card-aura pointer-events-none absolute inset-[-18%] rounded-full bg-sky-400/10 blur-[18px]" />
         <span className="portal-card-flash pointer-events-none absolute inset-[-4%] rounded-full bg-cyan-100/6 blur-[8px]" />
+        <img
+          src="/backgrounds/portal-residue.png"
+          alt=""
+          className="portal-card-residue pointer-events-none absolute left-1/2 top-1/2 h-[188%] w-[188%] -translate-x-1/2 -translate-y-[58%] object-contain opacity-95 drop-shadow-[0_0_22px_rgba(84,205,255,0.42)]"
+          draggable={false}
+        />
         <span className="portal-card-summon-light pointer-events-none absolute left-1/2 top-[46%] h-[86%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full" />
 
         {character.imageDataUrl ? (

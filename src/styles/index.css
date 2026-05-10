@@ -2648,12 +2648,18 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 }
 
 
-/* Character select summon: portal residue is the stage background; PNG characters materialize above it */
+/* Character select summon portal: residue image behind the PNG character */
+.portal-card-residue {
+  mix-blend-mode: screen;
+  filter: saturate(1.2) brightness(1.05) drop-shadow(0 0 18px rgba(84,205,255,0.34));
+  animation: portal-card-residue-breathe 3.2s ease-in-out infinite;
+}
+
 .portal-card-summon-light {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.52), rgba(100,230,255,0.16) 42%, rgba(64,151,255,0.02) 88%),
-    radial-gradient(circle at 50% 18%, rgba(255,255,255,0.42), rgba(92,226,255,0.12) 38%, transparent 70%);
-  filter: blur(9px) saturate(1.16);
+    linear-gradient(180deg, rgba(255,255,255,0.58), rgba(100,230,255,0.18) 42%, rgba(64,151,255,0.02) 88%),
+    radial-gradient(circle at 50% 18%, rgba(255,255,255,0.46), rgba(92,226,255,0.14) 38%, transparent 70%);
+  filter: blur(9px) saturate(1.2);
   opacity: 0;
   mix-blend-mode: screen;
   animation: portal-card-summon-light 2.2s ease-out 0.08s both;
@@ -2665,10 +2671,15 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
     character-avatar-materialize 1.85s ease-out both;
 }
 
+@keyframes portal-card-residue-breathe {
+  0%, 100% { opacity: 0.68; transform: translate(-50%, -58%) scale(0.98); }
+  50% { opacity: 0.98; transform: translate(-50%, -58%) scale(1.04); }
+}
+
 @keyframes portal-card-summon-light {
   0% { opacity: 0; clip-path: inset(0 0 76% 0 round 999px); }
-  42% { opacity: 0.46; clip-path: inset(0 0 36% 0 round 999px); }
-  100% { opacity: 0.12; clip-path: inset(0 0 0 0 round 999px); }
+  42% { opacity: 0.52; clip-path: inset(0 0 36% 0 round 999px); }
+  100% { opacity: 0.16; clip-path: inset(0 0 0 0 round 999px); }
 }
 
 @keyframes character-avatar-materialize {
