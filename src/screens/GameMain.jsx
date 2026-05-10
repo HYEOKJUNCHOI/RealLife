@@ -699,6 +699,7 @@ export default function GameMain({ onExit }) {
           cta: pendingBuy ? '매입 또는 스킵을 선택하세요' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
           previewPos: pendingBuy?.pos,
           price: pendingBuy?.buyPrice,
+          color: pendingBuy ? turnBaseMeta.color : undefined,
           onBuy: pendingBuy ? () => handleBuyProperty(playerId, pendingBuy.pos) : undefined,
           onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
         });
@@ -1221,6 +1222,11 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   if (!notice || typeof document === 'undefined') return null;
   const amount = Number(notice.amount);
   const showAmount = Number.isFinite(amount) && amount !== 0;
+  const accent = notice.color ?? '#22c55e';
+  const noticeStyle = notice.color ? {
+    background: `linear-gradient(135deg, rgba(15,12,10,0.92) 0%, ${accent}88 58%, rgba(255,255,255,0.18) 100%)`,
+    boxShadow: `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${accent}aa, 0 0 42px ${accent}8f, inset 0 0 30px ${accent}22`,
+  } : undefined;
   const layer = (
     <div
       className="pointer-events-auto fixed inset-0 flex items-center justify-center px-3"
@@ -1237,16 +1243,16 @@ function GlobalNoticeBand({ notice, onDismiss }) {
       >
         <div
           className={cn('mx-auto grid overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[38px_1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[30vh] max-w-[980px] grid-rows-[42px_1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
-          style={notice.kind === 'dice' && notice.color ? { boxShadow: `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${notice.color}aa, 0 0 42px ${notice.color}99, inset 0 0 28px ${notice.color}22` } : undefined}
+          style={noticeStyle}
         >
           <div className="flex items-center justify-center gap-2 rounded-xl border border-white/18 bg-black/22 px-3 font-board text-[clamp(14px,2vw,22px)] leading-none text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
-            {notice.kind === 'buy' ? <img src="/ui/host-mic.jpg" alt="" className="h-10 w-10 rounded-full border border-emerald-200/70 object-cover object-top shadow-[0_0_18px_rgba(80,255,160,0.45)]" draggable={false} /> : <span className="text-[1.15em]">🎙️</span>}
-            <span className={cn('font-display text-[10px] font-black uppercase tracking-[0.24em]', notice.kind === 'buy' ? 'text-emerald-200' : 'text-monopoly-gold/86')}>{notice.speaker ?? 'NPC'}</span>
+            {notice.kind === 'buy' ? <img src="/ui/host-mic.jpg" alt="" className="h-10 w-10 rounded-full border object-cover object-top shadow-[0_0_18px_rgba(255,255,255,0.35)]" style={{ borderColor: `${accent}aa` }} draggable={false} /> : <span className="text-[1.15em]">🎙️</span>}
+            <span className="font-display text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: notice.kind === 'buy' ? '#fff7d6' : undefined }}>{notice.speaker ?? 'NPC'}</span>
             <span className="truncate">{notice.text}</span>
           </div>
           {notice.kind === 'buy' && notice.previewPos != null ? (
             <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
-              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] border-emerald-200 bg-white shadow-[0_5px_0_#0F0C0A,0_0_24px_rgba(80,255,160,0.35)]">
+              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
                 <PropertyDeedMini pos={notice.previewPos} />
               </div>
               <div className="min-w-0 text-center sm:text-left">
@@ -1256,7 +1262,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
                 </div>
                 <div className="mt-2 font-board text-[clamp(17px,2.4vw,28px)] leading-tight text-white/92">{notice.text}</div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#bff7d8_48%,#22c55e_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
+                  <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none" style={{ background: `linear-gradient(180deg,#ffffff_0%,${accent}33_48%,${accent}_100%)` }}>매입</button>
                   <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
                 </div>
               </div>
