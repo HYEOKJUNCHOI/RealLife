@@ -2663,3 +2663,17 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
     box-shadow: 0 20px 42px -20px rgba(118,13,20,0.9), 0 0 18px rgba(255,255,255,0.52), 0 0 32px rgba(255,190,190,0.56), 0 0 48px rgba(255,82,82,0.34), inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -10px 24px rgba(96,0,10,0.18);
   }
 }
+
+/* Fake loading dots below start button */
+.initial-start-loading-dots {
+  display: inline-block;
+  min-width: 1.2em;
+  animation: initial-start-loading-dots 1.25s steps(4, end) infinite;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+@keyframes initial-start-loading-dots {
+  0% { width: 0; }
+  100% { width: 1.2em; }
+}
