@@ -2664,16 +2664,37 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   }
 }
 
-/* Fake loading dots below start button */
-.initial-start-loading-dots {
-  display: inline-block;
-  min-width: 1.2em;
-  animation: initial-start-loading-dots 1.25s steps(4, end) infinite;
-  overflow: hidden;
-  vertical-align: bottom;
+
+/* Warcraft-like fake loading bar below start button */
+.initial-start-loading-panel {
+  border: 1px solid rgba(255, 221, 145, 0.38);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(52, 28, 13, 0.66), rgba(13, 8, 5, 0.62)),
+    radial-gradient(circle at 50% 0%, rgba(255, 217, 128, 0.24), transparent 64%);
+  box-shadow:
+    0 12px 26px -18px rgba(0,0,0,0.88),
+    inset 0 1px 0 rgba(255, 225, 160, 0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.48);
+  backdrop-filter: blur(5px);
 }
 
-@keyframes initial-start-loading-dots {
-  0% { width: 0; }
-  100% { width: 1.2em; }
+.initial-start-loading-fill {
+  width: 42%;
+  border-right: 1px solid rgba(255, 244, 184, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255,239,166,0.95) 0%, rgba(207,143,45,0.96) 48%, rgba(101,55,14,0.98) 100%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 8px, rgba(0,0,0,0.08) 8px 14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.72),
+    inset 0 -2px 4px rgba(64,29,7,0.58),
+    0 0 10px rgba(255, 181, 58, 0.42);
+  animation: initial-start-loading-fill 5.2s ease-in-out infinite;
+}
+
+@keyframes initial-start-loading-fill {
+  0% { width: 18%; filter: brightness(0.94); }
+  38% { width: 56%; filter: brightness(1.08); }
+  72% { width: 83%; filter: brightness(1.02); }
+  100% { width: 96%; filter: brightness(1.15); }
 }
