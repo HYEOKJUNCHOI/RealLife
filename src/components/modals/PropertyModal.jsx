@@ -243,7 +243,7 @@ function PropertyActionRail({
   onCancelStage,
 }) {
   return (
-    <aside className={cn('property-action-rail order-2 flex shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)]', isEmpty ? 'w-[min(80vw,420px)] justify-center' : 'w-[min(92vw,336px)] sm:order-1 sm:w-[112px] sm:flex-col sm:self-start')}>
+    <aside className={cn('property-action-rail order-2 flex shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)]', isEmpty ? 'w-[min(80vw,420px)] justify-center' : 'w-[min(92vw,336px)] sm:order-1 sm:w-[124px] sm:flex-col sm:self-start')}>
       <div className="hidden rounded-md border-2 border-ink-line bg-ink px-2 py-1 text-center font-display text-[9px] font-extrabold uppercase tracking-[0.14em] text-white sm:block">
         메뉴
       </div>
@@ -453,7 +453,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
       surface={false}
       className="w-auto max-w-[calc(100vw-24px)] scale-[0.94] sm:scale-[0.9]"
     >
-      <div className={cn('property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar', isEmpty ? 'sm:flex-col' : 'sm:flex-row sm:items-start')}>
+      <div className={cn('property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar', isEmpty ? 'sm:flex-col' : 'sm:flex-row sm:items-start sm:gap-4')}>
         <PropertyActionRail
           isEmpty={isEmpty}
           isOpponentOwned={isOpponentOwned}
@@ -503,7 +503,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
           'relative overflow-hidden border-b-2 border-ink-line',
           COLOR_HEADER_BG[tile.color] || 'bg-neutral-600',
         )}
-        style={{ aspectRatio: '5 / 1.65' }}
+        style={{ aspectRatio: '5 / 1.35' }}
       >
         {/* 스카이라인 — 투명도 낮게 겹쳐서 헤더 색감 살림 */}
         {skylineSlot && (

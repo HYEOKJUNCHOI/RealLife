@@ -1,0 +1,10 @@
+node_modules
+.git
+.vite
+dist
+.tmp-*
+tmp-*
+*.log
+reallife-5174-*.png
+참고이미지
+memory

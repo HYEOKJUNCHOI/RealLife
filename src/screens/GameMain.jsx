@@ -1792,8 +1792,10 @@ function BoardArrivalCard({ state, pos, event, playerColor = '#d83b2f' }) {
   const isStation = tile.type === 'railroad';
   const isCard = tile.type === 'chance' || tile.type === 'community_chest';
   const color = tile.color ?? (isStation ? '#2f75c9' : isCard ? '#7c3aed' : playerColor);
+  const propertyPrice = ts.price ?? tile.price ?? 0;
+  const propertyMarketPrice = ts.marketPrice ?? ts.currentPrice ?? ts.price ?? tile.price ?? 0;
   const subtitle = isProperty
-    ? `구매가 ${fmt(tile.price ?? 0)}만`
+    ? `매입가 ${fmt(propertyPrice)}만 · 시세 ${fmt(propertyMarketPrice)}만`
     : isStation
       ? `역 적립금 ${fmt(ts.fund ?? 0)}만`
       : tile.type === 'tax'
@@ -1812,7 +1814,16 @@ function BoardArrivalCard({ state, pos, event, playerColor = '#d83b2f' }) {
       <div className="font-display text-[8px] font-black uppercase tracking-[0.22em] text-ink/42">arrival card</div>
       <div className="mt-1 h-[235px] overflow-hidden rounded-xl border-2 border-[#17120c] bg-white p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         {isProperty ? (
-          <PropertyDeedMini pos={pos} className="scale-[0.98]" />
+          <div className="relative flex h-full w-full flex-col justify-center overflow-hidden rounded-lg border-2 border-red-700 bg-[#fff8e8] px-3 py-4 text-center shadow-[inset_0_0_0_4px_rgba(220,38,38,0.08)]">
+            <div className="absolute left-[-24px] top-4 rotate-[-12deg] bg-red-700 px-8 py-1 font-display text-[10px] font-black uppercase tracking-[0.18em] text-white shadow-[0_3px_0_#17120c]">속보</div>
+            <div className="mx-auto rounded-md border-2 border-red-700 bg-white px-3 py-1 font-display text-[10px] font-black uppercase tracking-[0.22em] text-red-700 shadow-[0_2px_0_#7f1d1d]">부동산 급매 찌라시</div>
+            <div className="mt-5 whitespace-nowrap font-board text-[34px] font-black leading-none text-red-700 drop-shadow-[0_2px_0_rgba(23,18,12,0.22)]">{name} 도착</div>
+            <div className="mt-5 rounded-xl border-[3px] border-red-700 bg-white px-3 py-3 font-board text-[20px] font-black leading-tight text-red-700 shadow-[0_4px_0_#7f1d1d]">
+              {name} 매입가 , 시세 : {fmt(propertyMarketPrice)}만
+            </div>
+            <div className="mt-3 font-board text-[14px] font-bold text-red-800/80">권리증 확인 후 매입 여부 결정</div>
+            {owner && <div className="mx-auto mt-3 rounded-full border-2 border-red-700 bg-white px-3 py-1 font-board text-[13px] font-black text-red-700">{owner.name ?? `${ts.owner + 1}P`} 소유</div>}
+          </div>
         ) : (
           <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border-2 border-[#17120c] bg-[#fffaf0]">
             <div className="h-14 border-b-2 border-[#17120c]" style={{ background: `linear-gradient(135deg, ${color}, #fff2a8)` }} />

@@ -17,30 +17,55 @@ const fmt = (n) => (n ?? 0).toLocaleString('ko-KR');
 
 // 캐릭터별 동그란 아바타 background-position — 모자 크기/얼굴 높이 따라 미세조정
 const AVATAR_POSITION = {
-  yangban:    'center 30%',  // 갓 큼 → 살짝 더 아래로
-  general:    '36% 29%',     // 투구 얼굴 중앙 맞춤
-  magistrate: 'center 26%',  // 익선관
-  farmer:     'center 26%',  // 패랭이
+  yangban:    'center 24%',  // 얼굴 중심 크롭
+  general:    '36% 23%',     // 투구 얼굴 중앙 맞춤
+  magistrate: 'center 22%',  // 익선관
+  farmer:     'center 23%',  // 패랭이
   chunDooHwan: 'center 18%',
-  genghisKhan: 'center 24%',
-  steveJobs: 'center 24%',
-  billGates: 'center 24%',
-  donaldTrump: 'center 22%',
-  leeJaeMyung: 'center 22%',
-  wakizakaYasuharu: 'center 24%',
-  toyotomiHideyoshi: 'center 24%',
+  genghisKhan: 'center 20%',
+  steveJobs: 'center 18%',
+  billGates: 'center 18%',
+  donaldTrump: 'center 18%',
+  leeJaeMyung: 'center 18%',
+  wakizakaYasuharu: 'center 20%',
+  toyotomiHideyoshi: 'center 20%',
+  elonMusk: 'center 18%',
+  takedaShingen: 'center 18%',
+  liuBei: 'center 18%',
+  guanYu: 'center 18%',
+  zhangFei: 'center 18%',
+  caoCao: 'center 18%',
+  luBu: 'center 18%',
+  luffy: 'center 18%',
+  zoro: 'center 18%',
+  shanks: 'center 18%',
+  sanji: 'center 18%',
 };
 
 const AVATAR_SIZE = {
-  general: '135%',
-  chunDooHwan: '145%',
-  genghisKhan: '142%',
-  steveJobs: '138%',
-  billGates: '138%',
-  donaldTrump: '138%',
-  leeJaeMyung: '138%',
-  wakizakaYasuharu: '140%',
-  toyotomiHideyoshi: '140%',
+  yangban: '220%',
+  general: '205%',
+  magistrate: '220%',
+  farmer: '220%',
+  chunDooHwan: '220%',
+  genghisKhan: '220%',
+  steveJobs: '255%',
+  billGates: '255%',
+  donaldTrump: '255%',
+  leeJaeMyung: '245%',
+  wakizakaYasuharu: '245%',
+  toyotomiHideyoshi: '245%',
+  elonMusk: '255%',
+  takedaShingen: '255%',
+  liuBei: '255%',
+  guanYu: '255%',
+  zhangFei: '255%',
+  caoCao: '255%',
+  luBu: '255%',
+  luffy: '255%',
+  zoro: '255%',
+  shanks: '255%',
+  sanji: '255%',
 };
 
 // 보유 stage 별 개수 반환: 땅문서(전체) / 집(빌라 1~4) / 아파트(stage 5)

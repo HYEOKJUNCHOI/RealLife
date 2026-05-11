@@ -16,6 +16,17 @@ export const ASSET_SLOTS = [
   { id: 'character.leeJaeMyung', label: '이재명', category: 'character', defaultPath: '/characters/lee-jae-myung.png', ratio: 'aspect-square', fallback: '🗳️' },
   { id: 'character.wakizakaYasuharu', label: '와키자카', category: 'character', defaultPath: '/characters/wakizaka-yasuharu.png', ratio: 'aspect-square', fallback: '🗡️' },
   { id: 'character.toyotomiHideyoshi', label: '도요토미', category: 'character', defaultPath: '/characters/toyotomi-hideyoshi.png', ratio: 'aspect-square', fallback: '🏯' },
+  { id: 'character.elonMusk', label: '일론 머스크', category: 'character', defaultPath: '/characters/elon-musk.png', ratio: 'aspect-square', fallback: '🚀' },
+  { id: 'character.takedaShingen', label: '다케다 신겐', category: 'character', defaultPath: '/characters/takeda-shingen.png', ratio: 'aspect-square', fallback: '🪭' },
+  { id: 'character.liuBei', label: '유비', category: 'character', defaultPath: '/characters/liu-bei.png', ratio: 'aspect-square', fallback: '👑' },
+  { id: 'character.guanYu', label: '관우', category: 'character', defaultPath: '/characters/guan-yu.png', ratio: 'aspect-square', fallback: '🐉' },
+  { id: 'character.zhangFei', label: '장비', category: 'character', defaultPath: '/characters/zhang-fei.png', ratio: 'aspect-square', fallback: '🛡️' },
+  { id: 'character.caoCao', label: '조조', category: 'character', defaultPath: '/characters/cao-cao.png', ratio: 'aspect-square', fallback: '♟️' },
+  { id: 'character.luBu', label: '여포', category: 'character', defaultPath: '/characters/lu-bu.png', ratio: 'aspect-square', fallback: '⚔️' },
+  { id: 'character.luffy', label: '루피', category: 'character', defaultPath: '/characters/luffy.png', ratio: 'aspect-square', fallback: '🏴‍☠️' },
+  { id: 'character.zoro', label: '조로', category: 'character', defaultPath: '/characters/zoro.png', ratio: 'aspect-square', fallback: '🗡️' },
+  { id: 'character.shanks', label: '샹크스', category: 'character', defaultPath: '/characters/shanks.png', ratio: 'aspect-square', fallback: '🍷' },
+  { id: 'character.sanji', label: '상디', category: 'character', defaultPath: '/characters/sanji.png', ratio: 'aspect-square', fallback: '🍳' },
 
   // ===== NPC 2종 =====
   { id: 'npc.realtor', label: '사회자', category: 'npc', defaultPath: '/npc/realtor.png', ratio: 'aspect-square', fallback: '👨‍💼' },

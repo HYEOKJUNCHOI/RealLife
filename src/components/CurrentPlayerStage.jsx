@@ -66,29 +66,54 @@ const BUTTON_TONES = {
 };
 
 const AVATAR_POSITION = {
-  yangban: 'center 30%',
-  general: '36% 29%',
-  magistrate: 'center 26%',
-  farmer: 'center 26%',
+  yangban: 'center 24%',
+  general: '36% 23%',
+  magistrate: 'center 22%',
+  farmer: 'center 23%',
   chunDooHwan: 'center 18%',
-  genghisKhan: 'center 24%',
-  steveJobs: 'center 24%',
-  billGates: 'center 24%',
-  donaldTrump: 'center 22%',
-  leeJaeMyung: 'center 22%',
-  wakizakaYasuharu: 'center 24%',
-  toyotomiHideyoshi: 'center 24%',
+  genghisKhan: 'center 20%',
+  steveJobs: 'center 18%',
+  billGates: 'center 18%',
+  donaldTrump: 'center 18%',
+  leeJaeMyung: 'center 18%',
+  wakizakaYasuharu: 'center 20%',
+  toyotomiHideyoshi: 'center 20%',
+  elonMusk: 'center 18%',
+  takedaShingen: 'center 18%',
+  liuBei: 'center 18%',
+  guanYu: 'center 18%',
+  zhangFei: 'center 18%',
+  caoCao: 'center 18%',
+  luBu: 'center 18%',
+  luffy: 'center 18%',
+  zoro: 'center 18%',
+  shanks: 'center 18%',
+  sanji: 'center 18%',
 };
 const AVATAR_SIZE = {
-  general: '135%',
-  chunDooHwan: '145%',
-  genghisKhan: '142%',
-  steveJobs: '138%',
-  billGates: '138%',
-  donaldTrump: '138%',
-  leeJaeMyung: '138%',
-  wakizakaYasuharu: '140%',
-  toyotomiHideyoshi: '140%',
+  yangban: '220%',
+  general: '205%',
+  magistrate: '220%',
+  farmer: '220%',
+  chunDooHwan: '220%',
+  genghisKhan: '220%',
+  steveJobs: '255%',
+  billGates: '255%',
+  donaldTrump: '255%',
+  leeJaeMyung: '245%',
+  wakizakaYasuharu: '245%',
+  toyotomiHideyoshi: '245%',
+  elonMusk: '255%',
+  takedaShingen: '255%',
+  liuBei: '255%',
+  guanYu: '255%',
+  zhangFei: '255%',
+  caoCao: '255%',
+  luBu: '255%',
+  luffy: '255%',
+  zoro: '255%',
+  shanks: '255%',
+  sanji: '255%',
 };
 
 const HOST_VARIANTS = ['a', 'b', 'c', 'd'];
@@ -278,7 +303,7 @@ export default function CurrentPlayerStage({
 
     <section
       className={cn(
-        'relative grid flex-1 min-h-0 grid-cols-[1fr_248px] overflow-hidden rounded-2xl border border-white/65 bg-white/38 backdrop-blur-[18px]',
+        'relative grid flex-1 min-h-0 grid-cols-[1fr_248px] overflow-hidden rounded-2xl border border-white/65 bg-white/72',
       )}
       style={{
         boxShadow: `inset 0 1px 0 rgba(255,255,255,0.86), 0 18px 42px -30px rgba(36,57,74,0.58)`,
@@ -320,7 +345,7 @@ export default function CurrentPlayerStage({
       <div className={cn('flex min-w-0 flex-col', isSkipping && 'grayscale')}>
 
       {/* 상단 상태 영역 */}
-      <div className="relative grid h-[112px] grid-cols-[74px_1fr] gap-2 overflow-visible border-b border-white/45 bg-white/30 backdrop-blur-[14px] px-2.5 py-1.5 pr-[116px]">
+      <div className="relative grid h-[112px] grid-cols-[74px_1fr] gap-2 overflow-visible border-b border-white/45 bg-white/68 px-2.5 py-1.5 pr-[116px]">
         {/* 플레이어 아바타 */}
         <motion.div
           key={player.character + index}
@@ -406,7 +431,7 @@ export default function CurrentPlayerStage({
 
       </div>
       {/* 보유 부동산 */}
-      <div className="flex flex-1 min-h-0 flex-col px-3 pb-2 pt-3 pl-3 md:px-3 md:pb-2 md:pt-3">
+      <div className="flex flex-1 min-h-0 flex-col px-3 pb-[23px] pt-3 pl-3 md:px-3 md:pb-[23px] md:pt-3">
         <div className="mb-2.5 flex items-center justify-between">
           <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{'\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
             <span className="ml-1.5 font-semibold text-ink/40 tabular-nums">
@@ -417,7 +442,7 @@ export default function CurrentPlayerStage({
             type="button"
             onClick={onShowNoticeLog}
             disabled={!hasNoticeLog}
-            className="rounded-lg border border-white/70 bg-white/54 px-2.5 py-1 font-board text-sm leading-none text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.65)] backdrop-blur-[12px] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+            className="rounded-lg border border-white/70 bg-white/78 px-2.5 py-1 font-board text-sm leading-none text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
           >
             알림보기
           </button>
@@ -471,8 +496,8 @@ export default function CurrentPlayerStage({
           background: 'linear-gradient(90deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 100%)',
         }}
       >
-        <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-white/62 bg-white/34 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_16px_32px_-28px_rgba(36,57,74,0.72)] backdrop-blur-[18px]">
-          <div className="w-full shrink-0 rounded-xl border border-white/70 bg-white/50 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_-18px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
+        <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-white/62 bg-white/72 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_16px_32px_-28px_rgba(36,57,74,0.72)]">
+          <div className="w-full shrink-0 rounded-xl border border-white/70 bg-white/82 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_-18px_rgba(36,57,74,0.7)]">
             <div className="flex items-center justify-between gap-2">
               <div
                 className={cn(
@@ -488,7 +513,7 @@ export default function CurrentPlayerStage({
               <button
                 type="button"
                 onClick={() => setSettingsOpen((open) => !open)}
-                className="grid h-[32px] w-10 shrink-0 place-items-center rounded-lg border border-white/70 bg-white/66 font-display text-[17px] font-extrabold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_18px_-16px_rgba(36,57,74,0.65)] backdrop-blur-[12px] transition active:translate-y-1 active:shadow-none"
+                className="grid h-[32px] w-10 shrink-0 place-items-center rounded-lg border border-white/70 bg-white/86 font-display text-[17px] font-extrabold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none"
                 aria-label="게임 설정"
               >
                 ⚙
@@ -496,12 +521,12 @@ export default function CurrentPlayerStage({
             </div>
           </div>
 
-          <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-white/42 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[14px]">
+          <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)]">
             <button
               type="button"
               onClick={onOpenBoard}
               disabled={!onOpenBoard}
-              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-xl border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(224,244,255,0.72)_100%)] px-3 font-board text-[18px] leading-none text-ink shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] backdrop-blur-[12px] transition active:translate-y-1 active:shadow-none disabled:opacity-45"
+              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-xl border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(224,244,255,0.82)_100%)] px-3 font-board text-[18px] leading-none text-ink shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:opacity-45"
             >
               <span>🗺️</span>
               <span>보드판</span>
@@ -582,7 +607,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
   }, [result?.kind, result?.cardKind, result?.cardId, result?.eventId, result?.text]);
 
   return (
-    <div className="real-dice-panel mt-auto w-full shrink-0 rounded-b-2xl border-t border-white/56 bg-white/34 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-[14px]" style={{ '--player-color': color }}>
+    <div className="real-dice-panel mt-auto mb-[60px] w-full shrink-0 rounded-2xl border-t border-white/56 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]" style={{ '--player-color': color }}>
       {isJail ? (
         <div className="overflow-hidden rounded-xl border-2 border-ink-line bg-[linear-gradient(135deg,#f1f5f9_0%,#dbeafe_48%,#93c5fd_100%)] p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_3px_0_#0F0C0A]">
           <div className="rounded-lg border-2 border-ink-line bg-white/88 px-3 py-2 text-center shadow-[0_2px_0_rgba(15,12,10,0.55)]">
@@ -618,7 +643,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
           )}
         </div>
       ) : isRent ? (
-        <div className="overflow-hidden rounded-2xl border border-white/28 bg-[linear-gradient(135deg,rgba(15,12,10,0.84)_0%,rgba(127,29,29,0.66)_58%,rgba(255,255,255,0.16)_100%)] p-2.5 text-white shadow-[0_16px_34px_-22px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-[18px]">
+        <div className="overflow-hidden rounded-2xl border border-white/28 bg-[linear-gradient(135deg,rgba(15,12,10,0.84)_0%,rgba(127,29,29,0.66)_58%,rgba(255,255,255,0.16)_100%)] p-2.5 text-white shadow-[0_16px_34px_-22px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.24)]">
           <div className="relative overflow-hidden rounded-xl border border-white/24 bg-white/12 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_24px_-20px_rgba(0,0,0,0.8)]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.22),transparent_42%)]" />
             <div className="relative font-display text-[8px] font-black uppercase tracking-[0.22em] text-white/58">통행료 정산</div>
@@ -652,14 +677,14 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
           )}
         </div>
       ) : showNumberPad ? (
-        <div className="rounded-2xl border border-white/70 bg-white/44 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
-          <div className="mb-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-white/70 bg-white/44 p-1 backdrop-blur-[12px] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
+        <div className="rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)]">
+          <div className="mb-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-white/70 bg-white/82 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
             <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'keypad' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'keypad' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>직접 입력</button>
             <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'app' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'app' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>주사위</button>
           </div>
           {diceMode === 'app' ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-center gap-3 rounded-xl border border-white/70 bg-white/42 px-2 py-3 backdrop-blur-[12px] shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] [perspective:760px]">
+              <div className="flex items-center justify-center gap-3 rounded-xl border border-white/70 bg-white/82 px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] [perspective:760px]">
                 <DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} />
                 <span className="font-display text-[24px] font-black text-ink">+</span>
                 <DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} />
@@ -675,33 +700,35 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-white/70 bg-white/42 p-2 backdrop-blur-[12px] shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
-              {nums.map((num) => (
+            <>
+              <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-white/70 bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+                {nums.map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    disabled={disabled || diceLocked}
+                    onClick={() => onDiceRoll?.(num)}
+                    className="h-[46px] rounded-xl border border-white/80 font-display text-[19px] font-extrabold leading-none text-[#15324a] shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                    style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}18 100%)`, borderColor: `${color}44` }}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+              {diceLocked && onUnlockDice && (
                 <button
-                  key={num}
                   type="button"
-                  disabled={disabled || diceLocked}
-                  onClick={() => onDiceRoll?.(num)}
-                  className="h-[46px] rounded-xl border border-white/80 font-display text-[19px] font-extrabold leading-none text-[#15324a] shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
-                  style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}18 100%)`, borderColor: `${color}44` }}
+                  onClick={onUnlockDice}
+                  className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
                 >
-                  {num}
+                  다시 입력
                 </button>
-              ))}
-            </div>
-          )}
-          {diceLocked && onUnlockDice && (
-            <button
-              type="button"
-              onClick={onUnlockDice}
-              className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
-            >
-              다시 입력
-            </button>
+              )}
+            </>
           )}
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/70 bg-white/44 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
+        <div className="rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)]">
           <button
             type="button"
             onClick={() => setCardFlipped(true)}
@@ -816,7 +843,7 @@ function EventCardSlot({ event, hostLine, onClose }) {
 
   if (!event) {
     return (
-      <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 rounded-[22px] border border-white/72 bg-white/44 p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] backdrop-blur-[14px]">
+      <div className="flex w-full flex-1 flex-col items-center justify-center gap-2 rounded-[22px] border border-white/72 bg-white/78 p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
         <div className="grid h-[112px] w-[82px] place-items-center rounded-2xl border border-white/70 bg-[linear-gradient(135deg,#dff4ff_0%,#f7fbff_48%,#e8def8_100%)] text-3xl text-[#334155] shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_22px_-18px_rgba(36,57,74,0.62)]">🎴</div>
         <div className="font-display text-[8px] font-bold uppercase tracking-[0.16em] text-ink/38">card slot</div>
       </div>
@@ -855,7 +882,7 @@ function HostSpeechBubble({ content }) {
   if (!content) return null;
   return (
     <div
-      className="absolute left-1/2 top-[-82px] z-20 w-[220px] -translate-x-1/2 rounded-[20px] border border-white/75 bg-white/72 px-3 py-2 font-board text-[15px] font-extrabold leading-snug text-[#182a35] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_28px_-22px_rgba(36,57,74,0.78)] backdrop-blur-[14px]"
+      className="absolute left-1/2 top-[-82px] z-20 w-[220px] -translate-x-1/2 rounded-[20px] border border-white/75 bg-white/88 px-3 py-2 font-board text-[15px] font-extrabold leading-snug text-[#182a35] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_28px_-22px_rgba(36,57,74,0.78)]"
       style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}
     >
       {content}
@@ -884,7 +911,7 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
   const showTotal = visibleSteps >= totalSteps;
 
   return (
-    <div className="relative z-10 mt-2 max-h-[28vh] w-full overflow-y-auto rounded-[18px] border border-white/72 bg-white/58 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] backdrop-blur-[14px] no-scrollbar" style={{ borderColor: `${color}55`, background: `linear-gradient(180deg, rgba(255,255,255,0.66) 0%, ${color}14 100%)` }}>
+    <div className="relative z-10 mt-2 max-h-[28vh] w-full overflow-y-auto rounded-[18px] border border-white/72 bg-white/78 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] no-scrollbar" style={{ borderColor: `${color}55`, background: `linear-gradient(180deg, rgba(255,255,255,0.82) 0%, ${color}18 100%)` }}>
       <div className="mb-1.5 flex items-center justify-between border-b border-white/55 pb-1.5">
         <span className="font-display text-[8px] font-black uppercase tracking-[0.2em]" style={{ color }}>{playerName}</span>
         <span className="font-board text-[15px] font-extrabold leading-none text-[#182a35]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{content.title ?? '이번 턴 정산'}</span>
@@ -1002,7 +1029,7 @@ function BadgeLayoutTestPanel() {
     pendingLifeChange: true,
   };
   return (
-    <div className="mb-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_10px_22px_-18px_rgba(36,57,74,0.62)] backdrop-blur-[14px]">
+    <div className="mb-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/88 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_10px_22px_-18px_rgba(36,57,74,0.62)]">
       <div className="mb-1 font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-900/55">Badge Test</div>
       <div className="flex max-w-full flex-wrap items-center gap-1 overflow-hidden">
         <StatusBoard activePassives={fakePassives} player={fakePlayer} />

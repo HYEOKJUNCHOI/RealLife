@@ -9,24 +9,16 @@
   },
   "korea": [
     {
-      "id": "yangban",
-      "name": "정약용",
-      "role": "양반",
-      "description": "갓 쓰고 도포 입은 조선 사대부 (대표 인물: 정약용)",
-      "emoji": "🎓",
-      "slot": "character.yangban",
-      "color": "#D32F2F",
-      "_promptHint": "조선 양반, 갓+도포, 책, 친근한 만화 스타일"
-    },
-    {
-      "id": "general",
-      "name": "이순신",
-      "role": "장군",
-      "description": "갑옷 입고 칼 찬 조선 무관 (대표 인물: 이순신)",
-      "emoji": "⚔️",
-      "slot": "character.general",
-      "color": "#1976D2",
-      "_promptHint": "조선 장군, 흑색 갑옷+금장식, 칼, 친근한 만화 스타일"
+      "id": "genghisKhan",
+      "name": "징기스칸",
+      "role": "초원 군주",
+      "description": "몽골 초원에서 온 13세기 정복자 토큰",
+      "emoji": "🐎",
+      "slot": "character.genghisKhan",
+      "color": "#8B5A2B",
+      "_promptHint": "13세기 몽골 군주, 털모자와 델, 콧수염과 짧은 수염, 귀여운 3D 보드게임 토큰",
+      "group": "preJoseon",
+      "groupLabel": "조선시대 이전"
     },
     {
       "id": "magistrate",
@@ -36,7 +28,33 @@
       "emoji": "👑",
       "slot": "character.magistrate",
       "color": "#F57C00",
-      "_promptHint": "조선 임금, 곤룡포+익선관, 친근한 만화 스타일"
+      "_promptHint": "조선 임금, 곤룡포+익선관, 친근한 만화 스타일",
+      "group": "joseon",
+      "groupLabel": "조선시대"
+    },
+    {
+      "id": "general",
+      "name": "이순신",
+      "role": "장군",
+      "description": "갑옷 입고 칼 찬 조선 무관 (대표 인물: 이순신)",
+      "emoji": "⚔️",
+      "slot": "character.general",
+      "color": "#1976D2",
+      "_promptHint": "조선 장군, 흑색 갑옷+금장식, 칼, 친근한 만화 스타일",
+      "group": "joseon",
+      "groupLabel": "조선시대"
+    },
+    {
+      "id": "yangban",
+      "name": "정약용",
+      "role": "양반",
+      "description": "갓 쓰고 도포 입은 조선 사대부 (대표 인물: 정약용)",
+      "emoji": "🎓",
+      "slot": "character.yangban",
+      "color": "#D32F2F",
+      "_promptHint": "조선 양반, 갓+도포, 책, 친근한 만화 스타일",
+      "group": "joseon",
+      "groupLabel": "조선시대"
     },
     {
       "id": "farmer",
@@ -46,7 +64,9 @@
       "emoji": "🌾",
       "slot": "character.farmer",
       "color": "#388E3C",
-      "_promptHint": "조선 농부, 패랭이+호미, 친근한 만화 스타일"
+      "_promptHint": "조선 농부, 패랭이+호미, 친근한 만화 스타일",
+      "group": "joseon",
+      "groupLabel": "조선시대"
     },
     {
       "id": "chunDooHwan",
@@ -56,47 +76,9 @@
       "emoji": "🪖",
       "slot": "character.chunDooHwan",
       "color": "#5F6F3A",
-      "_promptHint": "1980년대 한국 군복, 대머리 윗부분과 짧은 옆머리, 금테 안경, 귀여운 3D 보드게임 토큰"
-    },
-    {
-      "id": "genghisKhan",
-      "name": "징기스칸",
-      "role": "초원 군주",
-      "description": "몽골 초원에서 온 13세기 정복자 토큰",
-      "emoji": "🐎",
-      "slot": "character.genghisKhan",
-      "color": "#8B5A2B",
-      "_promptHint": "13세기 몽골 군주, 털모자와 델, 콧수염과 짧은 수염, 귀여운 3D 보드게임 토큰"
-    },
-    {
-      "id": "steveJobs",
-      "name": "스티브 잡스",
-      "role": "혁신가",
-      "description": "검은 터틀넥을 입은 기술 혁신가 토큰",
-      "emoji": "📱",
-      "slot": "character.steveJobs",
-      "color": "#111827",
-      "_promptHint": "스티브 잡스풍 검은 터틀넥, 청바지, 둥근 안경, 귀여운 3D 보드게임 토큰"
-    },
-    {
-      "id": "billGates",
-      "name": "빌 게이츠",
-      "role": "소프트웨어 거물",
-      "description": "안경과 노트북을 든 기술 사업가 토큰",
-      "emoji": "💻",
-      "slot": "character.billGates",
-      "color": "#2563EB",
-      "_promptHint": "빌 게이츠풍 안경, 스웨터와 셔츠, 작은 노트북, 귀여운 3D 보드게임 토큰"
-    },
-    {
-      "id": "donaldTrump",
-      "name": "트럼프",
-      "role": "사업가 정치인",
-      "description": "금발과 정장을 한 사업가 정치인 토큰",
-      "emoji": "🏢",
-      "slot": "character.donaldTrump",
-      "color": "#F59E0B",
-      "_promptHint": "도널드 트럼프풍 금발, 남색 정장과 빨간 넥타이, 풍자형 3D 보드게임 토큰"
+      "_promptHint": "1980년대 한국 군복, 대머리 윗부분과 짧은 옆머리, 금테 안경, 귀여운 3D 보드게임 토큰",
+      "group": "modernKorea",
+      "groupLabel": "근현대사"
     },
     {
       "id": "leeJaeMyung",
@@ -106,7 +88,117 @@
       "emoji": "🗳️",
       "slot": "character.leeJaeMyung",
       "color": "#2563EB",
-      "_promptHint": "이재명풍 현대 정치인, 남색 정장과 파란 넥타이, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일"
+      "_promptHint": "이재명풍 현대 정치인, 남색 정장과 파란 넥타이, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
+      "group": "modernCelebrity",
+      "groupLabel": "현대유명인"
+    },
+    {
+      "id": "steveJobs",
+      "name": "스티브 잡스",
+      "role": "혁신가",
+      "description": "검은 터틀넥을 입은 기술 혁신가 토큰",
+      "emoji": "📱",
+      "slot": "character.steveJobs",
+      "color": "#111827",
+      "_promptHint": "스티브 잡스풍 검은 터틀넥, 청바지, 둥근 안경, 귀여운 3D 보드게임 토큰",
+      "group": "modernCelebrity",
+      "groupLabel": "현대유명인"
+    },
+    {
+      "id": "billGates",
+      "name": "빌 게이츠",
+      "role": "소프트웨어 거물",
+      "description": "안경과 노트북을 든 기술 사업가 토큰",
+      "emoji": "💻",
+      "slot": "character.billGates",
+      "color": "#2563EB",
+      "_promptHint": "빌 게이츠풍 안경, 스웨터와 셔츠, 작은 노트북, 귀여운 3D 보드게임 토큰",
+      "group": "modernCelebrity",
+      "groupLabel": "현대유명인"
+    },
+    {
+      "id": "donaldTrump",
+      "name": "트럼프",
+      "role": "사업가 정치인",
+      "description": "금발과 정장을 한 사업가 정치인 토큰",
+      "emoji": "🏢",
+      "slot": "character.donaldTrump",
+      "color": "#F59E0B",
+      "_promptHint": "도널드 트럼프풍 금발, 남색 정장과 빨간 넥타이, 풍자형 3D 보드게임 토큰",
+      "group": "modernCelebrity",
+      "groupLabel": "현대유명인"
+    },
+    {
+      "id": "elonMusk",
+      "name": "일론 머스크",
+      "role": "기술 사업가",
+      "description": "로켓과 전기차를 든 미래형 기술 사업가 캐릭터",
+      "emoji": "🚀",
+      "slot": "character.elonMusk",
+      "color": "#111827",
+      "_promptHint": "일론 머스크풍 기술 사업가, 검은 재킷, 로켓과 전기차 소품, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
+      "group": "modernCelebrity",
+      "groupLabel": "현대유명인"
+    },
+    {
+      "id": "liuBei",
+      "name": "유비",
+      "role": "삼국지 군주",
+      "description": "덕망 있는 촉한의 군주 캐릭터",
+      "emoji": "👑",
+      "slot": "character.liuBei",
+      "color": "#16A34A",
+      "_promptHint": "유비풍 삼국지 군주, 한나라풍 도포, 온화한 영웅 표정, 고급 3D 보드게임 토큰",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
+    },
+    {
+      "id": "guanYu",
+      "name": "관우",
+      "role": "삼국지 장수",
+      "description": "긴 수염과 청룡언월도를 든 의리의 장수 캐릭터",
+      "emoji": "🐉",
+      "slot": "character.guanYu",
+      "color": "#15803D",
+      "_promptHint": "관우풍 삼국지 장수, 긴 검은 수염, 녹색 갑옷/도포, 붉은 얼굴 톤, 청룡언월도, 고급 3D 보드게임 토큰",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
+    },
+    {
+      "id": "zhangFei",
+      "name": "장비",
+      "role": "삼국지 맹장",
+      "description": "민소매와 장팔사모가 특징인 맹장 캐릭터",
+      "emoji": "🛡️",
+      "slot": "character.zhangFei",
+      "color": "#7F1D1D",
+      "_promptHint": "장비풍 삼국지 맹장, 민소매 전투복, 굵은 팔, 장팔사모, 거친 표정, 고급 3D 보드게임 토큰",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
+    },
+    {
+      "id": "caoCao",
+      "name": "조조",
+      "role": "삼국지 책략가",
+      "description": "검붉은 갑옷을 입은 야심가 책략가 캐릭터",
+      "emoji": "♟️",
+      "slot": "character.caoCao",
+      "color": "#1F2937",
+      "_promptHint": "조조풍 삼국지 책략가, 검붉은 갑옷과 도포, 날카로운 표정, 고급 3D 보드게임 토큰",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
+    },
+    {
+      "id": "luBu",
+      "name": "여포",
+      "role": "삼국지 맹장",
+      "description": "붉은 깃 장식과 방천화극을 든 최강 무장 캐릭터",
+      "emoji": "⚔️",
+      "slot": "character.luBu",
+      "color": "#DC2626",
+      "_promptHint": "여포풍 삼국지 맹장, 붉은 깃 장식, 방천화극, 강한 표정, 고급 3D 보드게임 토큰",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
     },
     {
       "id": "wakizakaYasuharu",
@@ -116,7 +208,9 @@
       "emoji": "🗡️",
       "slot": "character.wakizakaYasuharu",
       "color": "#334155",
-      "_promptHint": "와키자카 야스하루풍 일본 사무라이 장수, 갑옷과 투구, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일"
+      "_promptHint": "와키자카 야스하루풍 일본 사무라이 장수, 갑옷과 투구, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
+      "group": "japaneseWarriors",
+      "groupLabel": "일본장수"
     },
     {
       "id": "toyotomiHideyoshi",
@@ -126,7 +220,69 @@
       "emoji": "🏯",
       "slot": "character.toyotomiHideyoshi",
       "color": "#B45309",
-      "_promptHint": "도요토미 히데요시풍 일본 전국시대 장수, 금색 갑옷, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일"
+      "_promptHint": "도요토미 히데요시풍 일본 전국시대 장수, 금색 갑옷, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
+      "group": "japaneseWarriors",
+      "groupLabel": "일본장수"
+    },
+    {
+      "id": "takedaShingen",
+      "name": "다케다 신겐",
+      "role": "전국시대 군략가",
+      "description": "붉은 갑옷과 군배를 든 일본 전국시대 다이묘 캐릭터",
+      "emoji": "🪭",
+      "slot": "character.takedaShingen",
+      "color": "#B91C1C",
+      "_promptHint": "다케다 신겐풍 일본 전국시대 다이묘, 붉은 사무라이 갑옷과 군배, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
+      "group": "japaneseWarriors",
+      "groupLabel": "일본장수"
+    },
+    {
+      "id": "luffy",
+      "name": "루피",
+      "role": "해적 선장",
+      "description": "밀짚모자를 쓴 쾌활한 해적 선장 캐릭터",
+      "emoji": "🏴‍☠️",
+      "slot": "character.luffy",
+      "color": "#DC2626",
+      "_promptHint": "루피풍 밀짚모자 해적 선장, 빨간 조끼, 파란 반바지, 활짝 웃는 표정, 고급 3D 보드게임 토큰",
+      "group": "anime",
+      "groupLabel": "만화/애니"
+    },
+    {
+      "id": "zoro",
+      "name": "조로",
+      "role": "검사",
+      "description": "초록 머리와 삼도류 분위기의 해적 검사 캐릭터",
+      "emoji": "🗡️",
+      "slot": "character.zoro",
+      "color": "#16A34A",
+      "_promptHint": "조로풍 초록머리 검사, 검 세 자루, 차분하고 강한 표정, 고급 3D 보드게임 토큰",
+      "group": "anime",
+      "groupLabel": "만화/애니"
+    },
+    {
+      "id": "shanks",
+      "name": "샹크스",
+      "role": "해적 선장",
+      "description": "붉은 머리와 망토가 특징인 카리스마 해적 선장 캐릭터",
+      "emoji": "🍷",
+      "slot": "character.shanks",
+      "color": "#B91C1C",
+      "_promptHint": "샹크스풍 붉은 머리 해적 선장, 긴 망토, 여유로운 미소, 고급 3D 보드게임 토큰",
+      "group": "anime",
+      "groupLabel": "만화/애니"
+    },
+    {
+      "id": "sanji",
+      "name": "상디",
+      "role": "요리사",
+      "description": "검은 정장을 입은 금발 요리사 해적 캐릭터",
+      "emoji": "🍳",
+      "slot": "character.sanji",
+      "color": "#EAB308",
+      "_promptHint": "상디풍 금발 요리사 해적, 검은 정장, 한쪽 눈을 가린 머리, 발을 내린 정면 스탠딩, 고급 3D 보드게임 토큰",
+      "group": "anime",
+      "groupLabel": "만화/애니"
     }
   ],
   "japan": [

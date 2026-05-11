@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '@/stores/gameStore.js';
 import { preloadGameAssets } from '@/lib/assets.js';
 import { useCustomCharacterStore } from '@/stores/customCharacterStore.js';
@@ -11,6 +11,25 @@ import AssetFrame from '@/components/AssetFrame.jsx';
 const PLAYER_COLORS = ['#E12D39', '#2F75C9', '#F27A1A', '#238B45'];
 
 const SETUP_PREFS_KEY = 'reallife:setupPrefs';
+
+const seededRandom = (seed) => {
+  let value = seed || 1;
+  return () => {
+    value = (value * 1664525 + 1013904223) % 4294967296;
+    return value / 4294967296;
+  };
+};
+
+const shuffleRoster = (items, seed) => {
+  const result = [...items];
+  const random = seededRandom(seed);
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
 const loadSetupPrefs = () => {
   if (typeof window === 'undefined') return null;
   try {
@@ -38,7 +57,11 @@ export default function Setup({ onStart }) {
   const initGame = useGameStore((s) => s.initGame);
   const customCharacters = useCustomCharacterStore((s) => s.characters);
 
-  const roster = getAvailableCharacters();
+  const [rosterSeed, setRosterSeed] = useState(null);
+  const roster = useMemo(() => {
+    const baseRoster = getAvailableCharacters();
+    return rosterSeed === null ? baseRoster : shuffleRoster(baseRoster, rosterSeed);
+  }, [customCharacters, rosterSeed]);
   const rosterSlotCount = Math.max(20, Math.ceil(roster.length / 4) * 4 + 12);
   const rosterSlots = [...roster, ...Array.from({ length: Math.max(0, rosterSlotCount - roster.length) }, (_, index) => ({ id: `locked-${index}`, locked: true }))].slice(0, rosterSlotCount);
   const customCount = customCharacters.filter((character) => character.active !== false).length;
@@ -242,8 +265,15 @@ export default function Setup({ onStart }) {
 
           <div className="setup-glass-panel relative min-h-0 flex-1 overflow-hidden rounded-xl border-2 border-cyan-50/36 bg-transparent p-3 shadow-[0_5px_0_#17120c,0_18px_36px_-22px_rgba(7,28,44,0.62),0_0_24px_rgba(54,207,255,0.12)]">
             <div className="relative z-20 flex h-full min-h-0 flex-col rounded-lg p-2">
-              <div className="shrink-0 px-1 pb-1.5">
+              <div className="flex shrink-0 items-center justify-between gap-2 px-1 pb-1.5">
                 <SectionTitle index="2" title="캐릭터 선택" />
+                <button
+                  type="button"
+                  onClick={() => setRosterSeed(Math.floor(Math.random() * 4294967295))}
+                  className="h-8 shrink-0 rounded-lg border-2 border-[#17120c] bg-[linear-gradient(180deg,#fff7bf_0%,#ffb84a_100%)] px-3 font-board text-[13px] font-extrabold text-[#17120c] shadow-[0_2px_0_#17120c] transition active:translate-y-1 active:shadow-none"
+                >
+                  셔플 🔀
+                </button>
               </div>
 
               <button
@@ -494,11 +524,11 @@ function ChipButton({ active, onClick, children }) {
 
 function LockedCharacterSlot() {
   return (
-    <div className="locked-character-slot relative mx-auto flex h-[178px] w-full max-w-[136px] min-w-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-cyan-50/38 bg-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_12px_24px_-18px_rgba(7,28,44,0.5)] backdrop-blur-[8px]">
-      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(54,207,255,0.12),transparent_45%)]" />
-      <div className="relative z-[1] flex flex-col items-center gap-1 text-[#17120c]/45">
-        <div className="grid h-12 w-12 place-items-center rounded-full border-2 border-[#17120c]/25 bg-white/24 text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">🔒</div>
-        <div className="font-display text-[9px] font-black uppercase tracking-[0.16em]">잠금</div>
+    <div className="locked-character-slot relative mx-auto flex h-[212px] w-full max-w-[162px] min-w-0 items-center justify-center overflow-hidden rounded-xl border-2 border-slate-300/55 bg-white/16 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_12px_24px_-18px_rgba(7,28,44,0.5),0_0_14px_rgba(100,116,139,0.22)] backdrop-blur-[8px]">
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(148,163,184,0.16),transparent_48%)]" />
+      <div className="relative z-[1] flex flex-col items-center gap-1 text-[#17120c]/42">
+        <div className="grid h-12 w-12 place-items-center rounded-xl border-2 border-slate-400/45 bg-white/24 text-[20px] font-display font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">＋</div>
+        <div className="font-display text-[9px] font-black uppercase tracking-[0.16em]">빈 슬롯</div>
       </div>
     </div>
   );

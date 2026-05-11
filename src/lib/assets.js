@@ -16,6 +16,17 @@ export const CHARACTER_IMG = {
   leeJaeMyung: '/characters/lee-jae-myung.png',
   wakizakaYasuharu: '/characters/wakizaka-yasuharu.png',
   toyotomiHideyoshi: '/characters/toyotomi-hideyoshi.png',
+  elonMusk: '/characters/elon-musk.png',
+  takedaShingen: '/characters/takeda-shingen.png',
+  liuBei: '/characters/liu-bei.png',
+  guanYu: '/characters/guan-yu.png',
+  zhangFei: '/characters/zhang-fei.png',
+  caoCao: '/characters/cao-cao.png',
+  luBu: '/characters/lu-bu.png',
+  luffy: '/characters/luffy.png',
+  zoro: '/characters/zoro.png',
+  shanks: '/characters/shanks.png',
+  sanji: '/characters/sanji.png',
 };
 
 // NPC 2종
@@ -59,6 +70,17 @@ export const CHARACTER_META = {
   leeJaeMyung: { name: '이재명', emoji: '🗳️', desc: '정치인' },
   wakizakaYasuharu: { name: '와키자카', emoji: '🗡️', desc: '일본 장수' },
   toyotomiHideyoshi: { name: '도요토미', emoji: '🏯', desc: '일본 장수' },
+  elonMusk: { name: '일론 머스크', emoji: '🚀', desc: '기술 사업가' },
+  takedaShingen: { name: '다케다 신겐', emoji: '🪭', desc: '전국시대 군략가' },
+  liuBei: { name: '유비', emoji: '👑', desc: '삼국지 군주' },
+  guanYu: { name: '관우', emoji: '🐉', desc: '삼국지 장수' },
+  zhangFei: { name: '장비', emoji: '🛡️', desc: '삼국지 맹장' },
+  caoCao: { name: '조조', emoji: '♟️', desc: '삼국지 책략가' },
+  luBu: { name: '여포', emoji: '⚔️', desc: '삼국지 맹장' },
+  luffy: { name: '루피', emoji: '🏴‍☠️', desc: '해적 선장' },
+  zoro: { name: '조로', emoji: '🗡️', desc: '검사' },
+  shanks: { name: '샹크스', emoji: '🍷', desc: '해적 선장' },
+  sanji: { name: '상디', emoji: '🍳', desc: '요리사' },
 };
 
 // ===== 이벤트 카드 7장 =====
