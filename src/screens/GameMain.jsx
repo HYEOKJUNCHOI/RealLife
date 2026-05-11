@@ -1951,7 +1951,10 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
   }, [dealVisible, onReady]);
 
   useEffect(() => {
-    if (phase === 'start' && startImageReady) setPortalCharged(false);
+    if (phase !== 'start' || !startImageReady) return undefined;
+    setPortalCharged(false);
+    const timer = window.setTimeout(() => setPortalCharged(true), 1900);
+    return () => window.clearTimeout(timer);
   }, [phase, startImageReady]);
 
   useEffect(() => {
@@ -2016,14 +2019,16 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
               >
                 {portalCharged ? '시작하기' : '로딩중..'}
               </button>
-              <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+128px)] z-30 w-[min(82vw,740px)] -translate-x-1/2 text-center">
-                <div className="initial-start-loading-content">
-                  <div className="initial-start-loading-bar h-full overflow-hidden rounded-[3px] bg-[#09050d] shadow-[inset_0_2px_5px_rgba(0,0,0,0.92),0_0_10px_rgba(255,230,150,0.18)]">
-                    <div className="initial-start-loading-fill h-full" onAnimationEnd={() => setPortalCharged(true)} />
+              {!portalCharged && (
+                <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+128px)] z-30 w-[min(82vw,740px)] -translate-x-1/2 text-center">
+                  <div className="initial-start-loading-content">
+                    <div className="initial-start-loading-bar h-full overflow-hidden rounded-[3px] bg-[#09050d] shadow-[inset_0_2px_5px_rgba(0,0,0,0.92),0_0_10px_rgba(255,230,150,0.18)]">
+                      <div className="initial-start-loading-fill h-full" onAnimationEnd={() => setPortalCharged(true)} />
+                    </div>
+                    <span className="initial-start-loading-percent">100%</span>
                   </div>
-                  <span className="initial-start-loading-percent">100%</span>
                 </div>
-              </div>
+              )}
             </>
           )}
         </>
