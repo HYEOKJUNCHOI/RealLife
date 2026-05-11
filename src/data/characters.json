@@ -9,6 +9,54 @@
   },
   "korea": [
     {
+      "id": "choiHyeokjun",
+      "name": "최혁준",
+      "role": "아빠",
+      "description": "데님 셔츠를 입은 귀여운 우리가족 아빠 캐릭터",
+      "emoji": "👨",
+      "slot": "character.choiHyeokjun",
+      "color": "#2563EB",
+      "_promptHint": "최혁준, 데님 셔츠, 가르마머리, 귀여운 3D 보드게임 토큰",
+      "group": "family",
+      "groupLabel": "우리가족"
+    },
+    {
+      "id": "haruna",
+      "name": "하루나",
+      "role": "엄마",
+      "description": "부드러운 미소의 귀여운 우리가족 엄마 캐릭터",
+      "emoji": "👩",
+      "slot": "character.haruna",
+      "color": "#EC4899",
+      "_promptHint": "하루나, 부드러운 미소, 캐주얼 여성복, 귀여운 3D 보드게임 토큰",
+      "group": "family",
+      "groupLabel": "우리가족"
+    },
+    {
+      "id": "choiDasol",
+      "name": "최다솔",
+      "role": "6살 남자아이",
+      "description": "가르마머리와 반팔 반바지를 입은 귀여운 6살 남자아이 캐릭터",
+      "emoji": "🧒",
+      "slot": "character.choiDasol",
+      "color": "#38BDF8",
+      "_promptHint": "최다솔, 6살 남자아이, 가르마머리, 반팔과 반바지, 귀여운 3D 보드게임 토큰",
+      "group": "family",
+      "groupLabel": "우리가족"
+    },
+    {
+      "id": "choiDabin",
+      "name": "최다빈",
+      "role": "1살 남자아이",
+      "description": "아장아장 걷는 느낌의 귀여운 1살 남자아이 캐릭터",
+      "emoji": "👶",
+      "slot": "character.choiDabin",
+      "color": "#60A5FA",
+      "_promptHint": "최다빈, 1살 남자아이, 아장아장 걷는 아기, 귀여운 3D 보드게임 토큰",
+      "group": "family",
+      "groupLabel": "우리가족"
+    },
+    {
       "id": "genghisKhan",
       "name": "징기스칸",
       "role": "초원 군주",
@@ -196,7 +244,19 @@
       "emoji": "⚔️",
       "slot": "character.luBu",
       "color": "#DC2626",
-      "_promptHint": "여포풍 삼국지 맹장, 붉은 깃 장식, 방천화극, 강한 표정, 고급 3D 보드게임 토큰",
+      "_promptHint": "??? ??? ??, ?? ? ??, ????? ???? ?? ??? ?? ?? ??? ? ?? ?? 3D ???? ??",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
+    },
+    {
+      "id": "dongZhuo",
+      "name": "동탁",
+      "role": "삼국지 군벌",
+      "description": "보라색 옷을 입은 약간 뚱뚱하고 귀여운 삼국지 군벌 캐릭터",
+      "emoji": "👑",
+      "slot": "character.dongZhuo",
+      "color": "#7C3AED",
+      "_promptHint": "동탁풍 삼국지 군벌, 보라 옷, 약간 뚱뚱한 체형, 귀여운 3D 보드게임 토큰",
       "group": "threeKingdoms",
       "groupLabel": "삼국지"
     },

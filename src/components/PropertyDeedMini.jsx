@@ -75,12 +75,9 @@ const COLOR_STAGE_FILL = {
 // 罹먮┃??id ??硫뷀? (state.players[i].character 濡?議고쉶)
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
 
-// playerId ??洹??뚮젅?댁뼱??罹먮┃??而щ윭
-// ?좑툘 characters.json ???몃뜳????state.players ???몃뜳??(罹먮┃???좏깮 ?쒖꽌 ?곕씪 ?ㅻ쫫)
-const playerColor = (state, playerId) => {
-  const p = state?.players?.[playerId];
-  return CHAR_META[p?.character]?.color ?? '#666';
-};
+// 플레이어 번호 고정 시그니처색: 1P 빨강 / 2P 파랑 / 3P 노랑 / 4P 초록
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const playerColor = (_state, playerId) => PLAYER_SIGNATURE_COLORS[playerId] ?? '#666';
 
 // ?대え?곗퐯?쇰줈 ?④퀎 ?쒗쁽
 const STAGE_EMOJI = ['□', '🏠', '🏠🏠', '🏠🏠🏠', '🏢', '🏢'];
@@ -146,6 +143,7 @@ function PremiumStars({ premium }) {
 
 export default function PropertyDeedMini({ pos, className }) {
   const state = useGameStore((s) => s.state);
+  const openTradeFromSelect = useGameStore((s) => s.openTradeFromSelect);
   if (!state || pos == null) return null;
 
   const tile = state.board.tiles[pos];
@@ -164,15 +162,15 @@ export default function PropertyDeedMini({ pos, className }) {
     <div
       className={cn(
         'group relative flex h-full w-full flex-col overflow-hidden',
-        'border-2 border-ink-line rounded-md',
-        'bg-parchment-50 ring-1 ring-inset ring-ink-line/55',
+        'border-2 border-white/38 rounded-md',
+        'bg-[linear-gradient(135deg,rgba(255,255,255,0.32),rgba(255,255,255,0.14),rgba(54,207,255,0.08))] ring-1 ring-inset ring-white/34 backdrop-blur-[10px]',
         'transition-transform duration-150 hover:-translate-y-0.5',
         ts.mortgaged && 'opacity-60 saturate-50',
         className,
       )}
       style={{
         // 而щ윭???쒓렇?덉쿂 湲濡쒖슦 ?????멸낸 ?덉そ outline + outset blur
-        boxShadow: `0 0 0 2px ${glow}cc, 0 0 0 5px ${glow}55, 0 0 14px 2px ${glow}80, 0 3px 0 0 #0F0C0A`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.62), 0 0 0 2px ${glow}cc, 0 0 0 5px ${glow}55, 0 0 14px 2px ${glow}80, 0 3px 0 0 #0F0C0A`,
       }}
       data-component="PropertyDeedMini"
     >
@@ -182,7 +180,7 @@ export default function PropertyDeedMini({ pos, className }) {
           'relative shrink-0 overflow-hidden border-b-2 border-ink-line',
           COLOR_HEADER_BG[tile.color] || 'bg-neutral-600',
         )}
-        style={{ aspectRatio: '5 / 2.2' }}
+        style={{ aspectRatio: '5 / 1.9' }}
       >
         {/* ?ㅼ뭅?대씪???ㅻ쾭?덉씠 (?щ챸????쾶 ???ㅻ뜑 ???대┝) */}
         {skylineSlot && (
@@ -219,9 +217,9 @@ export default function PropertyDeedMini({ pos, className }) {
       </div>
 
       {/* ?? 2. ?꾩떆紐??? */}
-      <div className="shrink-0 border-b-2 border-ink-line bg-parchment-50 px-1.5 py-1.5 text-center">
-        <div className="rounded-full border-2 border-ink-line bg-white/92 px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_2px_0_#0F0C0A,0_5px_10px_rgba(15,12,10,0.22)]">
-          <h3 className="font-board font-extrabold text-[17px] leading-none text-ink tracking-tight">
+      <div className="shrink-0 border-b border-white/32 bg-white/16 px-1.5 py-1 text-center">
+        <div className="rounded-full border-2 border-ink-line bg-white/92 px-2 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_2px_0_#0F0C0A,0_5px_10px_rgba(15,12,10,0.22)]">
+          <h3 className="font-board font-extrabold text-[16px] leading-none text-ink tracking-tight">
             {tile.names.ko}
           </h3>
           {tile.names.region && (
@@ -232,7 +230,7 @@ export default function PropertyDeedMini({ pos, className }) {
         </div>
       </div>
 
-      <div className="shrink-0 border-b-2 border-ink-line bg-parchment-100 px-1 py-1">
+      <div className="shrink-0 border-b border-white/28 bg-white/12 px-1 py-1">
         <div
           className="grid grid-cols-[1fr_auto_1fr] items-center rounded-[5px] px-1.5 py-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
           style={{ backgroundColor: '#1A1612' }}
@@ -268,11 +266,11 @@ export default function PropertyDeedMini({ pos, className }) {
             </div>
           </div>
         </div>
-        <div className="mt-1 h-2 rounded-full border border-ink-line/55 bg-[#80848c] shadow-[inset_0_1px_0_rgba(255,255,255,0.32),0_1px_0_#0F0C0A]" aria-hidden="true" />
+
       </div>
 
       {/* 같은 색상 그룹의 보유 상태를 표시한다. */}
-      <div className="shrink-0 border-b-2 border-ink-line bg-parchment-100 px-1.5 py-1.5">
+      <div className="shrink-0 border-b border-white/28 bg-white/10 px-1.5 py-1.5">
         <div className="flex flex-wrap items-center justify-center gap-1">
           {state.board.tiles
             .filter((t) => t.type === 'property' && t.color === tile.color)
@@ -284,12 +282,27 @@ export default function PropertyDeedMini({ pos, className }) {
               const otherColor =
                 otherOwner != null ? playerColor(state, otherOwner) : null;
               const isUnowned = tts.owner == null;
+              const openTradeForTile = (event) => {
+                if (otherOwner == null) return;
+                event.preventDefault();
+                event.stopPropagation();
+                openTradeFromSelect?.({ fromId: state.turnIndex ?? 0, toId: otherOwner, getPos: [t.pos] });
+              };
+              const handleTradeKeyDown = (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                openTradeForTile(event);
+              };
               return (
                 <span
                   key={t.pos}
-                  title={t.names.ko + (otherOwner != null ? ` - ${otherOwner + 1}P 보유` : isUnowned ? ' - 빈 땅' : '')}
+                  role={otherOwner != null ? 'button' : undefined}
+                  tabIndex={otherOwner != null ? 0 : undefined}
+                  onClick={openTradeForTile}
+                  onKeyDown={handleTradeKeyDown}
+                  title={t.names.ko + (otherOwner != null ? ` - ${otherOwner + 1}P 보유 · 눌러서 거래 제안` : isUnowned ? ' - 빈 땅' : '')}
                   className={cn(
                     'relative min-w-[34px] rounded-[5px] border px-1.5 py-1 text-center font-board text-[11px] font-extrabold leading-none tracking-tight',
+                    otherOwner != null && 'cursor-pointer transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
                     isMine
                       ? cn(
                           COLOR_HEADER_BG[tile.color] || 'bg-neutral-500',
@@ -301,13 +314,13 @@ export default function PropertyDeedMini({ pos, className }) {
                         : 'border-ink-line/50 bg-[#aeb3ba] text-ink shadow-[0_2px_0_rgba(15,12,10,0.35),0_4px_8px_rgba(15,12,10,0.18)]',
                   )}
                 >
-                  {/* ?ㅻⅨ ?щ엺 蹂댁쑀 ?쒖떆 ????以묒븰 ??(?섑뙣??8 ?꾩튂) */}
-                  {otherColor && (
+                  {otherOwner != null && (
                     <span
-                      className="absolute left-1/2 -top-[5px] h-[9px] w-[9px] -translate-x-1/2 rounded-full border-[1.5px] border-white shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+                      className="absolute left-1/2 -top-[9px] -translate-x-1/2 rounded-full border border-white px-1 font-display text-[7px] font-black leading-[11px] text-white shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
                       style={{ backgroundColor: otherColor }}
-                      aria-hidden="true"
-                    />
+                    >
+                      {otherOwner + 1}P
+                    </span>
                   )}
                   {t.names.ko}
                 </span>
@@ -317,7 +330,7 @@ export default function PropertyDeedMini({ pos, className }) {
       </div>
 
       {/* 임대료 + 단계 게이지 — 임대료는 독립 컨테이너로 분리 */}
-      <div className="flex-1 min-h-0 border-t-2 border-ink-line bg-parchment-50 px-[5px] py-[5px]">
+      <div className="flex-1 min-h-0 border-t border-white/26 bg-white/12 px-[5px] py-[5px]">
         {(() => {
           const currentRent = rents.find((r) => r.key === currentStage)?.rent ?? 0;
           const apartmentDone = currentStage === 5;

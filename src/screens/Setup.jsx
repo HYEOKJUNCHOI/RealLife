@@ -8,7 +8,7 @@ import { getAvailableCharacters } from '@/lib/characterRoster.js';
 import { getBgmPreference, pauseBgm, playBgm } from '@/lib/bgm.js';
 import AssetFrame from '@/components/AssetFrame.jsx';
 
-const PLAYER_COLORS = ['#E12D39', '#2F75C9', '#F27A1A', '#238B45'];
+const PLAYER_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
 
 const SETUP_PREFS_KEY = 'reallife:setupPrefs';
 
@@ -153,17 +153,12 @@ export default function Setup({ onStart }) {
     onStart();
   };
 
-  const startNew = async () => {
+  const startNew = () => {
     if (!ready || preloading) return;
     setPreloading(true);
-    try {
-      await Promise.race([
-        preloadGameAssets(),
-        new Promise((resolve) => window.setTimeout(resolve, 3200)),
-      ]);
-    } catch (error) {
-      console.warn('[Setup] preload failed; starting game anyway', error);
-    }
+    preloadGameAssets().catch((error) => {
+      console.warn('[Setup] preload failed; game loading screen will continue anyway', error);
+    });
     start();
   };
 
@@ -527,7 +522,7 @@ function LockedCharacterSlot() {
     <div className="locked-character-slot relative mx-auto flex h-[212px] w-full max-w-[162px] min-w-0 items-center justify-center overflow-hidden rounded-xl border-2 border-slate-300/55 bg-white/16 shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_12px_24px_-18px_rgba(7,28,44,0.5),0_0_14px_rgba(100,116,139,0.22)] backdrop-blur-[8px]">
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(148,163,184,0.16),transparent_48%)]" />
       <div className="relative z-[1] flex flex-col items-center gap-1 text-[#17120c]/42">
-        <div className="grid h-12 w-12 place-items-center rounded-xl border-2 border-slate-400/45 bg-white/24 text-[20px] font-display font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">＋</div>
+        <div className="grid h-12 w-12 place-items-center rounded-xl border-2 border-cyan-50/36 bg-white/24 text-[20px] font-display font-black shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_0_14px_rgba(135,220,255,0.18)]">✨</div>
         <div className="font-display text-[9px] font-black uppercase tracking-[0.16em]">빈 슬롯</div>
       </div>
     </div>

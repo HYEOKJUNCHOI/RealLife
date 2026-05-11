@@ -2,6 +2,7 @@ import charactersData from '@/data/characters.json';
 import { getCustomCharactersSnapshot } from '@/stores/customCharacterStore.js';
 
 export const CHARACTER_GROUPS = [
+  { key: 'family', label: '우리가족' },
   { key: 'modernCelebrity', label: '현대유명인' },
   { key: 'threeKingdoms', label: '삼국지' },
   { key: 'joseon', label: '조선시대' },
@@ -15,6 +16,9 @@ export const CHARACTER_GROUPS = [
 
 const BASE_CHARACTERS = charactersData.korea ?? [];
 const PAGE_LOAD_SHUFFLE_SEED = Math.floor(Math.random() * 4294967295);
+const FIXED_GROUP_ORDER = {
+  family: ['choiHyeokjun', 'haruna', 'choiDasol', 'choiDabin'],
+};
 
 const seededRandom = (seed) => {
   let value = seed >>> 0;
@@ -49,14 +53,19 @@ const sortByGroup = (items) => {
     if (!firstSeen.has(group)) firstSeen.set(group, index);
   });
 
-  const groups = [...firstSeen.keys()].sort((groupA, groupB) => {
-    const countDiff = (groupCounts[groupB] ?? 0) - (groupCounts[groupA] ?? 0);
-    if (countDiff !== 0) return countDiff;
-    return (firstSeen.get(groupA) ?? 0) - (firstSeen.get(groupB) ?? 0);
-  });
+  const groups = shuffleWithSeed([...firstSeen.keys()], PAGE_LOAD_SHUFFLE_SEED ^ 0x9E3779B9);
 
   return groups.flatMap((group, groupIndex) => {
     const bucket = items.filter((character) => (character.group ?? 'etc') === group);
+    const fixedOrder = FIXED_GROUP_ORDER[group];
+    if (fixedOrder) {
+      return [...bucket].sort((characterA, characterB) => {
+        const orderA = fixedOrder.indexOf(characterA.id);
+        const orderB = fixedOrder.indexOf(characterB.id);
+        if (orderA === -1 || orderB === -1) return orderA === -1 ? 1 : -1;
+        return orderA - orderB;
+      });
+    }
     return shuffleWithSeed(bucket, PAGE_LOAD_SHUFFLE_SEED + groupIndex * 9973);
   });
 };

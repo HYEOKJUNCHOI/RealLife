@@ -80,6 +80,21 @@ export const apartmentPassiveIncome = (state, playerId) => {
   return total;
 };
 
+const createLottoEvent = (rng, label = '휴게소 로또') => {
+  const candidates = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const lottoNumbers = rng.shuffle(candidates).slice(0, 3).sort((a, b) => a - b);
+  return {
+    kind: 'chance_draw',
+    card: label,
+    cardId: 'lotto',
+    description: '시스템이 뽑은 숫자 3개 중 추가 주사위 합을 맞히면 500만원을 받습니다.',
+    lottoNumbers,
+    lottoPrize: 500,
+    requiresLottoRoll: true,
+    effectText: `당첨 숫자 ${lottoNumbers.join(' · ')} · 추가 주사위를 굴려 맞히면 +500만`,
+  };
+};
+
 // 자기 턴 시작 전 자동 차감/입금
 export const onTurnStart = (state, playerId, log) => {
   const player = state.players[playerId];
@@ -116,6 +131,13 @@ export const onTurnStart = (state, playerId, log) => {
   const auto = tryAutoRepayCredit(player);
   if (auto > 0) log.push({ kind: 'credit_auto_repay', amt: auto });
 
+  // 기본 월급 패시브
+  const salaryBonus = player.salaryBonus ?? 0;
+  if (salaryBonus > 0) {
+    player.cash += salaryBonus;
+    log.push({ kind: 'salary_bonus', amt: salaryBonus, passives: player.activatedPassives ?? [] });
+  }
+
   // 생활비
   const living = chargeLivingCost(state, playerId);
   log.push({ kind: 'living', amt: living });
@@ -143,7 +165,7 @@ const movePlayer = (state, playerId, steps, log) => {
 };
 
 // 도착 칸 처리
-const handleTileArrival = (state, playerId, pos, rng, log, turnOptions = {}) => {
+export const handleTileArrival = (state, playerId, pos, rng, log, turnOptions = {}) => {
   const tile = state.board.tiles[pos];
   switch (tile.type) {
     case 'go':
@@ -191,8 +213,7 @@ const handleTileArrival = (state, playerId, pos, rng, log, turnOptions = {}) => 
       break;
     }
     case 'free_parking': {
-      const pot = collectParkingPot(state, playerId);
-      if (pot > 0) log.push({ kind: 'parking_jackpot', amt: pot });
+      log.push(createLottoEvent(rng));
       break;
     }
     case 'jail': {

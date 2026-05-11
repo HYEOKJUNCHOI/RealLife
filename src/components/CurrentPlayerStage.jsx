@@ -24,6 +24,7 @@ import { cn } from '@/lib/cn.js';
 import { getCharacterImg } from '@/lib/assets.js';
 
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
 const displayPlayerName = (player, fallback) => {
   const name = player?.name?.trim();
   return name && name !== player?.character ? name : fallback;
@@ -72,19 +73,24 @@ const AVATAR_POSITION = {
   farmer: 'center 23%',
   chunDooHwan: 'center 18%',
   genghisKhan: 'center 20%',
-  steveJobs: 'center 18%',
-  billGates: 'center 18%',
-  donaldTrump: 'center 18%',
+  steveJobs: 'center calc(18% + 12px)',
+  billGates: 'center calc(18% + 12px)',
+  donaldTrump: 'center calc(18% + 7px)',
   leeJaeMyung: 'center 18%',
   wakizakaYasuharu: 'center 20%',
   toyotomiHideyoshi: 'center 20%',
-  elonMusk: 'center 18%',
+  elonMusk: 'center calc(18% + 12px)',
+  choiHyeokjun: 'center calc(24% + 20px)',
+  haruna: 'center calc(24% + 25px)',
+  choiDasol: 'center calc(24% + 15px)',
+  choiDabin: 'center 48%',
   takedaShingen: 'center 18%',
   liuBei: 'center 18%',
   guanYu: 'center 18%',
   zhangFei: 'center 18%',
   caoCao: 'center 18%',
-  luBu: 'center 18%',
+  luBu: 'calc(50% - 10px) 18%',
+  dongZhuo: 'center 18%',
   luffy: 'center 18%',
   zoro: 'center 18%',
   shanks: 'center 18%',
@@ -104,12 +110,17 @@ const AVATAR_SIZE = {
   wakizakaYasuharu: '245%',
   toyotomiHideyoshi: '245%',
   elonMusk: '255%',
+  choiHyeokjun: '255%',
+  haruna: '390%',
+  choiDasol: '255%',
+  choiDabin: '259%',
   takedaShingen: '255%',
   liuBei: '255%',
   guanYu: '255%',
   zhangFei: '255%',
   caoCao: '255%',
   luBu: '255%',
+  dongZhuo: '255%',
   luffy: '255%',
   zoro: '255%',
   shanks: '255%',
@@ -130,7 +141,12 @@ function getOwnedPositions(state, playerId) {
   for (const tile of PROP_TILES) {
     if (state.tileState[tile.pos]?.owner === playerId) out.push(tile.pos);
   }
-  return out;
+  return out.sort((a, b) => {
+    const ta = state.board.tiles[a];
+    const tb = state.board.tiles[b];
+    if ((ta?.color ?? '') !== (tb?.color ?? '')) return String(ta?.color ?? '').localeCompare(String(tb?.color ?? ''));
+    return a - b;
+  });
 }
 
 // salaryBonus 기반으로 활성화된 패시브를 계산한다.
@@ -175,18 +191,20 @@ export default function CurrentPlayerStage({
   onDiceModeChange,
   onAppDiceRoll,
   lastDiceRoll,
-  onShowNoticeLog,
-  hasNoticeLog = false,
   compact = false,
   hideSkipOverlay = false,
   bgmEnabled = false,
   onToggleBgm,
+  onStationResign,
+  hideDicePanel = false,
+  statusActions = null,
 }) {
   if (!player) return null;
   const baseMeta = CHAR_META[player.character] ?? { name: player.character, color: '#666', slot: null };
   // 셋업에서 입력한 이름을 우선 표시한다.
   const meta = {
     ...baseMeta,
+    color: PLAYER_SIGNATURE_COLORS[index] ?? baseMeta.color,
     name: displayPlayerName(player, baseMeta.name),
   };
   const characterImg = getCharacterImg(player.character);
@@ -345,7 +363,10 @@ export default function CurrentPlayerStage({
       <div className={cn('flex min-w-0 flex-col', isSkipping && 'grayscale')}>
 
       {/* 상단 상태 영역 */}
-      <div className="relative grid h-[112px] grid-cols-[74px_1fr] gap-2 overflow-visible border-b border-white/45 bg-white/68 px-2.5 py-1.5 pr-[116px]">
+      <div
+        className="relative mx-2.5 mt-1.5 grid h-[100px] grid-cols-[74px_1fr] gap-2 overflow-visible rounded-xl border border-white/70 bg-white/82 px-2 py-1 pr-[116px]"
+        style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 2px ${meta.color}55, 0 0 0 5px ${meta.color}20, 0 0 24px ${meta.color}48, 0 10px 22px -18px rgba(36,57,74,0.7)` }}
+      >
         {/* 플레이어 아바타 */}
         <motion.div
           key={player.character + index}
@@ -362,13 +383,14 @@ export default function CurrentPlayerStage({
             )}
           {characterImg ? (
             <div
-              className="h-[62px] w-[62px] rounded-full border-2 border-white/70 bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_10px_22px_-16px_rgba(0,0,0,0.85),0_0_0_3px_rgba(255,255,255,0.22)]"
+              className="h-[62px] w-[62px] rounded-full border-2 bg-white/45 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_10px_22px_-16px_rgba(0,0,0,0.85),0_0_0_3px_rgba(255,255,255,0.22)]"
               style={{
                 backgroundImage: 'url(' + characterImg + ')',
                 backgroundSize: AVATAR_SIZE[player.character] ?? '155%',
                 backgroundPosition: AVATAR_POSITION[player.character] ?? 'center 22%',
                 backgroundRepeat: 'no-repeat',
                 backgroundColor: meta.color + '22',
+                borderColor: '#FFD54F',
                 filter: isCashBankrupt ? 'grayscale(1) brightness(0.72)' : undefined,
               }}
               aria-label={meta.name}
@@ -394,8 +416,9 @@ export default function CurrentPlayerStage({
               data-current-player-deal-target
               className={cn(
                 'shrink-0 w-[5.6em] truncate font-board font-extrabold leading-none text-ink',
-                compact ? 'text-[19px]' : 'text-[24px]',
+                compact ? 'text-[18px]' : 'text-[22px]',
                 Array.from(meta.name ?? '').length === 3 && 'tracking-[0.28em]',
+                Array.from(meta.name ?? '').length > 3 && Array.from(meta.name ?? '').length <= 6 && 'tracking-normal',
               )}
               style={{ wordBreak: 'keep-all' }}
             >
@@ -424,57 +447,53 @@ export default function CurrentPlayerStage({
             <HeaderChip icon={'\uD83D\uDED2'} label={'\uC0DD\uD65C'} value={'-' + livingCost} unit={'\uB9CC'} tone="red" size="normal" />
             <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-' + fmt(loanInterest)} unit={'\uB9CC'} tone="red" size="normal" />
             {aptIncome > 0 && <RentIncomeChip value={aptIncome} />}
-            {stationTiles.length > 0 && <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * stationTiles.length} sub={`${stationTiles.length}역 · 누적 ${fmt(stationFund)}만`} />}
+            {stationTiles.length > 0 && <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * stationTiles.length} sub={`${stationTiles.length}역 · 누적 ${fmt(stationFund)}만`} onClick={onStationResign} />}
             {institutionIncome > 0 && <IncomeBadge icon="⚡" label="기관 월급" value={institutionIncome} sub={`${institutionTiles.length}곳 보유`} />}
           </div>
         </div>
 
       </div>
       {/* 보유 부동산 */}
-      <div className="flex flex-1 min-h-0 flex-col px-3 pb-[23px] pt-3 pl-3 md:px-3 md:pb-[23px] md:pt-3">
-        <div className="mb-2.5 flex items-center justify-between">
+      <div className="mx-2.5 mb-[14px] mt-[14px] flex flex-1 min-h-0 flex-col rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22),0_12px_24px_-20px_rgba(36,57,74,0.72)]">
+        <div className="mb-[5px] flex items-center justify-between">
           <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{'\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
             <span className="ml-1.5 font-semibold text-ink/40 tabular-nums">
               {owned.length}{owned.length > OWNED_SLOTS ? `/${owned.length}` : ` / ${OWNED_SLOTS}`}
             </span>
           </span>
-          <button
-            type="button"
-            onClick={onShowNoticeLog}
-            disabled={!hasNoticeLog}
-            className="rounded-lg border border-white/70 bg-white/78 px-2.5 py-1 font-board text-sm leading-none text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            알림보기
-          </button>
+
         </div>
 
-        {/* 권리증 mini 4x2 */}
-        <div className="grid flex-1 min-h-[120px] grid-cols-4 grid-rows-2 gap-2 pt-0.5">
+        {/* 보유 부동산 캡슐 안에서 8개 섹션을 먼저 나누고, 각 섹션 안에 카드만 다시 그린다. */}
+        <div className="grid flex-1 min-h-0 content-start grid-cols-4 auto-rows-[calc((100%-10px)/2)] gap-x-1.5 gap-y-[10px] pt-0.5">
           {Array.from({ length: OWNED_SLOTS }).map((_, idx) => {
             const pos = owned[idx];
-            if (pos == null) return <EmptyDeed key={`empty-${idx}`} previewPos={idx === pendingPreviewSlot ? pendingPurchase.pos : null} state={state} onClick={idx === pendingPreviewSlot ? () => openModal(pendingPurchase.pos, index) : undefined} />;
+            const isPending = idx === pendingPreviewSlot;
+            const sectionClassName = "relative min-h-0 overflow-visible rounded-lg border border-white/42 bg-white/18 p-[2px] shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_0_0_1px_rgba(148,163,184,0.14),0_0_10px_rgba(100,116,139,0.10)]";
             return (
-              <button
-                key={pos}
-                type="button"
-                data-deed-slot={idx}
-                data-deed-pos={pos}
-                onClick={() => openModal(pos, index)}
-                className="relative block h-full min-h-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-monopoly-red"
-              >
-                <span className="deed-slot-placeholder absolute inset-0" aria-hidden="true">
-                  <EmptyDeed />
-                </span>
-                <span
-                  key={`${pos}-${state._lastDeedAdded?.nonce ?? 'base'}`}
-                  className={cn(
-                    'deed-slot-card relative z-[1] block h-full w-full p-[2px]',
-                    state._lastDeedAdded?.playerId === index && state._lastDeedAdded?.pos === pos && 'deed-slot-card-insert',
-                  )}
-                >
-                  <PropertyDeedMini pos={pos} className="scale-[0.985]" />
-                </span>
-              </button>
+              <div key={pos ?? `empty-${idx}`} data-deed-slot={idx} data-deed-pos={pos ?? undefined} className={sectionClassName}>
+                {pos == null ? (
+                  <div className="h-full w-full overflow-visible">
+                    <EmptyDeed previewPos={isPending ? pendingPurchase.pos : null} state={state} onClick={isPending ? () => openModal(pendingPurchase.pos, index) : undefined} />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openModal(pos, index)}
+                    className="relative block h-full min-h-0 w-full overflow-visible rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/70"
+                  >
+                    <span
+                      key={`${pos}-${state._lastDeedAdded?.nonce ?? 'base'}`}
+                      className={cn(
+                        'deed-slot-card relative block h-full w-full',
+                        state._lastDeedAdded?.playerId === index && state._lastDeedAdded?.pos === pos && 'deed-slot-card-insert',
+                      )}
+                    >
+                      <PropertyDeedMini pos={pos} />
+                    </span>
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -496,12 +515,12 @@ export default function CurrentPlayerStage({
           background: 'linear-gradient(90deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 100%)',
         }}
       >
-        <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-white/62 bg-white/72 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_16px_32px_-28px_rgba(36,57,74,0.72)]">
-          <div className="w-full shrink-0 rounded-xl border border-white/70 bg-white/82 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_22px_-18px_rgba(36,57,74,0.7)]">
+        <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-300/68 bg-white/72 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22),0_16px_32px_-28px_rgba(36,57,74,0.72)]">
+          <div className="w-full shrink-0 rounded-xl border border-white/70 bg-white/82 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_0_0_1px_rgba(148,163,184,0.30),0_0_18px_rgba(100,116,139,0.28),0_10px_22px_-18px_rgba(36,57,74,0.7)]">
             <div className="flex items-center justify-between gap-2">
               <div
                 className={cn(
-                  'flex h-[32px] flex-1 items-center justify-center gap-1.5 rounded-md border border-white/70 px-2 font-display text-[15px] font-extrabold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_18px_-16px_rgba(36,57,74,0.65)]',
+                  'flex h-[32px] flex-1 items-center justify-center gap-1.5 rounded-md border border-white/70 px-2 font-display text-[15px] font-extrabold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.20),0_8px_18px_-16px_rgba(36,57,74,0.65)]',
                   isTimerUrgent ? 'bg-monopoly-red text-white' : 'bg-white/88 text-ink',
                 )}
                 aria-label="남은 게임 시간"
@@ -513,7 +532,7 @@ export default function CurrentPlayerStage({
               <button
                 type="button"
                 onClick={() => setSettingsOpen((open) => !open)}
-                className="grid h-[32px] w-10 shrink-0 place-items-center rounded-lg border border-white/70 bg-white/86 font-display text-[17px] font-extrabold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none"
+                className="grid h-[32px] w-10 shrink-0 place-items-center rounded-lg border border-white/70 bg-white/86 font-display text-[17px] font-extrabold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.20),0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none"
                 aria-label="게임 설정"
               >
                 ⚙
@@ -521,12 +540,12 @@ export default function CurrentPlayerStage({
             </div>
           </div>
 
-          <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.7)]">
+          <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.34),rgba(255,255,255,0.16),rgba(148,163,184,0.10))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.28),0_0_18px_rgba(100,116,139,0.24),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[10px]">
             <button
               type="button"
               onClick={onOpenBoard}
               disabled={!onOpenBoard}
-              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-xl border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(224,244,255,0.82)_100%)] px-3 font-board text-[18px] leading-none text-ink shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:opacity-45"
+              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-xl border border-white/75 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(241,245,249,0.52),rgba(255,255,255,0.24))] px-3 font-board text-[18px] leading-none text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.18),0_10px_22px_-18px_rgba(36,57,74,0.72)] backdrop-blur-[8px] transition active:translate-y-1 active:shadow-none disabled:opacity-45"
             >
               <span>🗺️</span>
               <span>보드판</span>
@@ -537,19 +556,25 @@ export default function CurrentPlayerStage({
 
           {badgeTestMode && <BadgeLayoutTestPanel />}
 
-          <RealDiceTurnPanel
-            color={meta.color}
-            result={turnResult}
-            onDiceRoll={onDiceRoll}
-            diceMode={diceMode}
-            onDiceModeChange={onDiceModeChange}
-            onAppDiceRoll={onAppDiceRoll}
-            lastDiceRoll={lastDiceRoll}
-            diceLocked={diceLocked}
-            onUnlockDice={onUnlockDice}
-            onOpenResultCard={onOpenResultCard}
-            disabled={hideSkipOverlay}
-          />
+          {hideDicePanel ? (
+            <div className="real-dice-panel mt-auto mb-[78px] translate-y-[80px] w-full shrink-0 rounded-xl border border-white/70 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.30),0_0_20px_rgba(100,116,139,0.26),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
+              {statusActions}
+            </div>
+          ) : (
+            <RealDiceTurnPanel
+              color={meta.color}
+              result={turnResult}
+              onDiceRoll={onDiceRoll}
+              diceMode={diceMode}
+              onDiceModeChange={onDiceModeChange}
+              onAppDiceRoll={onAppDiceRoll}
+              lastDiceRoll={lastDiceRoll}
+              diceLocked={diceLocked}
+              onUnlockDice={onUnlockDice}
+              onOpenResultCard={onOpenResultCard}
+              disabled={hideSkipOverlay}
+            />
+          )}
         </div>
       </aside>
     </section>
@@ -576,14 +601,28 @@ function DiceFace({ value = 1, rolling = false, ready = false }) {
       transition={rolling ? { duration: 0.18, ease: 'linear' } : { duration: 0.22, ease: 'easeOut' }}
     >
       {ready ? (
-        <span className="select-none text-[58px] leading-none drop-shadow-[0_7px_0_rgba(15,12,10,0.72)]" aria-label="ready dice">🎲</span>
+        <div className="relative h-full w-full drop-shadow-[0_5px_0_rgba(15,12,10,0.78)]" aria-label="ready dice">
+          <svg viewBox="0 0 100 100" className="h-full w-full select-none opacity-95" aria-hidden="true">
+            <defs>
+              <linearGradient id="readyDiceBody" x1="14" y1="8" x2="88" y2="92" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#ffffff" />
+                <stop offset="0.46" stopColor="#fffdf4" />
+                <stop offset="1" stopColor="#e7ddc2" />
+              </linearGradient>
+            </defs>
+            <rect x="7" y="6" width="86" height="86" rx="18" fill="url(#readyDiceBody)" stroke="#120d09" strokeWidth="4" />
+            <path d="M16 17 C32 8 67 8 84 17" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" opacity="0.72" />
+            <path d="M84 20 C91 40 88 70 76 84" fill="none" stroke="#6b5b3b" strokeWidth="5" strokeLinecap="round" opacity="0.12" />
+          </svg>
+          <span className="absolute inset-0 grid place-items-center select-none font-display text-[34px] font-black leading-none text-ink drop-shadow-[0_2px_0_rgba(255,255,255,0.72)]">?</span>
+        </div>
       ) : (
         <img
           key={safeValue}
           src={`/ui/dice-face-${safeValue}.svg`}
           alt={`${safeValue}`}
           draggable={false}
-          className="h-full w-full select-none object-contain drop-shadow-[0_8px_0_#0F0C0A]"
+          className="h-full w-full select-none object-contain drop-shadow-[0_5px_0_rgba(15,12,10,0.78)]"
         />
       )}
     </motion.div>
@@ -595,9 +634,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
   const resultTitle = result?.title ?? '주사위';
   const resultText = result?.text ?? '굴릴 준비 완료';
   const resultIcon = result?.icon ?? '🎲';
-  const isAction = result?.kind === 'buy' || result?.kind === 'card' || result?.kind === 'rent';
   const showCardResult = result?.kind === 'card';
-  const isRent = result?.kind === 'rent';
   const isJail = result?.kind === 'jail' || result?.kind === 'jail_sent';
   const showNumberPad = !showCardResult && !isJail;
   const [cardFlipped, setCardFlipped] = useState(false);
@@ -607,7 +644,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
   }, [result?.kind, result?.cardKind, result?.cardId, result?.eventId, result?.text]);
 
   return (
-    <div className="real-dice-panel mt-auto mb-[60px] w-full shrink-0 rounded-2xl border-t border-white/56 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]" style={{ '--player-color': color }}>
+    <div className="real-dice-panel mt-auto mb-[78px] translate-y-[80px] w-full shrink-0 rounded-xl border border-white/70 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.30),0_0_20px_rgba(100,116,139,0.26),0_14px_28px_-22px_rgba(36,57,74,0.72)]" style={{ '--player-color': color }}>
       {isJail ? (
         <div className="overflow-hidden rounded-xl border-2 border-ink-line bg-[linear-gradient(135deg,#f1f5f9_0%,#dbeafe_48%,#93c5fd_100%)] p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_3px_0_#0F0C0A]">
           <div className="rounded-lg border-2 border-ink-line bg-white/88 px-3 py-2 text-center shadow-[0_2px_0_rgba(15,12,10,0.55)]">
@@ -642,73 +679,44 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
             </button>
           )}
         </div>
-      ) : isRent ? (
-        <div className="overflow-hidden rounded-2xl border border-white/28 bg-[linear-gradient(135deg,rgba(15,12,10,0.84)_0%,rgba(127,29,29,0.66)_58%,rgba(255,255,255,0.16)_100%)] p-2.5 text-white shadow-[0_16px_34px_-22px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.24)]">
-          <div className="relative overflow-hidden rounded-xl border border-white/24 bg-white/12 px-3 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_10px_24px_-20px_rgba(0,0,0,0.8)]">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.22),transparent_42%)]" />
-            <div className="relative font-display text-[8px] font-black uppercase tracking-[0.22em] text-white/58">통행료 정산</div>
-            <div className="relative mt-1 flex items-center justify-center gap-2">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/36 bg-white/14 text-[20px] shadow-[0_4px_10px_rgba(0,0,0,0.24)]">💸</span>
-              <div className="min-w-0 text-left">
-                <div className="truncate font-board text-[19px] font-extrabold leading-none text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">
-                  {result?.tileName ?? resultTitle}
-                </div>
-                <div className="mt-1 truncate font-board text-[13px] text-white/68">
-                  {result?.ownerName ?? '소유자'}님에게 통행료
-                </div>
-              </div>
-            </div>
-            <motion.div
-              className="relative mx-auto mt-2 inline-flex items-center justify-center rounded-full border border-red-200/62 bg-red-500/18 px-4 py-1.5 font-board text-[22px] font-extrabold text-red-100 shadow-[0_0_22px_rgba(248,113,113,0.28),inset_0_1px_0_rgba(255,255,255,0.18)]"
-              animate={{ scale: [1, 1.06, 1] }}
-              transition={{ duration: 0.58, repeat: 1 }}
-            >
-              -{fmt(result?.amount)}만 지출
-            </motion.div>
-          </div>
-          {diceLocked && onUnlockDice && (
-            <button
-              type="button"
-              onClick={onUnlockDice}
-              className="mt-2 h-9 w-full rounded-md border border-white/30 bg-white/14 font-board text-[14px] font-extrabold text-white whitespace-nowrap shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] active:translate-y-0.5"
-            >
-              다시 입력
-            </button>
-          )}
-        </div>
       ) : showNumberPad ? (
-        <div className="rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)]">
-          <div className="mb-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-white/70 bg-white/82 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
-            <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'keypad' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'keypad' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>직접 입력</button>
-            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('h-9 rounded-lg border border-white/70 font-board text-[13px] font-extrabold leading-none shadow-[0_8px_16px_-14px_rgba(36,57,74,0.7)] whitespace-nowrap', diceMode === 'app' ? 'bg-white/90 text-[#15324a]' : 'bg-white/36 text-ink/58')} style={diceMode === 'app' ? { borderColor: `${color}88`, boxShadow: `0 0 0 1px ${color}33 inset, 0 8px 16px -14px ${color}` } : undefined}>주사위</button>
+        <>
+          <div className="relative mb-1.5 grid grid-cols-2 rounded-full border border-white/70 bg-white/54 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_0_0_1px_rgba(148,163,184,0.18),0_0_10px_rgba(100,116,139,0.14)] backdrop-blur-[8px]">
+            <div
+              className="absolute bottom-1 top-1 rounded-full border bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_10px_rgba(100,116,139,0.16),0_8px_16px_-14px_rgba(36,57,74,0.7)]"
+              style={{ left: diceMode === 'keypad' ? 4 : '50%', right: diceMode === 'keypad' ? '50%' : 4, borderColor: diceMode === 'keypad' ? 'rgba(220,38,38,0.46)' : 'rgba(37,99,235,0.46)', boxShadow: diceMode === 'keypad' ? 'inset 0 1px 0 rgba(255,255,255,0.82), 0 0 0 1px rgba(220,38,38,0.18), 0 0 10px rgba(220,38,38,0.16), 0 8px 16px -14px rgba(220,38,38,0.72)' : 'inset 0 1px 0 rgba(255,255,255,0.82), 0 0 0 1px rgba(37,99,235,0.18), 0 0 10px rgba(37,99,235,0.16), 0 8px 16px -14px rgba(37,99,235,0.72)' }}
+              aria-hidden="true"
+            />
+            <button type="button" onClick={() => onDiceModeChange?.('keypad')} className={cn('relative z-[1] h-9 rounded-full font-board text-[13px] font-extrabold leading-none transition whitespace-nowrap', diceMode === 'keypad' ? 'text-[#15324a]' : 'text-ink/58')}>직접 입력</button>
+            <button type="button" onClick={() => onDiceModeChange?.('app')} className={cn('relative z-[1] h-9 rounded-full font-board text-[13px] font-extrabold leading-none transition whitespace-nowrap', diceMode === 'app' ? 'text-[#15324a]' : 'text-ink/58')}>주사위</button>
           </div>
           {diceMode === 'app' ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-center gap-3 rounded-xl border border-white/70 bg-white/82 px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] [perspective:760px]">
-                <DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} />
-                <span className="font-display text-[24px] font-black text-ink">+</span>
-                <DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} />
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-white/70 bg-white/82 px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.18),0_0_10px_rgba(100,116,139,0.14)] [perspective:760px]">
+                <span className="translate-x-[11px]"><DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} /></span>
+                <span className="font-display text-[22px] font-black leading-none text-ink">➕</span>
+                <span className="-translate-x-[11px]"><DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} /></span>
               </div>
               <button
                 type="button"
                 disabled={disabled || diceLocked}
                 onClick={onAppDiceRoll}
                 className="h-14 w-full rounded-xl border border-white/80 px-2 font-board text-[20px] font-extrabold leading-none text-[#15324a] shadow-[0_12px_24px_-18px_rgba(36,57,74,0.78)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 whitespace-nowrap"
-                style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}26 100%)`, borderColor: `${color}66` }}
+                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(196,181,253,0.52) 100%)', borderColor: 'rgba(139,92,246,0.58)' }}
               >
                 주사위 굴리기
               </button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-white/70 bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
+              <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-white/70 bg-white/82 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.18),0_0_10px_rgba(100,116,139,0.14)]">
                 {nums.map((num) => (
                   <button
                     key={num}
                     type="button"
                     disabled={disabled || diceLocked}
                     onClick={() => onDiceRoll?.(num)}
-                    className="h-[46px] rounded-xl border border-white/80 font-display text-[19px] font-extrabold leading-none text-[#15324a] shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+                    className="h-[46px] rounded-xl border border-white/80 font-display text-[19px] font-extrabold leading-none text-[#15324a] shadow-[0_0_0_1px_rgba(148,163,184,0.16),0_0_8px_rgba(100,116,139,0.12),0_10px_22px_-18px_rgba(36,57,74,0.72)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
                     style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.98) 0%, ${color}18 100%)`, borderColor: `${color}44` }}
                   >
                     {num}
@@ -726,7 +734,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
               )}
             </>
           )}
-        </div>
+        </>
       ) : (
         <div className="rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)]">
           <button
@@ -769,7 +777,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
                 <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-10 text-white">
                   <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/66">{result?.cardKind ?? 'card'}</div>
                   <div className="mt-0.5 font-board text-[22px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{result?.cardName ?? resultTitle}</div>
-                  <div className="mt-1.5 line-clamp-2 font-board text-[13px] leading-snug text-white/88">{result?.revealText ?? '카드 확인 후 정산을 공개합니다.'}</div>
+                  <div className="mt-1.5 line-clamp-2 font-board text-[13px] leading-snug text-white/88">{result?.revealText ?? <>카드 확인 후<br />정산을 공개합니다.</>}</div>
                 </div>
               </div>
             </motion.div>
@@ -1046,9 +1054,10 @@ function BadgeLayoutTestPanel() {
   );
 }
 
-function IncomeBadge({ icon, label, value, sub }) {
-  return (
-    <span className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-[9px] border-2 border-emerald-700 bg-emerald-100 px-2 font-display text-[9px] font-bold leading-none text-emerald-900 shadow-[inset_0_2px_0_rgba(255,255,255,0.62),0_2px_0_#0F0C0A]" title={sub ?? `${label} +${fmt(value)}만`}>
+function IncomeBadge({ icon, label, value, sub, onClick }) {
+  const className = "inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-[9px] border-2 border-emerald-700 bg-emerald-100 px-2 font-display text-[9px] font-bold leading-none text-emerald-900 shadow-[inset_0_2px_0_rgba(255,255,255,0.62),0_2px_0_#0F0C0A]";
+  const content = (
+    <>
       <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink-line/35 bg-white/75 text-[11px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.95),inset_0_-1px_2px_rgba(0,0,0,0.12)]" aria-hidden="true">
         {icon}
       </span>
@@ -1056,8 +1065,12 @@ function IncomeBadge({ icon, label, value, sub }) {
         <span className="opacity-80">{label} <b className="tabular-nums">+{fmt(value)}만</b></span>
         {sub && <span className="text-[7px] leading-none text-emerald-900/58">{sub}</span>}
       </span>
-    </span>
+    </>
   );
+  if (onClick) {
+    return <button type="button" onClick={onClick} className={cn(className, 'active:translate-y-0.5 active:shadow-none')} title={`${sub ?? `${label} +${fmt(value)}만`} · 퇴직신청`}>{content}</button>;
+  }
+  return <span className={className} title={sub ?? `${label} +${fmt(value)}만`}>{content}</span>;
 }
 
 function HeaderChip({ label, value, unit, tone = 'paper', icon, size = 'normal', subValue = null }) {
@@ -1121,7 +1134,7 @@ function PassiveChip({ passive, active, compact = false, separated = false }) {
     <span
       className={cn(
         'inline-flex h-[32px] shrink-0 items-center justify-center gap-1 overflow-hidden rounded-[9px] border-2 px-1 font-display leading-none',
-        active ? 'w-[76px] border-ink-line text-ink' : 'w-[64px] border-dashed border-ink/25 bg-transparent text-ink/48',
+        active ? 'w-[76px] border-ink-line text-ink' : 'w-[64px] border-ink/18 bg-transparent text-ink/48',
       )}
       style={{
         background: active ? BUTTON_TONES.gold.bg : 'transparent',
@@ -1254,16 +1267,17 @@ function EmptyDeed({ previewPos = null, state = null, onClick } = {}) {
     </div>
   ) : (
     <div
-      className="relative h-full w-full overflow-hidden rounded-md border-2 border-dashed border-ink/55 bg-white/18 text-ink/35 grayscale saturate-0"
+      className="relative h-full w-full overflow-hidden rounded-md border-2 border-white/28 bg-[linear-gradient(135deg,rgba(255,255,255,0.24)_0%,rgba(148,163,184,0.24)_46%,rgba(51,65,85,0.22)_100%)] text-ink/48 shadow-[inset_0_1px_0_rgba(255,255,255,0.42),inset_0_-18px_34px_rgba(15,23,42,0.10),0_0_0_1px_rgba(148,163,184,0.28),0_0_20px_rgba(100,116,139,0.24)] backdrop-blur-[10px]"
       aria-hidden="true"
     >
-      <div className="absolute inset-1 rounded-[5px] border border-ink/42 bg-[linear-gradient(180deg,rgba(255,255,255,0.38)_0%,rgba(20,18,16,0.10)_100%)]" />
-      <div className="absolute inset-x-2 top-2 h-[24%] rounded-sm bg-ink/38" />
+      <div className="absolute inset-1 rounded-[5px] border border-white/28 bg-[linear-gradient(180deg,rgba(255,255,255,0.20)_0%,rgba(255,255,255,0.06)_100%)]" />
+      <div className="absolute -left-8 top-4 h-12 w-24 -rotate-[24deg] bg-[linear-gradient(90deg,transparent_0%,rgba(238,253,255,0.42)_48%,transparent_78%)] blur-[4px]" />
+      <div className="absolute inset-x-2 top-2 h-[24%] rounded-sm border border-white/22 bg-white/18 shadow-[inset_0_1px_0_rgba(255,255,255,0.36)]" />
       <div className="absolute inset-x-2 top-[38%] space-y-1">
-        <div className="mx-auto h-1.5 w-10 rounded-full bg-ink/18" />
-        <div className="mx-auto h-1.5 w-8 rounded-full bg-ink/14" />
+        <div className="mx-auto h-1.5 w-10 rounded-full bg-white/30" />
+        <div className="mx-auto h-1.5 w-8 rounded-full bg-white/22" />
       </div>
-      <div className="absolute inset-x-0 bottom-2 text-center font-display text-[8px] font-black uppercase tracking-[0.18em] text-ink/20">TITLE DEED</div>
+      <div className="absolute inset-x-0 bottom-2 text-center font-display text-[8px] font-black uppercase tracking-[0.18em] text-ink/24">TITLE DEED</div>
     </div>
   );
   if (!onClick) return body;

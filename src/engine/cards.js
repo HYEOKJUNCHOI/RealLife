@@ -7,6 +7,22 @@ import { currentPrice } from './inflation.js';
 const moneyText = (amount) => `${amount > 0 ? '+' : ''}${amount}만`;
 const tileName = (state, pos) => state.board.tiles[pos]?.names?.ko ?? state.board.tiles[pos]?.name ?? '보유 부동산';
 const playerName = (state, playerId) => state.players[playerId]?.name ?? `${playerId + 1}P`;
+const PASSIVE_CARD_BONUS = {
+  marriage: { id: 1, name: '결혼', delta: 30 },
+  job_change: { id: 3, name: '이직', delta: 50 },
+  startup: { id: 4, name: '창업', delta: 50 },
+};
+
+const applyPassiveBonus = (player, cardId) => {
+  const passive = PASSIVE_CARD_BONUS[cardId];
+  if (!passive || !player) return null;
+  const activated = new Set(player.activatedPassives ?? []);
+  if (activated.has(passive.id)) return { ...passive, alreadyActive: true };
+  activated.add(passive.id);
+  player.activatedPassives = [...activated];
+  player.salaryBonus = (player.salaryBonus ?? 0) + passive.delta;
+  return { ...passive, alreadyActive: false };
+};
 
 // =================== 찬스 카드 (즉시 발동) ===================
 
@@ -23,8 +39,9 @@ export const CHANCE_CARDS = [
   { id: 'military', name: '군 입대', description: '입대 지원금 200만을 받고 3턴 쉽니다.', delta: +200, skipTurns: 3 },
   { id: 'holiday_bonus', name: '명절 보너스', description: '명절 보너스를 받습니다.', delta: +100 },
   { id: 'accident', name: '사고', description: '사고 처리 비용을 지불합니다.', delta: -150 },
-  { id: 'lotto', name: '로또', description: '로또에 당첨되어 상금을 받습니다.', delta: +500 },
+  { id: 'lotto', name: '로또', description: '시스템이 뽑은 숫자 3개 중 추가 주사위 합을 맞히면 500만원을 받습니다.', lottoPrize: +500 },
   { id: 'subscription_win', name: '청약 당첨', description: '보유 부동산 1곳을 한 단계 업그레이드합니다.', upgrade: true },
+
   { id: 'move_forward_3', name: '앞으로 3칸', description: '말을 앞으로 3칸 이동합니다.', moveSteps: +3 },
   { id: 'move_forward_2', name: '앞으로 2칸', description: '말을 앞으로 2칸 이동합니다.', moveSteps: +2 },
   { id: 'move_back_3', name: '뒤로 3칸', description: '말을 뒤로 3칸 이동합니다.', moveSteps: -3 },
@@ -64,6 +81,31 @@ export const drawChanceCard = (state, playerId, rng, { deferEffects = false } = 
     if (!deferEffects) player.cash += card.delta;
     log.delta = card.delta;
     log.effectText = `${card.description} (${moneyText(card.delta)})`;
+  }
+
+  if (PASSIVE_CARD_BONUS[card.id]) {
+    const passive = !deferEffects ? applyPassiveBonus(player, card.id) : PASSIVE_CARD_BONUS[card.id];
+    log.passiveId = PASSIVE_CARD_BONUS[card.id].id;
+    log.salaryBonusDelta = passive?.alreadyActive ? 0 : PASSIVE_CARD_BONUS[card.id].delta;
+    log.effectText = passive?.alreadyActive
+      ? `${card.description} (${moneyText(card.delta ?? 0)}, 이미 활성화된 패시브)`
+      : `${card.description} (${moneyText(card.delta ?? 0)}, 월급 +${PASSIVE_CARD_BONUS[card.id].delta}만 패시브 활성)`;
+  }
+
+  if (card.lottoPrize) {
+    const candidates = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const lottoNumbers = rng.shuffle(candidates).slice(0, 3).sort((a, b) => a - b);
+    const roll = !deferEffects ? rng.rollDice() : null;
+    const hit = roll ? lottoNumbers.includes(roll.sum) : false;
+    if (hit) player.cash += card.lottoPrize;
+    log.lottoNumbers = lottoNumbers;
+    log.lottoPrize = card.lottoPrize;
+    log.lottoRoll = roll;
+    log.lottoHit = hit;
+    log.requiresLottoRoll = deferEffects;
+    log.effectText = deferEffects
+      ? `당첨 숫자 ${lottoNumbers.join(' · ')} · 추가 주사위를 굴려 맞히면 +${card.lottoPrize}만`
+      : `당첨 숫자 ${lottoNumbers.join(' · ')} · 추가 주사위 ${roll.sum}${hit ? ` 적중! (+${card.lottoPrize}만)` : ' 아쉽게 실패'}`;
   }
 
   if (card.skipTurns) {
@@ -331,6 +373,7 @@ export const applyDeferredCardEffect = (state, playerId, event) => {
     } else if (event.delta) {
       player.cash += event.delta;
     }
+    if (PASSIVE_CARD_BONUS[event.cardId]) applyPassiveBonus(player, event.cardId);
     if (event.skipTurns) player.skipTurns = (player.skipTurns ?? 0) + event.skipTurns;
     if (event.moveSteps) {
       const boardSize = state.board?.tiles?.length ?? 40;

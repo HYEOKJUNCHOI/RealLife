@@ -1670,6 +1670,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
 }
 
 function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
+  const openTradeSelect = useGameStore((s) => s.openTradeSelect);
   const tiles = state.board?.tiles ?? [];
   const player = state.players?.[replay.playerId];
   const playerColor = player ? (CHAR_META[player.character]?.color ?? '#d83b2f') : '#d83b2f';
@@ -1704,7 +1705,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
 
   return (
     <div
-      className="board-turn-layer absolute inset-0 z-[85] flex items-center justify-center bg-transparent p-2"
+      className="board-turn-layer absolute inset-x-2 top-[112px] bottom-[76px] z-[85] flex items-center justify-center bg-transparent p-2"
       onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
       onClick={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.preventDefault(); event.stopPropagation(); }}
     >
@@ -1764,7 +1765,19 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                       </button>
                     ))}
                   </div>
-                ) : replay.phase === 'inspect' ? null : (
+                ) : replay.phase === 'inspect' ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openTradeSelect?.(replay.playerId);
+                    }}
+                    className="rounded-xl border border-[#17120c]/45 bg-[linear-gradient(180deg,rgba(255,247,214,0.72)_0%,rgba(214,177,93,0.62)_100%)] px-5 py-2.5 font-board text-[20px] font-black leading-none text-[#4b3510] shadow-[0_2px_0_rgba(23,18,12,0.55),0_8px_16px_-14px_rgba(0,0,0,0.45)] transition active:translate-y-1 active:shadow-none"
+                  >
+                    거래 제의
+                  </button>
+                ) : (
                   <div className={cn('board-turn-manual-result scale-75', replay.phase === 'rolling' && 'is-rolling')}>
                     {rollSum ?? replay.manualSteps ?? '?'}
                   </div>

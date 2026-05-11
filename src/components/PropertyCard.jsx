@@ -4,7 +4,7 @@
 import { useGameStore } from '@/stores/gameStore.js';
 import { currentPrice } from '@/engine/inflation.js';
 import { cn } from '@/lib/cn.js';
-import charactersData from '@/data/characters.json';
+
 
 // 컬러셋 → 배경 클래스 (모노폴리 클래식 색)
 const COLOR_BG = {
@@ -41,10 +41,8 @@ const COLOR_HEX = {
   darkblue: '#0072BB',
 };
 
-// 4명 캐릭터 색
-const PLAYER_COLOR = Object.fromEntries(
-  charactersData.korea.map((c, i) => [i, c.color]),
-);
+// 플레이어 번호 고정 시그니처색: 1P 빨강 / 2P 파랑 / 3P 노랑 / 4P 초록
+const PLAYER_COLOR = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
 
 export default function PropertyCard({ pos, compact = false, className }) {
   const state = useGameStore((s) => s.state);

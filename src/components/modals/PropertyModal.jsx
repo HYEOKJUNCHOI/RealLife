@@ -232,6 +232,7 @@ function PropertyActionRail({
   pos,
   initialStage,
   buildBlockReason,
+  cashDelta = 0,
   onClose,
   onBuy,
   onPayRent,
@@ -304,45 +305,43 @@ function PropertyActionRail({
 
       {isOwn && (
         <>
-          <RailButton
-            tone="gold"
-            className="flex-1 sm:flex-none"
-            onClick={() => onTradeSelectOpen?.(visitorId)}
-          >
-            거래<br />제의
-          </RailButton>
-          <RailButton
-            tone="red"
-            className="flex-1 sm:flex-none"
-            disabled={!canBuild || currentStage >= 5}
-            title={buildBlockReason ?? '집짓기'}
-            onClick={() => onDevelop?.(visitorId, pos, +1, initialStage)}
-          >
-            집짓기<br />+
-          </RailButton>
-          <div className="grid flex-1 grid-cols-[32px_1fr_32px] overflow-hidden rounded-md border-2 border-ink-line bg-neutral-200 shadow-[0_3px_0_0_#0F0C0A] sm:flex-none sm:grid-cols-1">
-            <button
-              type="button"
+          <div className="basis-full rounded-lg border-2 border-ink-line bg-white px-2 py-2 text-center shadow-[0_3px_0_#0F0C0A] sm:basis-auto">
+            <div className="font-display text-[9px] font-black uppercase tracking-[0.18em] text-ink/45">잔고</div>
+            <div className="mt-1 font-display text-[22px] font-black leading-none tabular-nums text-ink">
+              {fmt(visitor?.cash)}만
+            </div>
+            {cashDelta !== 0 && (
+              <div className={cn('mt-1 rounded-md border px-2 py-1 font-display text-[15px] font-black leading-none tabular-nums', cashDelta < 0 ? 'border-red-700 bg-red-50 text-red-700 animate-pulse' : 'border-emerald-700 bg-emerald-50 text-emerald-700')}>
+                {cashDelta > 0 ? '+' : ''}{fmt(cashDelta)}만
+              </div>
+            )}
+            {hasStageChange && <div className="mt-1 text-[10px] font-bold text-ink/55">실시간 반영중</div>}
+          </div>
+
+          <div className="basis-full grid grid-cols-1 gap-2 sm:basis-auto">
+            <RailButton
+              tone="red"
+              className="min-h-[56px] text-[12px]"
+              disabled={!canBuild || currentStage >= 5}
+              title={buildBlockReason ?? '집짓기'}
+              onClick={() => onDevelop?.(visitorId, pos, +1, initialStage)}
+            >
+              + 집짓기
+            </RailButton>
+            <RailButton
+              tone="paper"
+              className="min-h-[56px] text-[12px]"
               disabled={currentStage <= 0}
               onClick={() => onDevelop?.(visitorId, pos, -1, initialStage)}
-              className="font-display text-[12px] font-extrabold text-ink transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-ink/25 sm:py-1"
-              aria-label="철거"
             >
-              -
-            </button>
-            <span className="grid min-h-[30px] place-items-center border-x-2 border-ink-line bg-white font-display text-[15px] font-extrabold tabular-nums text-ink sm:border-x-0 sm:border-y-2">
-              {currentStage}
-            </span>
-            <button
-              type="button"
-              disabled={!canBuild || currentStage >= 5}
-              onClick={() => onDevelop?.(visitorId, pos, +1, initialStage)}
-              className="font-display text-[12px] font-extrabold text-ink transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-ink/25 sm:py-1"
-              aria-label="건설"
-            >
-              +
-            </button>
+              - 집철거
+            </RailButton>
           </div>
+
+          <div className="basis-full rounded-md border-2 border-ink-line bg-white px-2 py-1.5 text-center font-display text-[12px] font-black tabular-nums text-ink shadow-[0_2px_0_#0F0C0A] sm:basis-auto">
+            현재 단계 {currentStage}
+          </div>
+
           <RailButton
             tone="green"
             className="flex-1 sm:flex-none"
@@ -378,12 +377,14 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
   // 모달 열렸을 때의 단계 — 세션 내 빌드 취소 vs 기존 판매 판별 기준
   // ⚠️ deps 에 state 넣으면 매 변경마다 리셋되니까 open/pos 만으로 lock
   const [initialStage, setInitialStage] = useState(0);
+  const [initialCash, setInitialCash] = useState(0);
   useEffect(() => {
     if (open && pos != null) {
       const s = useGameStore.getState().state;
       setInitialStage(s?.tileState?.[pos]?.stage ?? 0);
+      setInitialCash(s?.players?.[visitorId]?.cash ?? 0);
     }
-  }, [open, pos]);
+  }, [open, pos, visitorId]);
 
   if (!state || pos == null) return null;
 
@@ -421,6 +422,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
         : null;
   const stageDelta = currentStage - initialStage;
   const hasStageChange = isOwn && stageDelta !== 0;
+  const cashDelta = (visitor?.cash ?? 0) - initialCash;
 
   const revertDevelopmentChange = () => {
     const latestState = useGameStore.getState().state;
@@ -453,7 +455,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
       surface={false}
       className="w-auto max-w-[calc(100vw-24px)] scale-[0.94] sm:scale-[0.9]"
     >
-      <div className={cn('property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar', isEmpty ? 'sm:flex-col' : 'sm:flex-row sm:items-start sm:gap-4')}>
+      <div className={cn('property-modal-shell flex max-h-[88vh] flex-col items-center gap-3 overflow-y-auto overflow-x-hidden p-1 no-scrollbar', isEmpty ? 'sm:flex-col' : 'sm:flex-row sm:items-start sm:gap-4', isOwn && 'sm:items-center')}> 
         <PropertyActionRail
           isEmpty={isEmpty}
           isOpponentOwned={isOpponentOwned}
@@ -471,6 +473,7 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
           pos={pos}
           initialStage={initialStage}
           buildBlockReason={buildBlockReason}
+          cashDelta={cashDelta}
           onClose={onClose}
           onBuy={handleBuy}
           onPayRent={handlePayRent}
@@ -478,11 +481,14 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
           onTradeSelectOpen={handleTradeSelectOpen}
           onRecoveryOpen={handleRecoveryOpen}
           onDevelop={handleDevelop}
-          onConfirmStage={() => setInitialStage(currentStage)}
+          onConfirmStage={() => {
+            setInitialStage(currentStage);
+            setInitialCash(visitor?.cash ?? 0);
+          }}
           onCancelStage={handleCancelDevelopment}
         />
         <div
-          className={cn('property-deed-card deed-surface relative order-1 shrink-0 overflow-hidden', isEmpty ? 'w-[min(80vw,420px)]' : 'w-[min(92vw,312px)] sm:order-2')}
+          className={cn('property-deed-card deed-surface relative order-1 shrink-0 overflow-hidden', isEmpty ? 'w-[min(80vw,420px)]' : isOwn ? 'w-[min(88vw,286px)] sm:order-2' : 'w-[min(92vw,312px)] sm:order-2')}
           style={{ boxShadow: cardShadow }}
         >
           <button

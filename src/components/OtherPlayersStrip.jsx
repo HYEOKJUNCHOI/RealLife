@@ -14,6 +14,7 @@ const displayPlayerName = (player, fallback) => {
 };
 const PROP_TILES = koreaBoard.tiles.filter((t) => t.type === 'property');
 const fmt = (n) => (n ?? 0).toLocaleString('ko-KR');
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
 
 // 캐릭터별 동그란 아바타 background-position — 모자 크기/얼굴 높이 따라 미세조정
 const AVATAR_POSITION = {
@@ -23,19 +24,24 @@ const AVATAR_POSITION = {
   farmer:     'center 23%',  // 패랭이
   chunDooHwan: 'center 18%',
   genghisKhan: 'center 20%',
-  steveJobs: 'center 18%',
-  billGates: 'center 18%',
-  donaldTrump: 'center 18%',
+  steveJobs: 'center calc(18% + 7px)',
+  billGates: 'center calc(18% + 7px)',
+  donaldTrump: 'center calc(18% + 7px)',
   leeJaeMyung: 'center 18%',
   wakizakaYasuharu: 'center 20%',
   toyotomiHideyoshi: 'center 20%',
-  elonMusk: 'center 18%',
+  elonMusk: 'center calc(18% + 7px)',
+  choiHyeokjun: 'center calc(24% + 15px)',
+  haruna: 'center calc(24% + 15px)',
+  choiDasol: 'center calc(24% + 10px)',
+  choiDabin: 'center 48%',
   takedaShingen: 'center 18%',
   liuBei: 'center 18%',
   guanYu: 'center 18%',
   zhangFei: 'center 18%',
   caoCao: 'center 18%',
-  luBu: 'center 18%',
+  luBu: 'calc(50% - 10px) 18%',
+  dongZhuo: 'center 18%',
   luffy: 'center 18%',
   zoro: 'center 18%',
   shanks: 'center 18%',
@@ -56,12 +62,17 @@ const AVATAR_SIZE = {
   wakizakaYasuharu: '245%',
   toyotomiHideyoshi: '245%',
   elonMusk: '255%',
+  choiHyeokjun: '300%',
+  haruna: '390%',
+  choiDasol: '255%',
+  choiDabin: '259%',
   takedaShingen: '255%',
   liuBei: '255%',
   guanYu: '255%',
   zhangFei: '255%',
   caoCao: '255%',
   luBu: '255%',
+  dongZhuo: '255%',
   luffy: '255%',
   zoro: '255%',
   shanks: '255%',
@@ -127,9 +138,11 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
 function PlayerChip({ player: p, index: i, state, onClick }) {
   const baseMeta = CHAR_META[p.character] ?? { name: p.character, color: '#666', slot: null };
   const meta = { ...baseMeta, name: displayPlayerName(p, baseMeta.name) };
+  const frameColor = PLAYER_SIGNATURE_COLORS[i] ?? meta.color;
   const { deeds, houses, apts } = propertyStats(state, i);
   const characterImg = getCharacterImg(p.character);
   const isCashBankrupt = (p.cash ?? 0) <= 0;
+  const stationCount = (state.board?.tiles ?? []).filter((tile) => tile.type === 'railroad' && tile.subType === 'station' && state.tileState?.[tile.pos]?.owner === i).length;
 
   return (
     <button
@@ -137,24 +150,24 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
       onClick={onClick}
       data-player-strip-index={i}
       className={cn(
-        'relative flex h-full shrink-0 items-center gap-1.5 overflow-hidden rounded-lg border border-white/70 bg-white/62 px-1.5 py-1 text-left shadow-[0_10px_20px_-16px_rgba(36,57,74,0.72)] transition active:translate-y-[1px] active:shadow-none backdrop-blur-[10px]',
+        'relative flex h-full shrink-0 items-center gap-1.5 overflow-visible rounded-lg border-2 bg-white/90 px-1.5 py-1 text-left transition active:translate-y-[1px] active:shadow-none backdrop-blur-[10px]',
         (p.bankrupt || isCashBankrupt) && 'opacity-55 grayscale saturate-50',
       )}
       style={{
         minWidth: 188,
-        boxShadow: `inset 0 0 0 2px ${meta.color}22, 0 10px 20px -16px ${meta.color}`,
+        borderColor: frameColor,
+        boxShadow: `0 0 0 1px rgba(255,255,255,0.72), 0 0 14px ${frameColor}55, 0 10px 20px -16px ${frameColor}`,
       }}
     >
-      <div
-        className="absolute left-0 top-0 h-full w-2 border-r-2 border-ink-line"
-        style={{ backgroundColor: meta.color }}
-        aria-hidden="true"
-      />
-      <div className="pointer-events-none absolute inset-x-2 top-1 h-px bg-gradient-to-r from-transparent via-monopoly-gold/70 to-transparent" />
+      {stationCount > 0 && (
+        <div className="pointer-events-none absolute right-3 top-[-2px] z-10 rounded-full border border-emerald-700 bg-emerald-100 px-2 py-0.5 font-display text-[9px] font-black text-emerald-800 shadow-[0_2px_0_#0F0C0A] station-income-pulse">
+          +{stationCount * 10}만 🚉
+        </div>
+      )}
       {/* 캐릭터 — 동그랗게 얼굴 잘 보이게 (캐릭터별 모자 높이 따라 position 분기) */}
       <div className="ml-1 shrink-0">
         <div
-          className="h-9 w-9 rounded-full border-2 shadow-[0_2px_0_0_#0F0C0A,0_0_0_3px_rgba(255,213,79,0.5),0_0_14px_rgba(255,193,7,0.4)]"
+          className="h-9 w-9 rounded-full border-2 shadow-[0_2px_0_0_#0F0C0A,0_0_0_3px_rgba(255,255,255,0.22)]"
           style={{
             backgroundImage: characterImg ? `url(${characterImg})` : undefined,
             backgroundSize: AVATAR_SIZE[p.character] ?? '155%',
@@ -174,11 +187,11 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
         <div className="flex items-center gap-1.5">
           <span
             className="rounded-sm border-2 border-ink-line px-1.5 py-0.5 font-display text-[10px] font-extrabold uppercase tracking-widest leading-none text-white shadow-[0_1px_0_0_#0F0C0A]"
-            style={{ backgroundColor: meta.color }}
+            style={{ backgroundColor: frameColor }}
           >
             {i + 1}p
           </span>
-          <span className="truncate font-board font-extrabold text-[12px] leading-none text-ink">
+          <span className="truncate font-board font-extrabold text-[12px] leading-[1.18] text-ink">
             {meta.name}
           </span>
           {p.inJail && <span className="font-display text-[9px] font-bold text-monopoly-red">감옥</span>}

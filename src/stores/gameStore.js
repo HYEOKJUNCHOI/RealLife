@@ -4,13 +4,15 @@
 import { create } from 'zustand';
 import { createGameState } from '@/engine/gameState.js';
 import { createRng } from '@/engine/rng.js';
-import { advanceTurn, finishGame, playTurn } from '@/engine/rules.js';
+import { advanceTurn, finishGame, handleTileArrival, playTurn } from '@/engine/rules.js';
 import { applyDeferredCardEffect } from '@/engine/cards.js';
+import { handleInstitutionArrival, stationResign } from '@/engine/station.js';
 import { currentPrice, hasColorMonopoly, rentFromStage } from '@/engine/inflation.js';
 import { CREDIT_ELIGIBILITY_CASH, CREDIT_LIMIT, LOANSHARK_LIMIT, round10 } from '@/engine/constants.js';
 import { canTakeCredit, canTakeLoanshark, takeCredit, takeLoanshark } from '@/engine/loan.js';
 
 const SAVE_KEY = 'reallife-save';
+const DEBUG_LOG_KEY = 'reallife-debug-log-v1';
 
 export const useGameStore = create((set, get) => ({
   // 게임 상태
@@ -56,6 +58,10 @@ export const useGameStore = create((set, get) => ({
     state._gameStartNonce = seed;
     state._forceInitialDeal = !!showInitialDeal;
     state._initialDealShown = false;
+    if (typeof localStorage !== 'undefined') {
+      const selected = state.players.map((player, index) => `${index + 1}P ${player.name ?? player.character ?? '플레이어'}`).join(', ');
+      localStorage.setItem(DEBUG_LOG_KEY, `# RealLife DEBUG LOG\n[새 게임 시작] ${new Date().toLocaleString('ko-KR')}\n플레이어: ${selected}\n\n`);
+    }
     set({
       state,
       rng,
@@ -146,19 +152,50 @@ export const useGameStore = create((set, get) => ({
     return true;
   },
   revealCardEffect: (playerId, event) => {
-    const { state, lastTurn, log } = get();
+    const { state, rng, lastTurn, log } = get();
     if (!state || !event || event._applied) return false;
     const before = state.players[playerId]?.cash ?? 0;
     const applied = applyDeferredCardEffect(state, playerId, event);
     if (!applied) return false;
+    const followUpEvents = [];
+    if (applied.moveSteps && Number.isInteger(state.players[playerId]?.position)) {
+      handleTileArrival(state, playerId, state.players[playerId].position, rng, followUpEvents, {
+        deferCardEffects: true,
+        deferPropertyModal: true,
+      });
+    }
     const after = state.players[playerId]?.cash ?? before;
+    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), ...followUpEvents] : followUpEvents;
+    set({
+      state: { ...state },
+      log: [...log, ...followUpEvents],
+      lastTurn: lastTurn?.playerId === playerId ? { ...lastTurn, cashAfter: after, events: nextEvents } : lastTurn,
+    });
+    get().save();
+    return { event: applied, followUpEvents };
+  },
+  settleLottoRoll: (playerId, event, dice) => {
+    const { state, lastTurn, log } = get();
+    if (!state || !event || event.lottoResolved) return false;
+    const player = state.players[playerId];
+    if (!player) return false;
+    const numbers = Array.isArray(event.lottoNumbers) ? event.lottoNumbers : [];
+    const sum = Number(dice?.sum);
+    const hit = numbers.includes(sum);
+    const prize = Number(event.lottoPrize ?? 500);
+    if (hit) player.cash += prize;
+    event.lottoRoll = { d1: dice?.d1, d2: dice?.d2, sum };
+    event.lottoHit = hit;
+    event.lottoResolved = true;
+    event.effectText = `당첨 숫자 ${numbers.join(' · ')} · 추가 주사위 ${sum}${hit ? ` 적중! (+${prize}만)` : ' 아쉽게 실패'}`;
+    const after = player.cash;
     set({
       state: { ...state },
       log: [...log],
       lastTurn: lastTurn?.playerId === playerId ? { ...lastTurn, cashAfter: after } : lastTurn,
     });
     get().save();
-    return true;
+    return { hit, prize, sum };
   },
 
   // ===== 토스트 (매트릭스 페이드아웃) =====
@@ -254,10 +291,15 @@ export const useGameStore = create((set, get) => ({
     if (safeFee > 0) player.cash -= safeFee;
     player.position = destPos;
     const event = { kind: 'hub_teleport', playerId, fromPos, destPos, fee: safeFee };
-    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), event] : [event];
+    const arrivalEvents = [];
+    if (target.type === 'utility') {
+      arrivalEvents.push({ kind: 'arrive_institution', ...handleInstitutionArrival(state, playerId, destPos) });
+    }
+    const appendedEvents = [event, ...arrivalEvents];
+    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), ...appendedEvents] : appendedEvents;
     set({
       state: { ...state },
-      log: [...log, event],
+      log: [...log, ...appendedEvents],
       lastTurn: {
         playerId,
         cashBefore: lastTurn?.playerId === playerId ? lastTurn.cashBefore : (player.cash ?? 0) + safeFee,
@@ -434,6 +476,23 @@ export const useGameStore = create((set, get) => ({
     get().addToast({ message: `${from.name ?? `${fromId + 1}P`} ↔ ${to.name ?? `${toId + 1}P`} 인생체인지 완료`, tone: 'success' });
     get().save();
     return true;
+  },
+
+  resignStation: (playerId) => {
+    const { state, log, lastTurn } = get();
+    if (!state || playerId == null) return null;
+    const result = stationResign(state, playerId);
+    if (!result) return null;
+    const event = { kind: 'station_resign', playerId, pos: result.pos, collected: result.collected };
+    set({
+      state: { ...state },
+      log: [...log, event],
+      lastTurn: lastTurn?.playerId === playerId
+        ? { ...lastTurn, cashAfter: state.players[playerId]?.cash ?? lastTurn.cashAfter, events: [...(lastTurn.events ?? []), event] }
+        : lastTurn,
+    });
+    get().save();
+    return result;
   },
 
   submitTrade: ({ fromId, toId, givePos = [], getPos = [], giveCash = 0, getCash = 0 }) => {

@@ -24,7 +24,7 @@ export default function ModalBase({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/55 backdrop-blur-[3px] p-3"
+      className="fixed inset-x-2 top-[112px] bottom-[76px] z-50 flex items-center justify-center rounded-2xl bg-ink/55 backdrop-blur-[3px] p-3"
       style={{ touchAction: 'none' }}
       onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); }}
