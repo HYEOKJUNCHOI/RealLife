@@ -1,8 +1,8 @@
 // 통행료 / 도착 처리
 //
-// 빌라 1채: 월세 강제 (RENT_RATIO[1] = 30%)
-// 빌라 2~4채: 월세(시세 × 비율) OR 임대(고정 100/120/130만) 중 보유자 선택
-// 아파트: 시세 × 80% (큰 한 방, 강제)
+// 빌라 1채: 월세 강제 (RENT_RATIO[1] = 20%)
+// 빌라 2~4채: 월세(시세 × 40/60/80%) OR 임대(고정 100/120/130만) 중 보유자 선택
+// 아파트: 시세 × 100% (큰 한 방, 강제)
 
 import { rentFromStage, currentPrice, incrementPremium } from './inflation.js';
 import { isProperty } from './board.js';

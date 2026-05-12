@@ -1,5 +1,5 @@
 // 보드 데이터 정규화 & 칸 분류 헬퍼
-// 원본 board-korea.json 의 가격은 ×2(매입가) / 건설비 ×0.5 변환을 적용한다.
+// 원본 board-korea.json 의 가격은 ×2(매입가) / 건설비 원가 변환을 적용한다.
 // 역장(춘천·광주) vs 환승 허브(서울·부산) 분기, 한전·수자원 정규화도 여기서.
 
 import { PRICE_SCALE, HOUSE_COST_SCALE } from './constants.js';
@@ -14,7 +14,7 @@ const normalizeTile = (raw) => {
   const t = { ...raw };
   if (t.type === 'property') {
     t.basePrice = Math.round(raw.price * PRICE_SCALE); // 매입가 ×2
-    t.houseCost = Math.round(raw.houseCost * HOUSE_COST_SCALE); // 건설비 ×0.5
+    t.houseCost = Math.round(raw.houseCost * HOUSE_COST_SCALE); // 건설비 원가
   } else if (t.type === 'railroad') {
     const name = raw.names?.ko ?? '';
     if (HUB_NAMES.has(name)) {

@@ -161,16 +161,15 @@ export default function PropertyDeedMini({ pos, className }) {
   return (
     <div
       className={cn(
-        'group relative flex h-full w-full flex-col overflow-hidden',
+        'relative flex h-full w-full flex-col overflow-hidden',
         'border-2 border-white/38 rounded-md',
         'bg-[linear-gradient(135deg,rgba(255,255,255,0.32),rgba(255,255,255,0.14),rgba(54,207,255,0.08))] ring-1 ring-inset ring-white/34 backdrop-blur-[10px]',
-        'transition-transform duration-150 hover:-translate-y-0.5',
         ts.mortgaged && 'opacity-60 saturate-50',
         className,
       )}
       style={{
         // 而щ윭???쒓렇?덉쿂 湲濡쒖슦 ?????멸낸 ?덉そ outline + outset blur
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.62), 0 0 0 2px ${glow}cc, 0 0 0 5px ${glow}55, 0 0 14px 2px ${glow}80, 0 3px 0 0 #0F0C0A`,
+        boxShadow: `0 0 0 2px ${glow}cc, 0 0 14px 2px ${glow}70, 0 3px 0 0 #0F0C0A`,
       }}
       data-component="PropertyDeedMini"
     >
@@ -193,7 +192,7 @@ export default function PropertyDeedMini({ pos, className }) {
         )}
         {/* ?섎떒 洹몃씪?곗씠????蹂몃Ц怨?遺?쒕윭???꾪솚 */}
         <div
-          className="absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-black/30 to-transparent"
+          className="absolute inset-x-0 bottom-0 h-1 bg-black/18"
           aria-hidden="true"
         />
         {/* TITLE DEED 캡슐 */}
@@ -202,7 +201,7 @@ export default function PropertyDeedMini({ pos, className }) {
             className={cn(
               'rounded-full border border-white/22 bg-black/34 px-2 py-[2px] font-display text-[6px] font-bold uppercase leading-none',
               'tracking-[0.18em] text-white backdrop-blur-[3px]',
-              'shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.34)]',
+              'shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]',
             )}
           >
             Title Deed

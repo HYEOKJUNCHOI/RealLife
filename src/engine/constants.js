@@ -3,11 +3,12 @@
 
 export const STARTING_CASH = 2500; // 디폴트 시작자금 (2,500만)
 export const PRICE_SCALE = 2; // 부동산 매입가 ×2
-export const HOUSE_COST_SCALE = 0.5; // 빌라/아파트 건설비 ×0.5
+export const HOUSE_COST_SCALE = 1; // 빌라/아파트 건설비 원가 적용
 
 // 통행료 = 시세 × 비율 (표준 모노폴리 rent 표 폐기)
 // 빈 / 빌라1 / 빌라2 / 빌라3 / 빌라4 / 아파트
-export const RENT_RATIO = [0.2, 0.3, 0.4, 0.5, 0.6, 0.8];
+// 빌라 월세 체감: 2 / 4 / 6 / 8 / 10 비율
+export const RENT_RATIO = [0.2, 0.2, 0.4, 0.6, 0.8, 1.0];
 
 // 컬러셋 독점 보너스
 export const COLOR_MONOPOLY_BONUS = 0.2; // 시세 +20%

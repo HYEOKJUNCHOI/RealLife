@@ -37,8 +37,10 @@ export default function App() {
   }
 
   // 게임 화면은 TabletShell 안에서 렌더 (PC면 태블릿 mockup, 모바일은 풀스크린)
+  const isGameScreen = screen === 'game' && !!state;
+
   return (
-    <TabletShell>
+    <TabletShell mode={isGameScreen ? 'game' : 'setup'}>
       <GameDialogProvider>
         {screen === 'setup' || !state ? (
           <Setup onStart={() => setScreen('game')} />

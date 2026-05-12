@@ -25,7 +25,7 @@ function shouldUseTabletFrame({ width, height }) {
   return !isLikelyRealTablet() && width >= MIN_TABLET_WIDTH && height >= MIN_TABLET_HEIGHT && width > height;
 }
 
-export default function TabletShell({ children }) {
+export default function TabletShell({ children, mode = 'setup' }) {
   const [viewport, setViewport] = useState(getViewport);
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function TabletShell({ children }) {
             transformOrigin: 'center center',
           }}
         >
-          <div className="tablet-active-glow" aria-hidden="true" />
+          <div className={cn('tablet-active-glow', mode === 'game' && 'is-game')} aria-hidden="true" />
           {children}
         </div>
       </div>
@@ -129,7 +129,7 @@ export default function TabletShell({ children }) {
               height: STAGE_HEIGHT,
             }}
           >
-            <div className="tablet-active-glow" aria-hidden="true" />
+            <div className={cn('tablet-active-glow', mode === 'game' && 'is-game')} aria-hidden="true" />
             {children}
           </div>
         </div>

@@ -136,11 +136,15 @@ export default function Setup({ onStart }) {
   const start = () => {
     const selected = picked.map((id) => roster.find((c) => c.id === id)).filter(Boolean);
     if (typeof window !== 'undefined') {
-      window.localStorage?.setItem(SETUP_PREFS_KEY, JSON.stringify({
-        numPlayers,
-        options,
-        playerTypes: playerTypes.slice(0, numPlayers),
-      }));
+      try {
+        window.localStorage?.setItem(SETUP_PREFS_KEY, JSON.stringify({
+          numPlayers,
+          options,
+          playerTypes: playerTypes.slice(0, numPlayers),
+        }));
+      } catch (error) {
+        console.warn('[Setup] setupPrefs 저장 실패: 저장공간이 부족해도 게임 시작은 계속합니다.', error);
+      }
     }
     initGame({
       numPlayers,
@@ -163,7 +167,7 @@ export default function Setup({ onStart }) {
   };
 
   const remainingPlayers = numPlayers - selectedCount;
-  const startLabel = preloading ? '필수 에셋 로딩 중...' : ready ? '게임 시작' : selectedCount === 0 ? `${numPlayers}명 선택` : `${remainingPlayers}명 더 선택`;
+  const startLabel = ready ? '게임 시작' : selectedCount === 0 ? `${numPlayers}명 선택` : `${remainingPlayers}명 더 선택`;
 
   const scrollRoster = (direction) => {
     rosterScrollerRef.current?.scrollBy({

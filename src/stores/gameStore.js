@@ -198,23 +198,10 @@ export const useGameStore = create((set, get) => ({
     return { hit, prize, sum };
   },
 
-  // ===== 토스트 (매트릭스 페이드아웃) =====
-  addToast: ({ type, amount, x, y, size, message, tone }) => {
-    const id = get().toastSeq + 1;
-    if (message) {
-      const text = String(message ?? '').trim();
-      if (!text || /nan/i.test(text)) return;
-      set((s) => ({ toasts: [...s.toasts.filter((t) => !/nan/i.test(String(t.message ?? t.amount ?? ''))), { id, message: text, tone }], toastSeq: id }));
-      return;
-    }
-    const safeAmount = Number(amount);
-    if (!Number.isFinite(safeAmount) || safeAmount === 0) return;
-    const toast = { id, type, amount: safeAmount, x, y, size };
-    set((s) => ({ toasts: [...s.toasts.filter((t) => Number.isFinite(Number(t.amount)) || t.message), toast], toastSeq: id }));
-  },
-  removeToast: (id) => {
-    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-  },
+  // ===== 토스트 비활성화 =====
+  // 오른쪽 아래/플로팅 상태 알림은 사용하지 않는다.
+  addToast: () => {},
+  removeToast: () => {},
 
   // ===== 부동산 매입 =====
   buyProperty: (playerId, pos) => {
@@ -539,7 +526,7 @@ export const useGameStore = create((set, get) => ({
     const { state } = get();
     if (!state) return;
     const ts = state.tileState[pos];
-    if (!ts || ts.owner !== playerId || ts.mortgaged) return;
+    if (!ts || ts.owner !== playerId || ts.mortgaged) return false;
     const player = state.players[playerId];
     const loanAmount = round10(currentPrice(state, pos) * 0.7);
     player.cash += loanAmount;
@@ -551,6 +538,30 @@ export const useGameStore = create((set, get) => ({
     set({ state: { ...state } });
     get().addToast({ type: 'income', amount: loanAmount });
     get().save();
+    return true;
+  },
+
+  repayPropertyLoan: (playerId, pos) => {
+    const { state } = get();
+    if (!state) return false;
+    const ts = state.tileState[pos];
+    if (!ts || ts.owner !== playerId || !ts.mortgaged || (ts.mortgageAmount ?? 0) <= 0) return false;
+    const player = state.players[playerId];
+    if (!player) return false;
+    const currentYear = state.year ?? 0;
+    const principal = ts.mortgageAmount ?? 0;
+    const fee = currentYear - (ts.mortgageYear ?? currentYear) < 1 ? round10(principal * 0.01) : 0;
+    const total = principal + fee;
+    if ((player.cash ?? 0) < total) return false;
+    player.cash -= total;
+    ts.mortgaged = false;
+    ts.mortgageAmount = 0;
+    ts.mortgageYear = null;
+    player.propertyLoans = (player.propertyLoans ?? []).filter((loan) => loan.pos !== pos);
+    set({ state: { ...state } });
+    get().addToast({ type: 'expense', amount: total });
+    get().save();
+    return true;
   },
 
   // 회생 3단계: NPC 매도 (시세 50%)
@@ -572,13 +583,14 @@ export const useGameStore = create((set, get) => ({
   },
 
   openLoanModal: (playerId) => {
-    set({ modal: { ...get().modal, loan: { playerId } } });
+    const current = get().modal?.loan;
+    set({ modal: { ...get().modal, loan: current?.playerId === playerId ? null : { playerId } } });
   },
   closeLoanModal: () => {
     set({ modal: { ...get().modal, loan: null } });
   },
 
-  // 회생/대출: 신용대출 (1,000만, 현금 300만 이하, 게임 중 1회)
+  // 회생/대출: 신용대출 (1,000만, 현금 300만 이하, 1회 제한)
   takeCreditLoan: (playerId) => {
     const { state } = get();
     if (!state) return false;
@@ -592,7 +604,7 @@ export const useGameStore = create((set, get) => ({
     return true;
   },
 
-  // 대출: 사채 (2,000만, 언제든 가능, 게임 중 1회)
+  // 대출: 사채 (2,000만, 언제든 가능, 1회 제한)
   takeLoanSharkLoan: (playerId) => {
     const { state } = get();
     if (!state) return false;

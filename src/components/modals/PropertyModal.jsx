@@ -194,6 +194,7 @@ function RailButton({ children, tone = 'paper', className, ...props }) {
     red: 'bg-monopoly-red text-white hover:bg-monopoly-deep',
     gold: 'bg-monopoly-gold text-ink hover:bg-[#ffe38a]',
     green: 'bg-white text-[#008f32] hover:bg-[#f4fff6]',
+    blue: 'bg-[#1769d8] text-white hover:bg-[#0f56b8]',
     ghost: 'bg-neutral-200 text-ink hover:bg-neutral-100',
   }[tone] ?? 'bg-white text-ink hover:bg-parchment-50';
 
@@ -233,6 +234,10 @@ function PropertyActionRail({
   initialStage,
   buildBlockReason,
   cashDelta = 0,
+  mortgaged = false,
+  mortgageAmount = 0,
+  canMortgage = false,
+  mortgageDisabledReason = '',
   onClose,
   onBuy,
   onPayRent,
@@ -240,11 +245,14 @@ function PropertyActionRail({
   onTradeSelectOpen,
   onRecoveryOpen,
   onDevelop,
+  onMortgage,
+  onRepayMortgage,
+  onOpenLoan,
   onConfirmStage,
   onCancelStage,
 }) {
   return (
-    <aside className={cn('property-action-rail order-2 flex shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)]', isEmpty ? 'w-[min(80vw,420px)] justify-center' : 'w-[min(92vw,336px)] sm:order-1 sm:w-[124px] sm:flex-col sm:self-start')}>
+    <aside className={cn('property-action-rail order-2 flex shrink-0 flex-wrap gap-2 rounded-lg border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_3px_0_0_#0F0C0A,0_12px_22px_-14px_rgba(0,0,0,0.75)]', isEmpty ? 'w-[min(80vw,420px)] justify-center' : isOwn ? 'w-[min(92vw,336px)] sm:order-1 sm:w-[220px] sm:self-start' : 'w-[min(92vw,336px)] sm:order-1 sm:w-[124px] sm:flex-col sm:self-start')}>
       <div className="hidden rounded-md border-2 border-ink-line bg-ink px-2 py-1 text-center font-display text-[9px] font-extrabold uppercase tracking-[0.14em] text-white sm:block">
         메뉴
       </div>
@@ -305,23 +313,23 @@ function PropertyActionRail({
 
       {isOwn && (
         <>
-          <div className="basis-full rounded-lg border-2 border-ink-line bg-white px-2 py-2 text-center shadow-[0_3px_0_#0F0C0A] sm:basis-auto">
-            <div className="font-display text-[9px] font-black uppercase tracking-[0.18em] text-ink/45">잔고</div>
-            <div className="mt-1 font-display text-[22px] font-black leading-none tabular-nums text-ink">
-              {fmt(visitor?.cash)}만
-            </div>
-            {cashDelta !== 0 && (
-              <div className={cn('mt-1 rounded-md border px-2 py-1 font-display text-[15px] font-black leading-none tabular-nums', cashDelta < 0 ? 'border-red-700 bg-red-50 text-red-700 animate-pulse' : 'border-emerald-700 bg-emerald-50 text-emerald-700')}>
-                {cashDelta > 0 ? '+' : ''}{fmt(cashDelta)}만
-              </div>
-            )}
-            {hasStageChange && <div className="mt-1 text-[10px] font-bold text-ink/55">실시간 반영중</div>}
-          </div>
+          <RailButton
+            tone={mortgaged ? 'gold' : 'blue'}
+            className="basis-full min-h-[44px]"
+            disabled={mortgaged ? (visitor?.cash ?? 0) < mortgageAmount : !canMortgage}
+            title={mortgaged ? `상환금 ${fmt(mortgageAmount)}만` : mortgageDisabledReason}
+            onClick={() => {
+              if (mortgaged) onRepayMortgage?.(visitorId, pos);
+              else onMortgage?.(visitorId, pos);
+            }}
+          >
+            {mortgaged ? `상환하기 ${fmt(mortgageAmount)}만` : '담보대출'}
+          </RailButton>
 
-          <div className="basis-full grid grid-cols-1 gap-2 sm:basis-auto">
+          <div className="grid basis-full grid-cols-2 gap-2">
             <RailButton
               tone="red"
-              className="min-h-[56px] text-[12px]"
+              className="min-h-[58px] text-[12px]"
               disabled={!canBuild || currentStage >= 5}
               title={buildBlockReason ?? '집짓기'}
               onClick={() => onDevelop?.(visitorId, pos, +1, initialStage)}
@@ -330,7 +338,7 @@ function PropertyActionRail({
             </RailButton>
             <RailButton
               tone="paper"
-              className="min-h-[56px] text-[12px]"
+              className="min-h-[58px] text-[12px]"
               disabled={currentStage <= 0}
               onClick={() => onDevelop?.(visitorId, pos, -1, initialStage)}
             >
@@ -338,26 +346,49 @@ function PropertyActionRail({
             </RailButton>
           </div>
 
-          <div className="basis-full rounded-md border-2 border-ink-line bg-white px-2 py-1.5 text-center font-display text-[12px] font-black tabular-nums text-ink shadow-[0_2px_0_#0F0C0A] sm:basis-auto">
-            현재 단계 {currentStage}
+          <div className="basis-full rounded-lg border-2 border-ink-line bg-white px-2 py-2 text-center shadow-[0_3px_0_#0F0C0A]">
+            <div className="font-display text-[9px] font-black uppercase tracking-[0.18em] text-ink/45">예금</div>
+            <div className="mt-1 font-display text-[22px] font-black leading-none tabular-nums text-ink">
+              {fmt(visitor?.cash)}만
+            </div>
+            <div className="mt-[10px] min-h-[34px]">
+              {cashDelta !== 0 ? (
+                <div className={cn('rounded-md border px-2 py-1 font-display text-[15px] font-black leading-none tabular-nums', cashDelta < 0 ? 'border-red-700 bg-red-50 text-red-700 animate-pulse' : 'border-emerald-700 bg-emerald-50 text-emerald-700')}>
+                  {cashDelta > 0 ? '+' : ''}{fmt(cashDelta)}만
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onOpenLoan?.(visitorId)}
+                  className="min-h-[30px] w-full rounded-md border-2 border-ink-line bg-monopoly-gold px-2 py-1 font-display text-[11px] font-black leading-tight text-ink shadow-[0_2px_0_#0F0C0A] transition hover:bg-[#ffe38a] active:translate-y-px active:shadow-[0_1px_0_#0F0C0A]"
+                >
+                  대출하기
+                </button>
+              )}
+            </div>
+            <div className="mt-1 min-h-[14px] text-[10px] font-bold text-ink/55">
+              {hasStageChange ? '실시간 확인중' : mortgaged ? '대출 중 · 월세 0' : ''}
+            </div>
           </div>
 
-          <RailButton
-            tone="green"
-            className="flex-1 sm:flex-none"
-            disabled={!hasStageChange}
-            onClick={onConfirmStage}
-          >
-            변경<br />확정
-          </RailButton>
-          <RailButton
-            tone="ghost"
-            className="flex-1 sm:flex-none"
-            disabled={!hasStageChange}
-            onClick={onCancelStage}
-          >
-            취소
-          </RailButton>
+          <div className="grid basis-full grid-cols-2 gap-2">
+            <RailButton
+              tone="green"
+              className="min-h-[48px]"
+              disabled={!hasStageChange}
+              onClick={onConfirmStage}
+            >
+              변경<br />확정
+            </RailButton>
+            <RailButton
+              tone="ghost"
+              className="min-h-[48px]"
+              disabled={!hasStageChange}
+              onClick={onCancelStage}
+            >
+              취소
+            </RailButton>
+          </div>
         </>
       )}
     </aside>
@@ -373,6 +404,9 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
   const handleTradeSelectOpen = useGameStore((s) => s.openTradeSelect);
   const handleRecoveryOpen = useGameStore((s) => s.openRecoveryModal);
   const handleDevelop  = useGameStore((s) => s.developProperty);
+  const handleMortgage = useGameStore((s) => s.takePropertyLoan);
+  const handleRepayMortgage = useGameStore((s) => s.repayPropertyLoan);
+  const handleOpenLoan = useGameStore((s) => s.openLoanModal);
 
   // 모달 열렸을 때의 단계 — 세션 내 빌드 취소 vs 기존 판매 판별 기준
   // ⚠️ deps 에 state 넣으면 매 변경마다 리셋되니까 open/pos 만으로 lock
@@ -413,6 +447,15 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
   const monopoly        = isOwn && hasColorMonopoly(state, visitorId, tile.color);
   const freeBuild       = state.options?.freeBuild ?? true; // gameState 디폴트와 일치
   const canBuild        = isOwn && !ts.mortgaged && (monopoly || freeBuild);
+  const stageDelta = currentStage - initialStage;
+  const hasStageChange = isOwn && stageDelta !== 0;
+  const cashDelta = (visitor?.cash ?? 0) - initialCash;
+  const canMortgage     = isOwn && !hasStageChange && !ts.mortgaged;
+  const mortgageDisabledReason = hasStageChange
+    ? '건설 변경 확정/취소 후 대출 가능'
+    : ts.mortgaged
+      ? '이미 담보대출 중'
+      : '';
   const buildBlockReason = !isOwn
     ? '본인 부동산만 건설 가능'
     : ts.mortgaged
@@ -420,9 +463,6 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
       : !canBuild
         ? `${tile.color} 그룹 독점 시 건설 가능`
         : null;
-  const stageDelta = currentStage - initialStage;
-  const hasStageChange = isOwn && stageDelta !== 0;
-  const cashDelta = (visitor?.cash ?? 0) - initialCash;
 
   const revertDevelopmentChange = () => {
     const latestState = useGameStore.getState().state;
@@ -474,6 +514,10 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
           initialStage={initialStage}
           buildBlockReason={buildBlockReason}
           cashDelta={cashDelta}
+          mortgaged={!!ts.mortgaged}
+          mortgageAmount={ts.mortgageAmount ?? 0}
+          canMortgage={canMortgage}
+          mortgageDisabledReason={mortgageDisabledReason}
           onClose={onClose}
           onBuy={handleBuy}
           onPayRent={handlePayRent}
@@ -481,6 +525,9 @@ export default function PropertyModal({ open, onClose, pos, visitorId, onBuy }) 
           onTradeSelectOpen={handleTradeSelectOpen}
           onRecoveryOpen={handleRecoveryOpen}
           onDevelop={handleDevelop}
+          onMortgage={handleMortgage}
+          onRepayMortgage={handleRepayMortgage}
+          onOpenLoan={handleOpenLoan}
           onConfirmStage={() => {
             setInitialStage(currentStage);
             setInitialCash(visitor?.cash ?? 0);

@@ -24,7 +24,6 @@ import EventModal from '@/components/modals/EventModal.jsx';
 import YearEndModal from '@/components/modals/YearEndModal.jsx';
 import DeathmatchModal from '@/components/modals/DeathmatchModal.jsx';
 import RecoveryModal from '@/components/modals/RecoveryModal.jsx';
-import LoanModal from '@/components/modals/LoanModal.jsx';
 import { useGameDialog } from '@/components/GameDialog.jsx';
 import { cn } from '@/lib/cn.js';
 import { getBgmPreference, pauseBgm, playBgm } from '@/lib/bgm.js';
@@ -57,6 +56,9 @@ const AVATAR_SIZE = {
 };
 
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const playerColor = (playerId, fallback = '#DC2626') => PLAYER_SIGNATURE_COLORS[playerId] ?? fallback;
+
 const displayPlayerName = (player, fallback) => {
   const name = player?.name?.trim();
   return name && name !== player?.character ? name : fallback;
@@ -97,16 +99,17 @@ export default function GameMain({ onExit }) {
   const restartSameGame = useGameStore((s) => s.restartSameGame);
   const endTurn = useGameStore((s) => s.endTurn);
   const restoreSnapshot = useGameStore((s) => s.restoreSnapshot);
-  const addToast = useGameStore((s) => s.addToast);
   const tickClock = useGameStore((s) => s.tickClock);
   const hubTeleportAction = useGameStore((s) => s.hubTeleport);
   const lifeChangeAction = useGameStore((s) => s.lifeChange);
   const skipLifeChangeAction = useGameStore((s) => s.skipLifeChange);
+  const resignStationAction = useGameStore((s) => s.resignStation);
   const initialDealPlayedRef = useRef(false);
   const prevTurnIndexRef = useRef(null);
   const jailPromptKeyRef = useRef(null);
   const skipPromptKeyRef = useRef(null);
   const [showInitialDeal, setShowInitialDeal] = useState(false);
+  const [initialDealPhase, setInitialDealPhase] = useState(null);
   const [showTurnCardTouch, setShowTurnCardTouch] = useState(false);
   const [boardTurn, setBoardTurn] = useState(null);
   const [pendingPurchase, setPendingPurchase] = useState(null);
@@ -122,7 +125,7 @@ export default function GameMain({ onExit }) {
   const [lastDiceRoll, setLastDiceRoll] = useState(null);
   const [bgmEnabled, setBgmEnabled] = useState(() => getBgmPreference());
   const [globalNotice, setGlobalNotice] = useState(null);
-  const [noticeLog, setNoticeLog] = useState([]);
+  const [turnStartNoticeKey, setTurnStartNoticeKey] = useState(null);
   const [viewPlayerIndex, setViewPlayerIndex] = useState(null);
   const [propertyShatter, setPropertyShatter] = useState(null);
 
@@ -134,22 +137,27 @@ export default function GameMain({ onExit }) {
       const owner = tileState?.owner;
       if (typeof owner !== 'number' || !byPlayer[owner]) return;
       const tile = tilesByPos[pos];
-      if (!tile) return;
+      if (!tile || tile.type !== 'property') return;
       byPlayer[owner].push({ pos: Number(pos), title: tile.name, color: tile.color ?? '#d9b45f' });
     });
     byPlayer.forEach((items) => items.sort((a, b) => a.pos - b.pos));
-    const playerOrder = [
-      state.turnIndex,
-      ...state.players.map((_, index) => index).filter((index) => index !== state.turnIndex),
-    ];
-    return playerOrder.flatMap((playerIndex, recipientOrder) => (
-      byPlayer[playerIndex].slice(0, 4).map((card, cardIndex) => ({
-        ...card,
-        playerIndex,
-        cardIndex,
-        recipientOrder,
-      }))
-    ));
+    const maxCards = Math.max(...byPlayer.map((items) => Math.min(items.length, 4)), 0);
+    const dealCards = [];
+    const footerPlayers = state.players.map((_, index) => index).filter((index) => index !== state.turnIndex);
+    for (let cardIndex = 0; cardIndex < maxCards; cardIndex += 1) {
+      footerPlayers.forEach((playerIndex, footerOrder) => {
+        const card = byPlayer[playerIndex][cardIndex];
+        if (!card) return;
+        dealCards.push({
+          ...card,
+          playerIndex,
+          cardIndex,
+          recipientOrder: footerOrder,
+          dealOrder: cardIndex * footerPlayers.length + footerOrder,
+        });
+      });
+    }
+    return dealCards;
   }, [state]);
 
   useEffect(() => {
@@ -168,9 +176,10 @@ export default function GameMain({ onExit }) {
   }, [state?._gameStartNonce]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('initial-deal-live', showInitialDeal);
+    const active = showInitialDeal && initialDealPhase !== 'start';
+    document.documentElement.classList.toggle('initial-deal-live', active);
     return () => document.documentElement.classList.remove('initial-deal-live');
-  }, [showInitialDeal]);
+  }, [initialDealPhase, showInitialDeal]);
 
   useEffect(() => {
     if (!state) return undefined;
@@ -198,10 +207,9 @@ export default function GameMain({ onExit }) {
     }
     playBgm().catch(() => {
       setBgmEnabled(false);
-      addToast?.({ message: 'BGM 버튼을 한 번 더 눌러주세요.', tone: 'warn' });
     });
     return undefined;
-  }, [bgmEnabled, addToast]);
+  }, [bgmEnabled]);
 
   const handleToggleBgm = useCallback(() => {
     if (bgmEnabled) {
@@ -213,9 +221,8 @@ export default function GameMain({ onExit }) {
       setBgmEnabled(true);
     }).catch(() => {
       setBgmEnabled(false);
-      addToast?.({ message: 'BGM 재생이 차단되었습니다. 버튼을 다시 눌러주세요.', tone: 'warn' });
     });
-  }, [bgmEnabled, addToast]);
+  }, [bgmEnabled]);
 
 
   // 실시간 게임 시간: 실제 플레이에서는 1초 단위로 흐른다.
@@ -258,22 +265,27 @@ export default function GameMain({ onExit }) {
       diceSnapshotRef.current = null;
       return;
     }
-    // 이동 전 차례/주사위 안내 팝업은 띄우지 않는다.
-    // 흐름은 주사위 → 말 이동 → 전체 보드 복귀 → 사회자창+알림창만 사용한다.
     diceSnapshotRef.current = null;
-  }, [state?.round, state?.turnIndex, showInitialDeal]);
+    const key = `${state?.round ?? 0}-${state?.turnIndex ?? 0}`;
+    if (activePlayer && turnStartNoticeKey !== key) {
+      setTurnStartNoticeKey(key);
+      setGlobalNotice({
+        id: Date.now() + Math.random(),
+        kind: 'turn_start',
+        speaker: '사회자',
+        title: `${activeName} 님의 차례 입니다.`,
+        text: '주사위를 굴려주세요!',
+        icon: '🎲',
+        color: playerColor(state?.turnIndex ?? 0, activeBaseMeta.color),
+        playerCharacter: activePlayer.character,
+        cta: '터치해서 시작',
+      });
+    }
+  }, [state?.round, state?.turnIndex, showInitialDeal, turnStartNoticeKey]);
 
   const pushGlobalNotice = (notice) => {
     if (!notice) return;
-    const item = { ...notice, id: Date.now() + Math.random() };
-    setNoticeLog((prev) => [item, ...prev].slice(0, 8));
-    setGlobalNotice(item);
-  };
-
-  const showNoticeLog = () => {
-    const latest = noticeLog[0];
-    if (!latest) return;
-    setGlobalNotice({ ...latest, id: Date.now() + Math.random(), replay: true, subtle: false });
+    setGlobalNotice({ ...notice, id: Date.now() + Math.random() });
   };
 
   const triggerPropertyShatter = (pos, label = '권리증 파괴') => {
@@ -328,7 +340,6 @@ export default function GameMain({ onExit }) {
             skipLifeChangeAction?.(playerId);
             return;
           }
-          addToast?.({ message: '푸터에서 바꿀 상대의 스테이터스를 열고 체인지 버튼을 누르세요.', tone: 'warn' });
         }, 520);
       }
     }
@@ -342,7 +353,6 @@ export default function GameMain({ onExit }) {
       return ownedTile?.type === 'property' && tileState?.owner === playerId;
     }).length;
     if (ownedPropertyCount >= 8) {
-      addToast?.({ message: '부동산은 최대 8개까지만 보유할 수 있습니다. 하나 정리하고 매입하세요.', tone: 'warn' });
       pushGlobalNotice({
         kind: 'buy_limit',
         speaker: '중개 NPC',
@@ -355,7 +365,6 @@ export default function GameMain({ onExit }) {
     }
     const ok = buyProperty?.(playerId, pos);
     if (!ok) {
-      addToast?.({ message: '매입에 실패했습니다. 잔액 또는 소유 상태를 확인해주세요.', tone: 'warn' });
       return false;
     }
     const tileName = tile?.names?.ko ?? tile?.name ?? '부동산';
@@ -396,13 +405,7 @@ export default function GameMain({ onExit }) {
   }, [showInitialDeal, pendingPurchase, turnResult?.kind, turnResult?.pos, turnBriefing, log, state]);
 
   if (!state) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-parchment-100">
-        <div className="font-display text-xl font-bold uppercase tracking-widest text-ink">
-          Loading...
-        </div>
-      </div>
-    );
+    return <div className="min-h-dvh bg-parchment-100" />;
   }
 
   const turnIndex = state.turnIndex;
@@ -417,9 +420,9 @@ export default function GameMain({ onExit }) {
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
-    document.documentElement.style.setProperty('--active-player-color', turnMeta?.color ?? '#d83b2f');
+    document.documentElement.style.setProperty('--active-player-color', playerColor(turnIndex, turnMeta?.color ?? '#d83b2f'));
     return undefined;
-  }, [turnMeta?.color]);
+  }, [turnIndex, turnMeta?.color]);
   useEffect(() => {
     if (!modalEvent) {
       setShowEventModal(false);
@@ -554,11 +557,9 @@ export default function GameMain({ onExit }) {
 
   const handleEndTurn = () => {
     if (hubTeleport) {
-      addToast?.({ message: '환승 이동을 선택하거나 머무르기를 눌러주세요.', tone: 'warn' });
       return false;
     }
     if (!diceLocked && !hasMovedThisTurn) {
-      addToast?.({ message: '주사위를 먼저 입력해주세요.', tone: 'warn' });
       return false;
     }
     diceSnapshotRef.current = null;
@@ -640,7 +641,6 @@ export default function GameMain({ onExit }) {
     if (!state || state.finished || boardTurn || (!allowLocked && diceLocked)) return;
     const currentKey = `${state.round ?? 0}-${state.turnIndex ?? 0}`;
     if (turnMovedKey === currentKey) {
-      addToast?.({ message: '이미 주사위를 진행했습니다.', tone: 'warn' });
       return;
     }
     setShowInitialDeal(false);
@@ -713,7 +713,7 @@ export default function GameMain({ onExit }) {
           text: isOwn ? '내가 보유한 권리증입니다. 이번엔 정산 없이 지나갑니다.' : isMortgaged ? '담보 설정된 권리증이라 통행료 정산은 없습니다.' : '도착 처리를 확인했습니다.',
           icon: isOwn ? '🏠' : '📍',
           previewPos: propertyEvent.pos ?? endPos,
-          color: turnBaseMeta.color,
+          color: playerColor(playerId, turnBaseMeta.color),
           cta: '터치해서 닫기',
         });
       }
@@ -730,7 +730,7 @@ export default function GameMain({ onExit }) {
           amount: collected,
           cash: state.players?.[playerId]?.cash,
           previewPos: stationEvent.pos ?? endPos,
-          color: '#2f75c9',
+          color: playerColor(playerId, '#2f75c9'),
           cta: collected > 0 ? `+${fmt(collected)}만 수령 · 터치해서 닫기` : '역장 부임 · 터치해서 닫기',
         });
       }
@@ -754,21 +754,21 @@ export default function GameMain({ onExit }) {
           tileName: rentTileName,
           visitorCharacter: turnPlayer?.character,
           ownerCharacter: owner?.character,
-          ownerColor: ownerBase.color,
+          ownerColor: playerColor(ownerId, ownerBase.color),
         });
       }
-      if (pendingBuy || jailNotice || isCardArrival) {
+      if (pendingBuy || jailNotice) {
         pushGlobalNotice({
-          kind: pendingBuy ? 'buy' : jailNotice ? 'jail_sent' : 'card_arrival',
+          kind: pendingBuy ? 'buy' : 'jail_sent',
           speaker: '사회자',
-          title: pendingBuy ? `좋은 땅인데\n매입하시겠어요? 호호` : jailNotice ? `${playerName} 감옥 수감!` : '카드를 뒤집어주세요',
+          title: pendingBuy ? `좋은 땅인데\n매입하시겠어요? 호호` : `${playerName} 감옥 수감!`,
           hostText: pendingBuy ? `부동산 아주머니가 ${tileNameForPos(state, pendingBuy.pos)} 권리증을 슬쩍 내밉니다 🧑‍💼` : undefined,
-          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}` : isCardArrival ? '무슨 카드가 나올까요? 두근두근합니다 👀' : (toastMessage ?? '감옥으로 이동합니다 😭'),
-          icon: pendingBuy ? '🧑‍💼' : jailNotice ? '🚓' : '💡',
-          cta: pendingBuy ? '매입 / 스킵' : isCardArrival ? '카드를 뒤집어주세요' : '터치해서 닫기',
+          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}` : (toastMessage ?? '감옥으로 이동합니다 😭'),
+          icon: pendingBuy ? '🧑‍💼' : '🚓',
+          cta: pendingBuy ? '매입 / 스킵' : '터치해서 닫기',
           previewPos: pendingBuy?.pos,
           price: pendingBuy?.buyPrice,
-          color: pendingBuy ? turnBaseMeta.color : undefined,
+          color: pendingBuy ? playerColor(playerId, turnBaseMeta.color) : undefined,
           onBuy: pendingBuy ? () => handleBuyProperty(playerId, pendingBuy.pos) : undefined,
           onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
         });
@@ -846,11 +846,14 @@ export default function GameMain({ onExit }) {
     setBoardTurn(null);
   };
 
+  const toggleBoardInspect = () => {
+    setBoardTurn((current) => current ? null : { phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() });
+  };
+
   const resolveHubTeleport = (destPos) => {
     if (!hubTeleport) return false;
     const ok = hubTeleportAction?.(hubTeleport.playerId, destPos, hubTeleport.fee ?? 0);
     if (!ok) {
-      addToast?.({ message: '환승 목적지가 잘못됐거나 이동할 수 없습니다.', tone: 'warn' });
       return false;
     }
     const tile = state?.board?.tiles?.[destPos];
@@ -866,7 +869,33 @@ export default function GameMain({ onExit }) {
 
   const stayHubTeleport = () => {
     setHubTeleport(null);
-    addToast?.({ message: '환승하지 않고 현재 역에 머무릅니다.', tone: 'success' });
+  };
+
+  const handleStationResign = async () => {
+    const stationTiles = (state?.board?.tiles ?? []).filter((tile) => tile.type === 'railroad' && tile.subType === 'station' && state.tileState?.[tile.pos]?.owner === turnIndex);
+    const fund = stationTiles.reduce((sum, tile) => sum + (state.tileState?.[tile.pos]?.fund ?? 0), 0);
+    const ok = await dialog.confirm({
+      title: '퇴직신청서',
+      badgeText: '역장 적립금',
+      message: `퇴직금을 수령하고 역장 자리에서 물러나시겠습니까?\n\n예상 퇴직금 ${fmt(fund)}만`,
+      okText: '수령하기',
+      cancelText: '취소',
+      tone: 'warn',
+    });
+    if (!ok) return false;
+    const result = resignStationAction?.(turnIndex);
+    if (result) {
+      pushGlobalNotice({
+        kind: 'station_resign',
+        speaker: '사회자',
+        title: '역장 퇴직 완료',
+        text: `퇴직금 ${fmt(result.collected ?? 0)}만을 수령했습니다.`,
+        icon: '🚉',
+        amount: result.collected ?? 0,
+        cta: '터치해서 닫기',
+      });
+    }
+    return !!result;
   };
 
   const handleLifeChange = async (targetId) => {
@@ -965,18 +994,17 @@ export default function GameMain({ onExit }) {
             onDiceModeChange={setDiceMode}
             onAppDiceRoll={rollAppDice}
             lastDiceRoll={lastDiceRoll}
-            onShowNoticeLog={showNoticeLog}
-            hasNoticeLog={noticeLog.length > 0}
             diceLocked={diceInputLocked}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             turnResult={turnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenBoard={toggleBoardInspect}
             pendingPurchase={pendingPurchase}
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
+            onStationResign={handleStationResign}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
@@ -996,20 +1024,19 @@ export default function GameMain({ onExit }) {
             onDiceModeChange={setDiceMode}
             onAppDiceRoll={rollAppDice}
             lastDiceRoll={lastDiceRoll}
-            onShowNoticeLog={showNoticeLog}
-            hasNoticeLog={noticeLog.length > 0}
             diceLocked={diceInputLocked}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             turnResult={turnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
             onOpenLoan={openLoanModal}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenBoard={toggleBoardInspect}
             pendingPurchase={pendingPurchase}
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
+            onStationResign={handleStationResign}
           />
         </div>
 
@@ -1034,9 +1061,10 @@ export default function GameMain({ onExit }) {
             onDiceRoll={runManualDiceMove}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
             onOpenResultCard={handleOpenResultCard}
-            onOpenBoard={() => { setBoardTurn({ phase: 'inspect', playerId: turnIndex, startPos: turnPlayer?.position ?? 0, displayPos: turnPlayer?.position ?? 0, nonce: Date.now() }); }}
+            onOpenBoard={toggleBoardInspect}
             onBack={() => setViewPlayerIndex(null)}
             onOpenLoan={openLoanModal}
+            onStationResign={handleStationResign}
             canLifeChange={state.pendingLifeChange?.playerId != null && viewPlayerIndex !== state.pendingLifeChange.playerId}
             onLifeChange={() => handleLifeChange(viewPlayerIndex)}
           />
@@ -1060,9 +1088,29 @@ export default function GameMain({ onExit }) {
             players={state.players}
             turnIndex={state.turnIndex}
             cards={initialDealCards}
+            onPhaseChange={setInitialDealPhase}
             onReady={() => {
               setShowInitialDeal(false);
+              setInitialDealPhase(null);
               if (state) state._initialDealShown = true;
+              const activePlayer = state?.players?.[state?.turnIndex ?? 0];
+              if (activePlayer) {
+                const activeBaseMeta = CHAR_META[activePlayer.character] ?? { name: activePlayer.character, color: '#d83b2f' };
+                const activeName = displayPlayerName(activePlayer, activeBaseMeta.name);
+                const key = `${state?.round ?? 0}-${state?.turnIndex ?? 0}`;
+                setTurnStartNoticeKey(key);
+                setGlobalNotice({
+                  id: Date.now() + Math.random(),
+                  kind: 'turn_start',
+                  speaker: '사회자',
+                  title: `${activeName} 님의 차례 입니다.`,
+                  text: '주사위를 굴려주세요!',
+                  icon: '🎲',
+                  color: playerColor(state?.turnIndex ?? 0, activeBaseMeta.color),
+                  playerCharacter: activePlayer.character,
+                  cta: '터치해서 시작',
+                });
+              }
             }}
           />
         )}
@@ -1128,14 +1176,6 @@ export default function GameMain({ onExit }) {
             needAmount={modalRecovery.needAmount}
           />
         )}
-        {!state.finished && modalLoan && (
-          <LoanModal
-            open
-            onClose={closeLoanModal}
-            playerId={modalLoan.playerId}
-          />
-        )}
-
         <GlobalNoticeBand notice={globalNotice} onDismiss={(item) => { setGlobalNotice(null); item?.action?.(); }} />
         {cardSettlementPending && turnResult?.kind === 'card' && (
           <CardRevealOverlay card={turnResult} onReveal={() => handleOpenResultCard(turnResult)} />
@@ -1158,6 +1198,10 @@ function CardRevealOverlay({ card, onReveal }) {
   const [flipped, setFlipped] = useState(false);
   if (!card || typeof document === 'undefined') return null;
   const tone = CARD_REVEAL_TONE[card.cardKind] ?? CARD_REVEAL_TONE.chance;
+  const reveal = () => {
+    if (flipped) onReveal?.();
+    else setFlipped(true);
+  };
   const layer = (
     <div
       className="fixed inset-0 flex items-center justify-center bg-ink/66 p-3 backdrop-blur-[5px]"
@@ -1165,57 +1209,49 @@ function CardRevealOverlay({ card, onReveal }) {
       onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
       onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
-      <div className="w-[min(90vw,390px)] overflow-hidden rounded-[24px] border border-white/30 bg-white/14 p-3 text-center text-white shadow-[0_18px_54px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-[18px]">
+      <div className="w-[min(90vw,390px)] overflow-hidden rounded-[24px] border border-white/18 bg-[linear-gradient(145deg,rgba(3,7,18,0.88)_0%,rgba(15,23,42,0.78)_56%,rgba(0,0,0,0.72)_100%)] p-3 text-center text-white shadow-[0_18px_54px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-24px_60px_rgba(0,0,0,0.38)] backdrop-blur-[20px]">
         <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/58">card reveal</div>
         <div className="mt-1 font-board text-[24px] leading-none text-white">카드를 뒤집어주세요</div>
         <div className="mt-1 font-board text-[14px] text-white/62">결과는 뒤집기 전까지 비밀</div>
         <button
           type="button"
-          onClick={() => setFlipped(true)}
-          className="mx-auto mt-3 block [perspective:1100px]"
+          onClick={reveal}
+          className="mx-auto mt-3 block"
         >
           <motion.div
-            className="relative h-[250px] w-[180px] rounded-2xl [transform-style:preserve-3d]"
-            animate={{ rotateY: flipped ? 180 : 0, y: flipped ? 0 : [0, -4, 0], rotate: flipped ? 0 : [-1.2, 1.2, -1.2] }}
-            transition={{ rotateY: { type: 'spring', stiffness: 210, damping: 22 }, y: { duration: 0.9, repeat: flipped ? 0 : Infinity }, rotate: { duration: 1.1, repeat: flipped ? 0 : Infinity } }}
+            className="relative h-[250px] w-[180px] overflow-hidden rounded-2xl border border-white/34 bg-slate-950 text-white shadow-[0_8px_0_#0F0C0A,0_20px_42px_rgba(0,0,0,0.42)]"
+            animate={flipped ? { scale: [1, 1.08, 1], boxShadow: ['0 8px 0 #0F0C0A,0 20px 42px rgba(0,0,0,0.42)', `0 8px 0 #0F0C0A,0 0 54px ${tone.glow}`, '0 8px 0 #0F0C0A,0 20px 42px rgba(0,0,0,0.42)'] } : { y: [0, -4, 0], rotate: [-1.2, 1.2, -1.2] }}
+            transition={flipped ? { duration: 0.42 } : { y: { duration: 0.9, repeat: Infinity }, rotate: { duration: 1.1, repeat: Infinity } }}
           >
-            <div
-              className="absolute inset-0 grid place-items-center overflow-hidden rounded-2xl border border-white/34 text-white shadow-[0_16px_38px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.24)] [backface-visibility:hidden] backdrop-blur-[10px]"
-              style={{
-                background: `radial-gradient(circle at 50% 24%, rgba(255,255,255,0.28) 0%, transparent 23%), linear-gradient(145deg, ${tone.from} 0%, ${tone.mid} 52%, ${tone.to} 100%)`,
-                boxShadow: `0 8px 0 #0F0C0A, 0 20px 42px rgba(0,0,0,0.42), 0 0 42px ${tone.glow}`,
-              }}
-            >
-              <div className="absolute inset-3 rounded-[18px] border border-white/24" />
-              <div className="relative text-center">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/48 bg-white/16 text-[34px] shadow-[0_0_26px_rgba(255,255,255,0.18)]">{tone.mark}</div>
-                <div className="mt-5 font-display text-[9px] font-black uppercase tracking-[0.28em] text-white/62">The RealLife</div>
-                <div className="mt-2 font-board text-[31px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
-                <div className="mx-auto mt-4 h-px w-20 bg-white/30" />
-                <div className="mt-3 font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/58">tap to reveal</div>
+            {!flipped ? (
+              <div
+                className="absolute inset-0 grid place-items-center text-white backdrop-blur-[10px]"
+                style={{ background: `radial-gradient(circle at 50% 24%, rgba(255,255,255,0.28) 0%, transparent 23%), linear-gradient(145deg, ${tone.from} 0%, ${tone.mid} 52%, ${tone.to} 100%)` }}
+              >
+                <div className="absolute inset-3 rounded-[18px] border border-white/24" />
+                <div className="relative text-center">
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/48 bg-white/16 text-[34px] shadow-[0_0_26px_rgba(255,255,255,0.18)]">{tone.mark}</div>
+                  <div className="mt-5 font-display text-[9px] font-black uppercase tracking-[0.28em] text-white/62">The RealLife</div>
+                  <div className="mt-2 font-board text-[31px] leading-[0.86] drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]">{tone.label}<br />Card</div>
+                  <div className="mx-auto mt-4 h-px w-20 bg-white/30" />
+                  <div className="mt-3 font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/58">tap to reveal</div>
+                </div>
               </div>
-            </div>
-            <div className="absolute inset-0 overflow-hidden rounded-2xl border border-white/34 bg-white/18 text-ink shadow-[0_16px_38px_rgba(0,0,0,0.36)] [backface-visibility:hidden] [transform:rotateY(180deg)] backdrop-blur-[10px]">
-              {card?.cardKind ? (
-                <CardArtwork type={card.cardKind} id={String(card.cardId ?? card.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
-              ) : (
-                <div className="absolute inset-0 grid place-items-center bg-white/12 text-[72px]">{card.icon ?? '🎴'}</div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.72)_34%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-14 text-white">
-                <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/62">{card.cardKind ?? 'card'}</div>
-                <div className="mt-1 font-board text-[24px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{card.cardName ?? card.title ?? '카드 공개'}</div>
-                <div className="mt-2 line-clamp-2 font-board text-[13px] leading-snug text-white/82">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
+            ) : (
+              <div className="absolute inset-0 overflow-hidden bg-white text-ink">
+                {card?.cardKind ? (
+                  <CardArtwork type={card.cardKind} id={String(card.cardId ?? card.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center bg-white text-[72px]">{card.icon ?? '🎴'}</div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.72)_34%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-14 text-white">
+                  <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/62">{card.cardKind ?? 'card'}</div>
+                  <div className="mt-1 font-board text-[24px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{card.cardName ?? card.title ?? '카드 공개'}</div>
+                  <div className="mt-2 line-clamp-2 font-board text-[13px] leading-snug text-white/82">{card.revealText ?? '카드 효과를 정산합니다.'}</div>
+                </div>
               </div>
-            </div>
+            )}
           </motion.div>
-        </button>
-        <button
-          type="button"
-          onClick={onReveal}
-          disabled={!flipped}
-          className="mt-3 h-11 w-full rounded-xl border border-white/34 bg-white/18 font-board text-[18px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] active:translate-y-0.5 disabled:opacity-45 disabled:grayscale"
-        >
-          {flipped ? '카드 확인 · 정산 공개' : '먼저 카드를 뒤집어주세요'}
         </button>
       </div>
     </div>
@@ -1288,6 +1324,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   const amount = Number(notice.amount);
   const showAmount = Number.isFinite(amount) && amount !== 0;
   const accent = notice.color ?? '#22c55e';
+  const isTurnStart = notice.kind === 'turn_start';
   const isBuy = notice.kind === 'buy' && notice.previewPos != null;
   const isStationNotice = notice.kind === 'station' && notice.previewPos != null;
   const isPropertyNotice = notice.kind === 'property' && notice.previewPos != null;
@@ -1299,6 +1336,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   } : undefined;
   const visitorImg = notice.visitorCharacter ? getCharacterImg(notice.visitorCharacter) : null;
   const ownerImg = notice.ownerCharacter ? getCharacterImg(notice.ownerCharacter) : null;
+  const noticePlayerImg = notice.playerCharacter ? getCharacterImg(notice.playerCharacter) : null;
   const avatarStyle = (character, img, fallbackColor = '#d83b2f') => ({
     backgroundImage: img ? `url(${img})` : undefined,
     backgroundSize: AVATAR_SIZE[character] ?? '155%',
@@ -1317,20 +1355,20 @@ function GlobalNoticeBand({ notice, onDismiss }) {
     >
       <motion.div
         key={`${notice.kind}-${notice.title}-${notice.text}`}
-        className="flex w-full max-w-[920px] flex-col items-center"
+        className={cn('flex w-full flex-col items-center', isTurnStart ? 'max-w-[440px]' : 'max-w-[920px]')}
         initial={{ opacity: 0, scale: 0.96, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: -10 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
       >
-        {hostText && (
+        {hostText && !isTurnStart && (
           <div className="mb-[5px] flex max-w-[860px] items-center justify-center gap-2 rounded-[18px] border border-emerald-200/75 bg-[linear-gradient(180deg,rgba(236,253,245,0.78),rgba(16,185,129,0.34))] px-4 py-2 text-center text-[#08372b] shadow-[0_12px_28px_-22px_rgba(6,95,70,0.78),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-[16px]">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
             <span className="font-board text-[clamp(15px,2vw,21px)] font-extrabold leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{hostText}</span>
           </div>
         )}
         <div
-          className={cn('mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)] backdrop-blur-[1px]', notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]')}
+          className={cn('mx-auto grid w-full overflow-hidden border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[440px] grid-rows-[1fr_auto] rounded-[20px] border-2 p-3 shadow-[0_4px_0_#0F0C0A,0_16px_34px_rgba(0,0,0,0.34)] bg-[linear-gradient(135deg,rgba(15,12,10,0.90)_0%,rgba(42,63,92,0.86)_100%)]' : 'rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
           style={noticeStyle}
         >
           {isBuy || isStationNotice || isPropertyNotice ? (
@@ -1376,10 +1414,19 @@ function GlobalNoticeBand({ notice, onDismiss }) {
             </div>
           ) : (
             <div className="flex min-h-0 items-center justify-center gap-3">
-              <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
+              {isTurnStart && notice.playerCharacter ? (
+                <motion.div
+                  className="h-16 w-16 shrink-0 rounded-full border-2 border-white/75 bg-white/70 shadow-[0_3px_0_#0F0C0A,0_0_22px_rgba(255,255,255,0.26)]"
+                  style={avatarStyle(notice.playerCharacter, noticePlayerImg, accent)}
+                  animate={{ scale: [1, 1.08, 1] }}
+                  transition={{ duration: 0.65 }}
+                />
+              ) : (
+                <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
+              )}
               <div className="min-w-0">
-                <div className={cn('font-board leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', notice.subtle ? 'text-[clamp(24px,4.2vw,46px)]' : 'text-[clamp(30px,6vw,74px)]')}>{notice.title}</div>
-                <div className={cn('mt-1 line-clamp-1 font-display font-black uppercase tracking-[0.18em] text-monopoly-gold/78', notice.subtle ? 'text-[10px]' : 'text-[12px]')}>{notice.cta ?? 'tap to close'}</div>
+                <div className={cn('font-board font-black leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', isTurnStart ? 'text-[clamp(20px,2.8vw,30px)]' : notice.subtle ? 'text-[clamp(24px,4.2vw,46px)]' : 'text-[clamp(30px,6vw,74px)]')}>{notice.title}</div>
+                <div className={cn('mt-1 line-clamp-1 font-board font-black tracking-normal text-monopoly-gold/86', isTurnStart ? 'text-[clamp(17px,2.2vw,23px)]' : notice.subtle ? 'text-[10px]' : 'text-[12px]')}>{isTurnStart ? notice.text : (notice.cta ?? 'tap to close')}</div>
               </div>
             </div>
           )}
@@ -1405,7 +1452,10 @@ function StationRoleCard({ notice }) {
       <div className="relative border-b-2 border-[#0F0C0A] bg-black/22 px-2 py-1 text-center font-display text-[7px] font-black uppercase tracking-[0.18em] text-white/70">station master</div>
       <div className="relative flex flex-1 flex-col items-center justify-center px-2 text-center">
         <div className="grid h-16 w-16 place-items-center rounded-full border-2 border-white/80 bg-white/18 text-[38px] shadow-[0_4px_0_rgba(15,12,10,0.55),0_0_22px_rgba(255,221,102,0.55)]">🚉</div>
-        <div className="mt-3 whitespace-pre-line font-board text-[25px] leading-[0.92] drop-shadow-[0_3px_0_rgba(0,0,0,0.42)]">역장\n부임</div>
+        <div className="mt-3 font-board text-[25px] leading-[0.92] drop-shadow-[0_3px_0_rgba(0,0,0,0.42)]">
+          <div>역장</div>
+          <div>부임</div>
+        </div>
         <div className="mt-2 max-w-full truncate rounded-full border border-white/40 bg-black/18 px-2 py-1 font-board text-[12px] text-white/88">{title}</div>
       </div>
       <div className="relative border-t-2 border-[#0F0C0A] bg-black/24 px-2 py-1 text-center font-board text-[14px] text-[#ffe483]">{text}</div>
@@ -1500,7 +1550,7 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
   const cashAfter = player?.cash ?? cashBefore;
   return {
     playerName: name,
-    color: meta.color,
+    color: playerColor(playerId, meta.color),
     roll: roll ? `${roll.d1 ?? '?'} + ${roll.d2 ?? '?'} = ${roll.sum ?? roll.dice?.sum ?? '?'}${roll.isDouble ? ' · 더블' : ''}` : '주사위 정보 없음',
     arrival: arrival?.pos != null ? tileName(arrival.pos) : describeArrival(arrival, state.board?.tiles?.[player?.position ?? 0]),
     arrivalText: describeArrival(arrival, arrival?.pos != null ? state.board?.tiles?.[arrival.pos] : state.board?.tiles?.[player?.position ?? 0]),
@@ -1545,7 +1595,7 @@ function HubTeleportModal({ state, request, onSelect, onStay }) {
                   <div className="text-[16px] leading-tight">{tile.names?.ko ?? tile.name ?? `${tile.pos}번`}</div>
                   <div className="mt-1 flex items-center justify-between gap-1 font-display text-[8px] font-black uppercase tracking-[0.12em] text-ink/42">
                     <span>{tile.pos}번 칸</span>
-                    {owner && <span style={{ color: ownerMeta?.color ?? '#D32F2F' }}>{owner.name ?? `${ownerId + 1}P`} 소유</span>}
+                    {owner && <span style={{ color: playerColor(ownerId, ownerMeta?.color ?? '#D32F2F') }}>{owner.name ?? `${ownerId + 1}P`} 소유</span>}
                   </div>
                 </button>
               );
@@ -1610,8 +1660,8 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
   const name = displayPlayerName(player, base.name);
   const currentName = displayPlayerName(current, currentBase.name);
   return (
-    <div className="fixed inset-0 z-[86] flex items-center justify-center bg-ink/58 p-2 backdrop-blur-[4px]" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-      <div className="relative flex h-[min(92vh,760px)] w-[min(96vw,1040px)] flex-col overflow-hidden rounded-xl border-[3px] border-ink-line bg-parchment-100 shadow-[0_6px_0_#0F0C0A,0_24px_48px_-18px_rgba(0,0,0,0.75)]">
+    <div className="absolute inset-x-0 top-[72px] bottom-[86px] z-[86] flex items-center justify-center bg-ink/38 p-2 backdrop-blur-[3px]" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+      <div className="relative flex h-full max-h-[760px] w-[min(96vw,1040px)] flex-col overflow-hidden rounded-xl border-[3px] border-ink-line bg-parchment-100 shadow-[0_6px_0_#0F0C0A,0_24px_48px_-18px_rgba(0,0,0,0.75)]">
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b-2 border-ink-line bg-[linear-gradient(180deg,#fff8dc_0%,#f0d48f_100%)] px-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className="rounded-md border-2 border-ink-line bg-white px-2.5 py-1 shadow-[0_2px_0_#0F0C0A]">
@@ -1673,7 +1723,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   const openTradeSelect = useGameStore((s) => s.openTradeSelect);
   const tiles = state.board?.tiles ?? [];
   const player = state.players?.[replay.playerId];
-  const playerColor = player ? (CHAR_META[player.character]?.color ?? '#d83b2f') : '#d83b2f';
+  const activePlayerColor = player ? playerColor(replay.playerId, CHAR_META[player.character]?.color ?? '#d83b2f') : '#d83b2f';
   const tileByPos = Object.fromEntries(tiles.map((tile) => [tile.pos, tile]));
   const pos = replay.displayPos ?? replay.startPos ?? player?.position ?? 0;
   const activeTile = tileByPos[pos];
@@ -1697,7 +1747,8 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   const cameraCol = Number(cameraGrid.gridColumn) || 6;
   const cameraRow = Number(cameraGrid.gridRow) || 6;
   const cameraActive = replay.phase === 'moving';
-  const cameraZoom = cameraActive ? 1.18 : 1;
+  const boardScale = 0.95;
+  const cameraZoom = (cameraActive ? 1.18 : 1) * boardScale;
   const rawCameraX = cameraActive ? (6 - cameraCol) * 5.1 : 0;
   const rawCameraY = cameraActive ? (6 - cameraRow) * 5.1 : 0;
   const cameraX = Math.max(-22, Math.min(22, rawCameraX));
@@ -1706,8 +1757,12 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   return (
     <div
       className="board-turn-layer absolute inset-x-2 top-[112px] bottom-[76px] z-[85] flex items-center justify-center bg-transparent p-2"
-      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
-      onClick={closeOnTouch ? (event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); } : (event) => { event.preventDefault(); event.stopPropagation(); }}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (closeOnTouch) onClose?.();
+      }}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
     >
       <div className="board-turn-shell relative grid h-full w-full grid-rows-[1fr] overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#efe1bb] shadow-[0_5px_0_#17120c,0_20px_40px_-26px_rgba(0,0,0,0.82)]">
         <div className="relative min-h-0 overflow-hidden p-3 md:p-4">
@@ -1721,7 +1776,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
               const isEnd = replay.endPos === tile.pos && replay.phase === 'arrived';
               const ownerId = state.tileState?.[tile.pos]?.owner;
               const owner = typeof ownerId === 'number' ? state.players?.[ownerId] : null;
-              const ownerColor = owner ? (CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
+              const ownerColor = owner ? playerColor(ownerId, CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
               const isCenterSpecial = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax'].includes(tile.type);
               return (
                 <div
@@ -1736,7 +1791,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                     {state.players.map((piecePlayer, pieceIndex) => {
                       const renderPos = pieceIndex === replay.playerId ? pos : (piecePlayer.position ?? 0);
                       if (renderPos !== tile.pos || piecePlayer.bankrupt) return null;
-                      const pieceColor = CHAR_META[piecePlayer.character]?.color ?? '#d83b2f';
+                      const pieceColor = playerColor(pieceIndex, CHAR_META[piecePlayer.character]?.color ?? '#d83b2f');
                       const pieceImg = getCharacterImg(piecePlayer.character);
                       return (
                         <div
@@ -1756,7 +1811,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
             <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
                 {replay.phase === 'arrived' ? (
-                  <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} playerColor={playerColor} />
+                  <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} activeColor={activePlayerColor} />
                 ) : replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
@@ -1792,7 +1847,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   );
 }
 
-function BoardArrivalCard({ state, pos, event, playerColor = '#d83b2f' }) {
+function BoardArrivalCard({ state, pos, event, activeColor = '#d83b2f' }) {
   const isJailArrival = event?.kind === 'go_to_jail' || event?.kind === 'three_doubles_jail';
   if (isJailArrival) return <JailArrivalCard reason={event.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸'} />;
   const tile = state?.board?.tiles?.[pos];
@@ -1804,7 +1859,7 @@ function BoardArrivalCard({ state, pos, event, playerColor = '#d83b2f' }) {
   const isProperty = tile.type === 'property';
   const isStation = tile.type === 'railroad';
   const isCard = tile.type === 'chance' || tile.type === 'community_chest';
-  const color = tile.color ?? (isStation ? '#2f75c9' : isCard ? '#7c3aed' : playerColor);
+  const color = tile.color ?? (isStation ? '#2f75c9' : isCard ? '#7c3aed' : activeColor);
   const propertyPrice = ts.price ?? tile.price ?? 0;
   const propertyMarketPrice = ts.marketPrice ?? ts.currentPrice ?? ts.price ?? tile.price ?? 0;
   const subtitle = isProperty
@@ -1846,7 +1901,7 @@ function BoardArrivalCard({ state, pos, event, playerColor = '#d83b2f' }) {
               </div>
               <div className="mt-4 font-board text-[28px] leading-none">{name}</div>
               <div className="mt-2 font-board text-[15px] text-ink/62">{subtitle}</div>
-              {owner && <div className="mt-3 rounded-full border-2 border-[#17120c] bg-white px-3 py-1 font-board text-[13px]" style={{ color: ownerMeta?.color ?? color }}>{owner.name ?? `${ts.owner + 1}P`} 소유</div>}
+              {owner && <div className="mt-3 rounded-full border-2 border-[#17120c] bg-white px-3 py-1 font-board text-[13px]" style={{ color: playerColor(ts.owner, ownerMeta?.color ?? color) }}>{owner.name ?? `${ts.owner + 1}P`} 소유</div>}
             </div>
           </div>
         )}
@@ -1940,13 +1995,22 @@ function describeArrival(event, tile) {
   return `${name} 도착`;
 }
 
-function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
+function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseChange }) {
   const [targets, setTargets] = useState({});
-  const [phase, setPhase] = useState('start');
+  const [phase, setPhase] = useState('intro');
   const [startImageReady, setStartImageReady] = useState(false);
   const [portalCharged, setPortalCharged] = useState(false);
   const introVisible = phase === 'intro';
   const dealVisible = phase === 'deal';
+  const onReadyRef = useRef(onReady);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  useEffect(() => {
+    onPhaseChange?.(phase);
+  }, [onPhaseChange, phase]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('initial-deal-pending', introVisible);
@@ -1959,15 +2023,14 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
 
   useEffect(() => {
     if (!dealVisible) return undefined;
-    const timer = window.setTimeout(() => onReady?.(), 1900);
+    const timer = window.setTimeout(() => onReadyRef.current?.(), 4200);
     return () => window.clearTimeout(timer);
-  }, [dealVisible, onReady]);
+  }, [dealVisible]);
 
   useEffect(() => {
     if (phase !== 'start' || !startImageReady) return undefined;
     setPortalCharged(false);
-    const timer = window.setTimeout(() => setPortalCharged(true), 1900);
-    return () => window.clearTimeout(timer);
+    return undefined;
   }, [phase, startImageReady]);
 
   useEffect(() => {
@@ -2002,8 +2065,18 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
       ? [{ x: -250, y: -130 }, { x: 250, y: -130 }, { x: 0, y: 190 }]
       : [{ x: -260, y: -130 }, { x: 260, y: -130 }, { x: -260, y: 180 }, { x: 260, y: 180 }];
 
+  const handleOverlayTap = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (phase === 'intro') setPhase('deal');
+  };
+
   return (
-    <div className={cn('pointer-events-none absolute inset-0 z-[80] overflow-hidden rounded-[18px]', phase === 'start' && 'bg-[#eef1ed]')}>
+    <div
+      className={cn('pointer-events-auto absolute inset-0 z-[80] overflow-hidden rounded-[18px]', phase === 'start' && 'bg-[#eef1ed]')}
+      onPointerDown={(event) => { event.stopPropagation(); }}
+      onClick={handleOverlayTap}
+    >
       {phase === 'start' && (
         <>
           <div className="absolute inset-0 overflow-hidden rounded-[18px] bg-[#eef1ed]" aria-hidden="true">
@@ -2016,21 +2089,15 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
             />
           </div>
 
-          {!startImageReady ? (
-            <div className="pointer-events-auto absolute inset-0 z-30 grid place-items-center rounded-[18px] bg-[#eef1ed]/72 backdrop-blur-[6px]">
-              <div className="rounded-[22px] border border-white/70 bg-white/70 px-6 py-4 text-center shadow-[0_18px_38px_-28px_rgba(0,0,0,0.72)]">
-                <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-ink/48">loading</div>
-                <div className="mt-1 font-board text-[22px] font-extrabold text-ink">무대 준비 중...</div>
-              </div>
-            </div>
-          ) : (
+          {startImageReady && (
             <>
               <button
                 type="button"
-                onClick={() => portalCharged && setPhase('intro')}
+                onPointerDown={(event) => { event.stopPropagation(); }}
+                onClick={(event) => { event.preventDefault(); event.stopPropagation(); setPortalCharged(true); setPhase('intro'); }}
                 className={cn('pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border border-white/55 px-12 py-4 font-board text-[26px] font-black leading-none shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]', portalCharged ? 'initial-start-button-pulse bg-[linear-gradient(180deg,rgba(255,92,92,0.92),rgba(168,23,31,0.94))] text-white' : 'initial-start-button-loading cursor-wait bg-[linear-gradient(180deg,#ffe682_0%,#f4b72f_56%,#b86a09_100%)] text-[#4a2200]')}
               >
-                {portalCharged ? '시작하기' : '로딩중..'}
+                시작하기
               </button>
               {!portalCharged && (
                 <div className="initial-start-loading-panel pointer-events-none absolute left-1/2 top-[calc(62%+128px)] z-30 w-[min(82vw,740px)] -translate-x-1/2 text-center">
@@ -2048,10 +2115,8 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
       )}
 
       {introVisible && (
-        <button
-          type="button"
-          onClick={() => setPhase('deal')}
-          className="pointer-events-auto absolute left-1/2 top-[47%] z-30 w-[min(88vw,560px)] -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-emerald-200/80 bg-[linear-gradient(180deg,rgba(236,253,245,0.78),rgba(16,185,129,0.36))] px-5 py-4 text-left text-[#08372b] shadow-[0_18px_42px_-24px_rgba(6,95,70,0.72),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-[16px] transition active:translate-y-[calc(-50%+1px)]"
+        <div
+          className="pointer-events-none absolute left-1/2 top-[47%] z-30 flex min-h-[168px] w-[min(90vw,620px)] -translate-x-1/2 -translate-y-1/2 items-center rounded-[24px] border border-emerald-200/80 bg-[linear-gradient(180deg,rgba(236,253,245,0.78),rgba(16,185,129,0.36))] px-6 py-8 text-left text-[#08372b] shadow-[0_18px_42px_-24px_rgba(6,95,70,0.72),inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-[16px]"
         >
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xl text-white">🎙️</span>
@@ -2061,31 +2126,36 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady }) {
               <div className="mt-1 font-board text-[14px] font-extrabold text-emerald-950/54">터치하면 내 첫 권리증이 펼쳐집니다</div>
             </div>
           </div>
-        </button>
+        </div>
       )}
 
       {dealVisible && cards.map((card, dealIndex) => {
         const targetKey = `${card.playerIndex}-${card.cardIndex}`;
         const fallback = fallbackTargets[card.playerIndex] ?? fallbackTargets[0];
         const target = targets[targetKey] ?? { ...fallback, w: 68, h: 96 };
+        const inwardShift = target.x > 120 ? -70 : target.x < -120 ? 70 : 0;
         return (
           <div
             key={`${card.playerIndex}-${card.cardIndex}-${card.pos}`}
-            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg border-[3px] border-[#17120c] bg-[#fff7df] shadow-[0_4px_0_#17120c,0_16px_22px_-15px_rgba(0,0,0,0.72)]"
+            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg"
             style={{
-              width: `${target.w}px`,
-              height: `${target.h}px`,
-              '--deal-delay': `${card.recipientOrder * 0.72 + card.cardIndex * 0.095}s`,
-              '--deal-x': `${target.x}px`,
+              width: '69px',
+              height: '96px',
+              '--deal-delay': `${(card.dealOrder ?? dealIndex) * 0.18}s`,
+              '--deal-x': `${target.x + inwardShift}px`,
               '--deal-y': `${target.y}px`,
-              '--deal-stack-x': `${(card.cardIndex - 1.5) * 18}px`,
-              '--deal-stack-y': `${(card.cardIndex % 2) * 4}px`,
-              '--deal-rot': `${(card.cardIndex - 1.5) * 2.2}deg`,
+              '--deal-stack-x': '0px',
+              '--deal-stack-y': '0px',
+              '--deal-rot': `${(card.cardIndex - 1.5) * 8}deg`,
               '--deed-color': '#17120c',
+              zIndex: 30 + dealIndex,
             }}
           >
-            <div className="h-full w-full overflow-hidden rounded-[5px] bg-[#17120c] p-[2px]">
-              <PropertyDeedMini pos={card.pos} className="scale-[0.96]" />
+            <div
+              className="h-[288px] w-[208px] overflow-visible rounded-lg shadow-[0_4px_0_#17120c,0_16px_22px_-15px_rgba(0,0,0,0.72)] [&_[data-component=PropertyDeedMini]]:!border-[#17120c] [&_[data-component=PropertyDeedMini]]:!bg-[#fff7df] [&_[data-component=PropertyDeedMini]]:!backdrop-blur-none"
+              style={{ transform: 'scale(0.333)', transformOrigin: 'top left' }}
+            >
+              <PropertyDeedMini pos={card.pos} />
             </div>
           </div>
         );
@@ -2187,13 +2257,13 @@ function GameEndOverlay({ state, onRestart, onQuit }) {
               >
                 <span
                   className="grid h-8 w-8 place-items-center rounded-full border-2 border-ink-line font-display text-[13px] font-extrabold text-white"
-                  style={{ backgroundColor: idx === 0 ? '#D32F2F' : base.color }}
+                  style={{ backgroundColor: idx === 0 ? '#D32F2F' : playerColor(r.i, base.color) }}
                 >
                   {idx === 0 ? '??' : idx + 1}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-display text-[9px] font-extrabold uppercase tracking-[0.2em]" style={{ color: base.color }}>
+                    <span className="font-display text-[9px] font-extrabold uppercase tracking-[0.2em]" style={{ color: playerColor(r.i, base.color) }}>
                       {r.i + 1}P
                     </span>
                     <span className="truncate font-board text-[17px] font-extrabold text-ink">

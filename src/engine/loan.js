@@ -12,7 +12,7 @@
 //  - 한도 1,000만, 자격: 잔액 ≤ 300만
 //  - 자기 턴마다 10만 이자
 //  - 미납 3회 OK, 4회 청산
-//  - 게임 중 1회
+//  - 1회 제한
 //  - 자동 상환: 잔액 1,000만 도달 시 300만 자동 상환
 //
 // 고리대금:
@@ -20,7 +20,7 @@
 //  - 자기 턴마다 30만 이자
 //  - 1회 미납 = 즉시 청산
 //  - 중도상환 가능 (수수료 10%)
-//  - 게임 중 1회
+//  - 1회 제한
 
 import {
   LTV_RATIO,
@@ -106,7 +106,7 @@ export const chargeMortgageInterest = (state, playerId) => {
 
 // 자격 확인
 export const canTakeCredit = (player) => {
-  if (player.creditUsed) return false; // 게임 중 1회
+  if (player.creditUsed) return false; // 1회 제한
   if (player.cash > CREDIT_ELIGIBILITY_CASH) return false;
   return true;
 };

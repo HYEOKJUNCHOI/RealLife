@@ -56,8 +56,8 @@ export const currentPrice = (state, pos) => {
   return round10(raw);
 };
 
-// 월세 — BRAINSTORM 7-2 결정: 시세 비율 (표준 모노폴리 rent 배열 폐기)
-// 빈=20% / 빌라1=30% / 빌라2=40% / 빌라3=50% / 빌라4=60% / 아파트=80%
+// 월세 — 시세 비율 (표준 모노폴리 rent 배열 폐기)
+// 빈=20% / 빌라1=20% / 빌라2=40% / 빌라3=60% / 빌라4=80% / 아파트=100%
 // 색깔독점 보너스는 currentPrice 단계에서 +20% 곱해지므로 자동 반영됨
 // 대출 상태(저당)면 월세 0
 export const rentFromStage = (state, pos) => {

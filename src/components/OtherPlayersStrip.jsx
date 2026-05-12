@@ -102,10 +102,10 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
 
   return (
     <footer
-      className="flex min-h-[62px] items-stretch gap-1.5 overflow-hidden rounded-xl border border-white/65 bg-white/42 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_12px_28px_-24px_rgba(36,57,74,0.72)] backdrop-blur-[14px]"
+      className="relative z-30 flex min-h-[62px] items-stretch gap-1.5 overflow-visible rounded-xl border border-white/65 bg-white/42 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_12px_28px_-24px_rgba(36,57,74,0.72)] backdrop-blur-[14px]"
       data-component="OtherPlayersStrip"
     >
-      <div className="flex flex-1 items-stretch gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="flex flex-1 items-stretch gap-1.5 overflow-x-auto overflow-y-visible no-scrollbar">
         {others.map(({ p, i }) => (
           <PlayerChip key={i} player={p} index={i} state={state} onClick={() => onViewPlayer?.(i)} />
         ))}
@@ -143,6 +143,7 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
   const characterImg = getCharacterImg(p.character);
   const isCashBankrupt = (p.cash ?? 0) <= 0;
   const stationCount = (state.board?.tiles ?? []).filter((tile) => tile.type === 'railroad' && tile.subType === 'station' && state.tileState?.[tile.pos]?.owner === i).length;
+  const institutionCount = (state.board?.tiles ?? []).filter((tile) => tile.type === 'utility' && state.tileState?.[tile.pos]?.owner === i).length;
 
   return (
     <button
@@ -160,9 +161,11 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
       }}
     >
       {stationCount > 0 && (
-        <div className="pointer-events-none absolute right-3 top-[-2px] z-10 rounded-full border border-emerald-700 bg-emerald-100 px-2 py-0.5 font-display text-[9px] font-black text-emerald-800 shadow-[0_2px_0_#0F0C0A] station-income-pulse">
-          +{stationCount * 10}만 🚉
-        </div>
+        <>
+          <div className="pointer-events-none absolute right-2 top-[-18px] z-[80] rounded-full border border-emerald-700 bg-emerald-100 px-2.5 py-1 font-display text-[10px] font-black text-emerald-800 shadow-[0_2px_0_#0F0C0A,0_0_18px_rgba(34,197,94,0.55)] station-income-pulse">
+            +{stationCount * 10}만
+          </div>
+        </>
       )}
       {/* 캐릭터 — 동그랗게 얼굴 잘 보이게 (캐릭터별 모자 높이 따라 position 분기) */}
       <div className="ml-1 shrink-0">
@@ -197,6 +200,12 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
           {p.inJail && <span className="font-display text-[9px] font-bold text-monopoly-red">감옥</span>}
           {p.skipTurns > 0 && <span className="font-display text-[9px] font-bold text-amber-700">군복무</span>}
           {(p.bankrupt || isCashBankrupt) && <span className="font-display text-[9px] font-bold text-monopoly-red">파산</span>}
+          {(stationCount > 0 || institutionCount > 0) && (
+            <span className="inline-flex shrink-0 flex-col gap-0.5 leading-none">
+              {stationCount > 0 && <span className="rounded-full border border-emerald-700 bg-emerald-50 px-1.5 py-0.5 font-display text-[7px] font-black leading-none text-emerald-800 shadow-[0_1px_0_#0F0C0A]">역장</span>}
+              {institutionCount > 0 && <span className="rounded-full border border-sky-700 bg-sky-50 px-1.5 py-0.5 font-display text-[7px] font-black leading-none text-sky-800 shadow-[0_1px_0_#0F0C0A]">기관장</span>}
+            </span>
+          )}
         </div>
         {/* 2행: 집문서 / 집 / 아파트 */}
         <div className="mt-1 inline-flex items-center gap-1 rounded-sm border border-ink-line/25 bg-white/55 px-1.5 py-0.5 font-display text-[9px] font-bold leading-none tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
@@ -214,8 +223,8 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
         </div>
       </div>
 
-      {/* 우측: 현금 — 살짝 크게 */}
-      <div className="ml-0.5 inline-flex shrink-0 items-baseline gap-0.5 rounded-md border-2 border-ink-line bg-white px-2 py-1 font-display tabular-nums shadow-[0_2px_0_0_#0F0C0A]">
+      {/* 우측: 현금 */}
+      <div className="ml-0.5 mt-auto inline-flex shrink-0 items-baseline gap-0.5 self-end rounded-md border-2 border-ink-line bg-white px-2 py-1 font-display tabular-nums shadow-[0_2px_0_0_#0F0C0A]">
         <span className="text-[10px] font-bold text-emerald-900/60">₩</span>
         <span className="text-[14px] font-extrabold leading-none text-ink">{fmt(p.cash)}</span>
         <span className="text-[10px] font-bold text-ink/55">만</span>

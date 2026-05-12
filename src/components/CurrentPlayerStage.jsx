@@ -13,6 +13,7 @@ import PropertyDeedMini from '@/components/PropertyDeedMini.jsx';
 import AnimatedCash from '@/components/AnimatedCash.jsx';
 import CashDeltaFloat from '@/components/CashDeltaFloat.jsx';
 import CardArtwork from '@/components/CardArtwork.jsx';
+import LoanModal from '@/components/modals/LoanModal.jsx';
 import { useGameStore } from '@/stores/gameStore.js';
 import charactersData from '@/data/characters.json';
 import koreaBoard from '@/boards/korea.json';
@@ -241,7 +242,6 @@ export default function CurrentPlayerStage({
   const loanInterest = mortgageInterest + creditInterest + loansharkInterest;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [badgeTestMode, setBadgeTestMode] = useState(false);
   const [hostVariant, setHostVariant] = useState(() => getRandomHostVariant());
   useEffect(() => {
     setHostVariant(getRandomHostVariant());
@@ -249,19 +249,18 @@ export default function CurrentPlayerStage({
 
   const openModal = useGameStore((s) => s.openPropertyModal);
   const openLoanModal = useGameStore((s) => s.openLoanModal);
+  const modalLoan = useGameStore((s) => s.modal.loan);
+  const closeLoanModal = useGameStore((s) => s.closeLoanModal);
   const saveGame = useGameStore((s) => s.save);
   const restartSameGame = useGameStore((s) => s.restartSameGame);
-  const addToast = useGameStore((s) => s.addToast);
 
   const handleQuitGame = () => {
     saveGame?.();
-    addToast?.({ message: '게임을 저장하고 나갑니다.', tone: 'success' });
     setSettingsOpen(false);
     setTimeout(() => onExit?.(), 650);
   };
 
   const handleRestartGame = () => {
-    addToast?.({ message: '같은 멤버로 새 판을 시작합니다.', tone: 'warn' });
     setSettingsOpen(false);
     setTimeout(() => {
       restartSameGame?.();
@@ -320,16 +319,13 @@ export default function CurrentPlayerStage({
     )}
 
     <section
-      className={cn(
-        'relative grid flex-1 min-h-0 grid-cols-[1fr_248px] overflow-hidden rounded-2xl border border-white/65 bg-white/72',
-      )}
+      className="relative grid flex-1 min-h-0 grid-cols-[1fr_248px] overflow-hidden"
       style={{
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.86), 0 18px 42px -30px rgba(36,57,74,0.58)`,
         '--active-player-color': meta.color,
       }}
       data-component="CurrentPlayerStage"
     >
-      <div className="active-player-glow-layer pointer-events-none absolute inset-0 z-[75] rounded-lg" aria-hidden="true" />
+      <div className="active-player-glow-layer pointer-events-none absolute inset-x-0 top-0 z-[75] h-[112px] rounded-lg" aria-hidden="true" />
       {settingsOpen && (
         <div className="absolute right-3 top-14 z-40 w-[190px] rounded-md border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_4px_0_#0F0C0A,0_18px_34px_-18px_rgba(0,0,0,0.75)]">
           <div className="mb-2 border-b border-white/45 pb-1 font-display text-[10px] font-extrabold uppercase tracking-[0.22em] text-ink/55">
@@ -400,6 +396,14 @@ export default function CurrentPlayerStage({
               {meta.emoji ?? '🎭'}
             </div>
           )}
+          {(player.defenseCards ?? 0) > 0 && (
+            <div
+              className="absolute -bottom-2 left-1/2 z-20 grid h-7 min-w-7 -translate-x-1/2 place-items-center rounded-b-[12px] rounded-t-[8px] border-2 border-ink-line bg-[linear-gradient(180deg,#e8fff6_0%,#38b46f_100%)] px-1 font-display text-[11px] font-black leading-none text-white shadow-[0_2px_0_#0F0C0A,0_7px_12px_-10px_rgba(0,0,0,0.8)]"
+              title={`방어 카드 ${player.defenseCards}장`}
+            >
+              🛡{player.defenseCards > 1 ? player.defenseCards : ''}
+            </div>
+          )}
           </div>
         </motion.div>
 
@@ -454,7 +458,7 @@ export default function CurrentPlayerStage({
 
       </div>
       {/* 보유 부동산 */}
-      <div className="mx-2.5 mb-[14px] mt-[14px] flex flex-1 min-h-0 flex-col rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22),0_12px_24px_-20px_rgba(36,57,74,0.72)]">
+      <div className="relative mx-2.5 mb-[14px] mt-[14px] flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22),0_12px_24px_-20px_rgba(36,57,74,0.72)]">
         <div className="mb-[5px] flex items-center justify-between">
           <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{'\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
             <span className="ml-1.5 font-semibold text-ink/40 tabular-nums">
@@ -465,7 +469,7 @@ export default function CurrentPlayerStage({
         </div>
 
         {/* 보유 부동산 캡슐 안에서 8개 섹션을 먼저 나누고, 각 섹션 안에 카드만 다시 그린다. */}
-        <div className="grid flex-1 min-h-0 content-start grid-cols-4 auto-rows-[calc((100%-10px)/2)] gap-x-1.5 gap-y-[10px] pt-0.5">
+        <div className="grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5">
           {Array.from({ length: OWNED_SLOTS }).map((_, idx) => {
             const pos = owned[idx];
             const isPending = idx === pendingPreviewSlot;
@@ -498,6 +502,18 @@ export default function CurrentPlayerStage({
           })}
         </div>
 
+        {modalLoan?.playerId === index && (
+          <div
+            className="absolute inset-1 z-[60] rounded-xl bg-ink/35 p-1.5 backdrop-blur-[2px]"
+            onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+            onClick={(event) => { event.preventDefault(); event.stopPropagation(); closeLoanModal?.(); }}
+          >
+            <div className="h-full" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+              <LoanModal open inline onClose={closeLoanModal} playerId={modalLoan.playerId} />
+            </div>
+          </div>
+        )}
+
         {owned.length > OWNED_SLOTS && (
           <div className="mt-1 text-right font-display text-[9px] font-semibold uppercase tracking-wider text-ink/50">
             +{owned.length - OWNED_SLOTS} {'\uCD94\uAC00 \uBCF4\uC720'}
@@ -510,7 +526,7 @@ export default function CurrentPlayerStage({
 
       {/* 우측: 사회자 브리핑 */}
       <aside
-        className="flex min-h-0 flex-col p-2.5"
+        className="flex min-h-0 flex-col px-2.5 pb-[14px] pt-1"
         style={{
           background: 'linear-gradient(90deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 100%)',
         }}
@@ -554,10 +570,8 @@ export default function CurrentPlayerStage({
 
           {/* 중복 정산 패널 제거: 도착 후 사회자창+알림창만 사용 */}
 
-          {badgeTestMode && <BadgeLayoutTestPanel />}
-
           {hideDicePanel ? (
-            <div className="real-dice-panel mt-auto mb-[78px] translate-y-[80px] w-full shrink-0 rounded-xl border border-white/70 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.30),0_0_20px_rgba(100,116,139,0.26),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
+            <div className="real-dice-panel mt-auto mb-[88px] translate-y-[70px] w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
               {statusActions}
             </div>
           ) : (
@@ -596,7 +610,7 @@ function DiceFace({ value = 1, rolling = false, ready = false }) {
   const safeValue = Math.max(1, Math.min(6, value));
   return (
     <motion.div
-      className="relative grid h-[78px] w-[78px] place-items-center overflow-visible rounded-[20px]"
+      className="relative grid h-[68px] w-[68px] place-items-center overflow-visible rounded-[18px]"
       animate={rolling ? { scale: [1, 1.035, 1.01], y: [0, -1, 0] } : { scale: [1.03, 1] }}
       transition={rolling ? { duration: 0.18, ease: 'linear' } : { duration: 0.22, ease: 'easeOut' }}
     >
@@ -614,7 +628,7 @@ function DiceFace({ value = 1, rolling = false, ready = false }) {
             <path d="M16 17 C32 8 67 8 84 17" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" opacity="0.72" />
             <path d="M84 20 C91 40 88 70 76 84" fill="none" stroke="#6b5b3b" strokeWidth="5" strokeLinecap="round" opacity="0.12" />
           </svg>
-          <span className="absolute inset-0 grid place-items-center select-none font-display text-[34px] font-black leading-none text-ink drop-shadow-[0_2px_0_rgba(255,255,255,0.72)]">?</span>
+          <span className="absolute inset-0 grid place-items-center select-none font-display text-[30px] font-black leading-none text-ink drop-shadow-[0_2px_0_rgba(255,255,255,0.72)]">?</span>
         </div>
       ) : (
         <img
@@ -637,14 +651,11 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
   const showCardResult = result?.kind === 'card';
   const isJail = result?.kind === 'jail' || result?.kind === 'jail_sent';
   const showNumberPad = !showCardResult && !isJail;
-  const [cardFlipped, setCardFlipped] = useState(false);
 
-  useEffect(() => {
-    setCardFlipped(false);
-  }, [result?.kind, result?.cardKind, result?.cardId, result?.eventId, result?.text]);
+  if (showCardResult) return null;
 
   return (
-    <div className="real-dice-panel mt-auto mb-[78px] translate-y-[80px] w-full shrink-0 rounded-xl border border-white/70 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.30),0_0_20px_rgba(100,116,139,0.26),0_14px_28px_-22px_rgba(36,57,74,0.72)]" style={{ '--player-color': color }}>
+    <div className="real-dice-panel mt-auto mb-[88px] translate-y-[70px] w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]" style={{ '--player-color': color }}>
       {isJail ? (
         <div className="overflow-hidden rounded-xl border-2 border-ink-line bg-[linear-gradient(135deg,#f1f5f9_0%,#dbeafe_48%,#93c5fd_100%)] p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_3px_0_#0F0C0A]">
           <div className="rounded-lg border-2 border-ink-line bg-white/88 px-3 py-2 text-center shadow-[0_2px_0_rgba(15,12,10,0.55)]">
@@ -693,9 +704,9 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
           {diceMode === 'app' ? (
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2 rounded-xl border border-white/70 bg-white/82 px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.18),0_0_10px_rgba(100,116,139,0.14)] [perspective:760px]">
-                <span className="translate-x-[11px]"><DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} /></span>
+                <span className="translate-x-[5px]"><DiceFace value={lastDiceRoll?.d1 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} /></span>
                 <span className="font-display text-[22px] font-black leading-none text-ink">➕</span>
-                <span className="-translate-x-[11px]"><DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} /></span>
+                <span className="-translate-x-[5px]"><DiceFace value={lastDiceRoll?.d2 ?? 1} rolling={lastDiceRoll?.rolling} ready={!lastDiceRoll} /></span>
               </div>
               <button
                 type="button"
@@ -735,72 +746,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
             </>
           )}
         </>
-      ) : (
-        <div className="rounded-2xl border border-white/70 bg-white/78 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_10px_24px_-20px_rgba(36,57,74,0.72)]">
-          <button
-            type="button"
-            onClick={() => setCardFlipped(true)}
-            className="block w-full [perspective:900px]"
-            title={cardFlipped ? resultTitle : '카드 뒤집기'}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 8, rotate: -1.5 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                rotate: cardFlipped ? 0 : [-1.5, 1.5, -1, 1, -1.5],
-                rotateY: cardFlipped ? 180 : 0,
-              }}
-              transition={{
-                opacity: { duration: 0.18 },
-                y: { type: 'spring', stiffness: 250, damping: 22 },
-                rotateY: { type: 'spring', stiffness: 230, damping: 24 },
-                rotate: cardFlipped ? { duration: 0.18 } : { duration: 0.72, repeat: Infinity, repeatDelay: 0.85 },
-              }}
-              className="relative h-[218px] rounded-lg [transform-style:preserve-3d]"
-            >
-              <div className="absolute inset-0 grid place-items-center overflow-hidden rounded-lg border-2 border-ink-line bg-[linear-gradient(135deg,#20324d_0%,#51244b_54%,#d6a94b_100%)] text-white shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] [backface-visibility:hidden]">
-                <div className="grid h-[132px] w-[100px] place-items-center rounded-xl border-2 border-white/45 bg-white/12 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
-                  <div>
-                    <div className="text-[42px] leading-none">🎴</div>
-                    <div className="mt-2 font-board text-[22px] leading-none">카드<br />뒤집기</div>
-                    <div className="mt-2 font-display text-[8px] font-black uppercase tracking-[0.18em] text-white/62">tap to reveal</div>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute inset-0 overflow-hidden rounded-lg border-2 border-ink-line bg-[#fffaf0] text-ink shadow-[0_10px_22px_-18px_rgba(36,57,74,0.72)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                {result?.cardKind ? (
-                  <CardArtwork type={result.cardKind} id={String(result.cardId ?? result.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
-                ) : (
-                  <div className="absolute inset-0 grid place-items-center bg-[#fffaf0] text-[64px]">{resultIcon}</div>
-                )}
-                <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.78)_30%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-10 text-white">
-                  <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/66">{result?.cardKind ?? 'card'}</div>
-                  <div className="mt-0.5 font-board text-[22px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{result?.cardName ?? resultTitle}</div>
-                  <div className="mt-1.5 line-clamp-2 font-board text-[13px] leading-snug text-white/88">{result?.revealText ?? <>카드 확인 후<br />정산을 공개합니다.</>}</div>
-                </div>
-              </div>
-            </motion.div>
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenResultCard?.(result)}
-            disabled={!cardFlipped}
-            className="mt-1.5 h-10 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_55%,#f1b84d_100%)] font-board text-[16px] text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none disabled:opacity-45 disabled:grayscale"
-          >
-            {cardFlipped ? '카드 확인 · 정산 공개' : '먼저 카드를 뒤집어주세요'}
-          </button>
-          {diceLocked && onUnlockDice && (
-            <button
-              type="button"
-              onClick={onUnlockDice}
-              className="mt-1.5 h-9 w-full rounded-md border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#dff4ff_50%,#6fb3ff_100%)] font-board text-[14px] font-extrabold text-[#15324a] whitespace-nowrap shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] active:translate-y-1 active:shadow-none"
-            >
-              다시 입력
-            </button>
-          )}
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1028,31 +974,6 @@ function RentIncomeChip({ value }) {
   return <IncomeBadge icon="🏢" label="아파트 월세" value={value} />;
 }
 
-function BadgeLayoutTestPanel() {
-  const fakePassives = new Set(PASSIVE_SLOTS.map((item) => item.id));
-  const fakePlayer = {
-    creditDebt: 300,
-    loansharkDebt: 200,
-    defenseCards: 1,
-    pendingLifeChange: true,
-  };
-  return (
-    <div className="mb-2 rounded-2xl border border-emerald-200/80 bg-emerald-50/88 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_10px_22px_-18px_rgba(36,57,74,0.62)]">
-      <div className="mb-1 font-display text-[8px] font-black uppercase tracking-[0.2em] text-emerald-900/55">Badge Test</div>
-      <div className="flex max-w-full flex-wrap items-center gap-1 overflow-hidden">
-        <StatusBoard activePassives={fakePassives} player={fakePlayer} />
-        <RentIncomeChip value={80} />
-      </div>
-      <div className="mt-1 flex max-w-full flex-wrap items-center gap-1 overflow-hidden">
-        <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-25'} unit={'\uB9CC'} tone="red" size="normal" />
-        <IncomeBadge icon="🚉" label="역장 적립" value={40} sub="4역 · 누적 400만" />
-        <IncomeBadge icon="⚡" label="기관 월급" value={20} sub="2곳 보유" />
-        <MiniBadge text="방어 1" tone="green" />
-        <MiniBadge text="체인지" tone="amber" />
-      </div>
-    </div>
-  );
-}
 
 function IncomeBadge({ icon, label, value, sub, onClick }) {
   const className = "inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-[9px] border-2 border-emerald-700 bg-emerald-100 px-2 font-display text-[9px] font-bold leading-none text-emerald-900 shadow-[inset_0_2px_0_rgba(255,255,255,0.62),0_2px_0_#0F0C0A]";
@@ -1196,7 +1117,7 @@ function Group({ label, children }) {
 function StatusBadges({ player }) {
   const items = [];
   // 감옥/휴식 턴 수 뱃지는 메인 쉬는 중 오버레이와 중복되어 숨긴다.
-  if ((player.defenseCards ?? 0) > 0) items.push({ tone: 'green', text: `방어 ${player.defenseCards}` });
+
   if (player.pendingLifeChange) items.push({ tone: 'amber', text: '체인지' });
   if (player.creditDebt > 0) items.push({ tone: 'amber', text: `신용 ${fmt(player.creditDebt)}만` });
   if (player.loansharkDebt > 0) items.push({ tone: 'red', text: `고리 ${fmt(player.loansharkDebt)}만` });
