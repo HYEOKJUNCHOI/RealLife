@@ -3118,18 +3118,18 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
 
       {introVisible && (
         <div className="pointer-events-none absolute left-1/2 top-[47%] z-30 flex w-full max-w-[920px] -translate-x-1/2 -translate-y-1/2 flex-col items-center px-3">
-          <div className="mb-[5px] flex w-full max-w-[960px] items-center justify-center gap-2 rounded-[18px] border border-emerald-200/75 bg-[linear-gradient(135deg,rgba(5,5,5,0.9)_0%,rgba(7,30,24,0.82)_45%,rgba(16,185,129,0.42)_100%)] px-5 py-2 text-center text-white shadow-[0_12px_28px_-22px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-[16px]">
+          <div className="mb-[5px] flex w-full max-w-[960px] items-center justify-center gap-2 rounded-[18px] border border-fuchsia-300/50 bg-[linear-gradient(135deg,rgba(5,5,5,0.9)_0%,rgba(49,10,54,0.85)_45%,rgba(219,39,119,0.45)_100%)] px-5 py-2 text-center text-white shadow-[0_12px_28px_-22px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-[16px]">
             <div className="flex min-w-0 items-center justify-start gap-2">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[linear-gradient(135deg,#3b82f6_0%,#d946ef_100%)] text-white shadow-[0_2px_0_#0f0c0a]">🎙️</span>
               <span className="font-board text-[clamp(15px,2vw,21px)] font-extrabold leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>자, 첫 출발은 권리증부터 나눠드릴게요 👀</span>
             </div>
           </div>
           <div
-            className="mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line bg-[linear-gradient(135deg,rgba(15,12,10,0.92)_0%,rgba(34,197,94,0.53)_58%,rgba(255,255,255,0.18)_100%)] p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46),0_0_0_2px_rgba(34,197,94,0.66),0_0_42px_rgba(34,197,94,0.55),inset_0_0_30px_rgba(34,197,94,0.13)] backdrop-blur-[1px]"
+            className="mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line bg-[linear-gradient(135deg,rgba(15,12,10,0.92)_0%,rgba(59,130,246,0.45)_30%,rgba(217,70,239,0.45)_65%,rgba(234,179,8,0.35)_100%)] p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46),0_0_0_2px_rgba(217,70,239,0.5),0_0_42px_rgba(59,130,246,0.4),inset_0_0_30px_rgba(234,179,8,0.15)] backdrop-blur-[3px]"
           >
             <div className="grid min-h-0 grid-cols-[minmax(150px,236px)_1fr] items-center gap-5 px-2 text-left">
-              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] border-[#22c55ecc] bg-white shadow-[0_5px_0_#0F0C0A,0_0_24px_rgba(34,197,94,0.5)]">
-                <NoticeIconCard notice={{ kind: 'go_reward', icon: '📝', title: '초기 자산' }} accent="#22c55e" />
+              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] border-[#d946efcc] bg-white shadow-[0_5px_0_#0F0C0A,0_0_24px_rgba(217,70,239,0.5)]">
+                <NoticeIconCard notice={{ kind: 'go_reward', icon: '📝', title: '초기 자산' }} accent="#d946ef" />
               </div>
               <div className="min-w-0 text-center sm:text-left">
                 <div className="flex items-center justify-center gap-3 sm:justify-start">
