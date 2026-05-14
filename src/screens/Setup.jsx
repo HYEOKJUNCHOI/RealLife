@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn.js';
 import { getAvailableCharacters } from '@/lib/characterRoster.js';
 import { getBgmPreference, pauseBgm, playBgm } from '@/lib/bgm.js';
 import AssetFrame from '@/components/AssetFrame.jsx';
+import { useGameDialog } from '@/components/GameDialog.jsx';
 
 const PLAYER_COLORS = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
 

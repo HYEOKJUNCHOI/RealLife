@@ -392,7 +392,13 @@ export const advanceTurn = (state, rng, log) => {
     const chance = state.deathmatch ? DEATHMATCH_EVENT_TURN_CHANCE : EVENT_CARD_TURN_CHANCE;
     if (rng.next() < chance) {
       const r = triggerEventCard(state, rng);
-      log.push({ kind: 'event_card', ...r, deathmatch: !!state.deathmatch });
+      // 수술적 수정: 원래의 kind를 보존하여 정산 UI에서 식별 가능하게 함
+      log.push({ 
+        ...r, 
+        originalKind: r.kind,
+        kind: 'event_card', 
+        deathmatch: !!state.deathmatch 
+      });
     }
   }
 

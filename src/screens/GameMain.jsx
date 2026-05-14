@@ -306,8 +306,9 @@ export default function GameMain({ onExit }) {
     window.setTimeout(() => setPropertyShatter((current) => current?.pos === pos ? null : current), 1150);
   };
 
+  // 수술적 수정: lastTurn 의존성 제거 (턴 종료 시 키 변경으로 인한 루프 방지)
   const cardSettlementKey = turnResult?.kind === 'card'
-    ? `${lastTurn?.playerId ?? ''}|${turnResult.cardKind ?? ''}|${turnResult.cardId ?? ''}|${turnResult.eventId ?? ''}|${JSON.stringify(turnResult.text ?? '')}`
+    ? `${turnResult.playerId ?? ''}|${turnResult.cardKind ?? ''}|${turnResult.cardId ?? ''}|${turnResult.eventId ?? ''}|${JSON.stringify(turnResult.text ?? '')}`
     : null;
   const cardSettlementPending = !!cardSettlementKey && cardSettlementSeenKey !== cardSettlementKey;
 
@@ -327,7 +328,7 @@ export default function GameMain({ onExit }) {
     if (card?.kind === 'card' && cardSettlementKey) {
       if (cardSettlementSeenKey === cardSettlementKey) return; // 중복 방지 가드
 
-      const playerId = card.playerId ?? lastTurn?.playerId ?? state?.turnIndex ?? 0;
+      const playerId = card.playerId ?? state?.turnIndex ?? 0;
       const cashBefore = card.cashBefore ?? useGameStore.getState().state?.players?.[playerId]?.cash ?? 0;
       const revealedEvent = card.rawEvent ?? card;
       
@@ -688,14 +689,25 @@ export default function GameMain({ onExit }) {
     if (!diceLocked && !hasMovedThisTurn) {
       return false;
     }
+
+    // 수술적 수정: 다음 턴 시작 전 이전 결과 명시적 정리
+    setTurnResult(null);
+    setBoardTurn(null);
+    setCardEffectNotice(null);
+    setGlobalNotice(null);
+    setSettlementLocked(false);
+    
     diceSnapshotRef.current = null;
     const prevPlayerId = state?.turnIndex ?? 0;
     const prevPos = state?.players?.[prevPlayerId]?.position ?? 0;
     const cashBeforeEnd = state?.players?.[prevPlayerId]?.cash ?? 0;
+    
     const events = endTurn?.();
     const eventCard = Array.isArray(events) ? events.find((event) => event.kind === 'event_card' || event.card) : null;
+    
     if (eventCard) {
       const result = summarizeTurnResult(events, prevPlayerId, null);
+      // 이벤트 카드가 있다면 해당 결과로 다시 설정
       setTurnResult({ ...result, playerId: prevPlayerId, cashBefore: cashBeforeEnd });
       setBoardTurn({ phase: 'arrived', playerId: prevPlayerId, startPos: prevPos, displayPos: prevPos, endPos: prevPos, card: result, arrival: eventCard, nonce: Date.now() });
     }
