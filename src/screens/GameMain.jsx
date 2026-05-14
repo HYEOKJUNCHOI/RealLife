@@ -566,6 +566,9 @@ export default function GameMain({ onExit }) {
     ? { ...turnBaseMeta, name: displayPlayerName(turnPlayer, turnBaseMeta.name) }
     : turnBaseMeta;
 
+  // 수술적 수정: 1인칭 시선 이동 제어용 변수 복구
+  const isGazeBlocked = !!globalNotice;
+  const effectiveTurnResult = isGazeBlocked ? null : turnResult;
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;

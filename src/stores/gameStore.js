@@ -837,7 +837,10 @@ export const useGameStore = create((set, get) => ({
     const { state } = get();
     if (state) {
       try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        // 수술적 수정: 저장소 용량 초과 방지를 위해 무거운 데이터(로그) 다이어트
+        const safeState = { ...state };
+        if (safeState._log) safeState._log = undefined;
+        localStorage.setItem(SAVE_KEY, JSON.stringify(safeState));
       } catch (e) {
         console.warn('[gameStore] save failed', e);
       }
