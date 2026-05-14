@@ -3141,10 +3141,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
                   <span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]">📜</span>
                   <div className="whitespace-pre-line font-board text-[clamp(28px,4.1vw,50px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">권리증<br />초기 분배</div>
                 </div>
-                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">각 플레이어당 {cards.length > 0 && players.length > 0 ? Math.floor(cards.length / players.length) : 0}개의 권리증이 분배됩니다.</div>
-                <div className="mt-4 inline-block rounded-xl border border-white/28 bg-white/12 px-4 py-3 font-board text-[22px] leading-tight text-white/90">
-                  화면을 터치해서 진행
-                </div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">각 플레이어당 {cards.length > 0 ? Math.max(...cards.map((c) => c.cardIndex)) + 1 : 0}개의 권리증이 분배됩니다.</div>
               </div>
             </div>
           </div>
