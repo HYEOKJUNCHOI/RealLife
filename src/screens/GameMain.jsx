@@ -381,10 +381,24 @@ export default function GameMain({ onExit }) {
       }
       const showEffectNotice = () => {
         const latest = useGameStore.getState().state;
+        // 수술적 수정: 순환 참조 방지를 위해 직렬화 가능한 데이터만 추출
         setCardEffectNotice({
           id: Date.now() + Math.random(),
-          card,
-          event: revealedEvent,
+          card: {
+            cardKind: card.cardKind,
+            cardId: card.cardId,
+            cardName: card.cardName,
+            title: card.title,
+            icon: card.icon,
+          },
+          event: {
+            kind: revealedEvent.kind,
+            cardId: revealedEvent.cardId,
+            effectText: revealedEvent.effectText,
+            description: revealedEvent.description,
+            skipTurns: revealedEvent.skipTurns,
+            amt: revealedEvent.amt,
+          },
           playerId,
           cashBefore,
           cashAfter: latest?.players?.[playerId]?.cash ?? cashBefore,

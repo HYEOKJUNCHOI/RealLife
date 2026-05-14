@@ -195,10 +195,11 @@ export const useGameStore = create((set, get) => ({
       });
     }
     const after = state.players[playerId]?.cash ?? before;
-    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), ...followUpEvents] : followUpEvents;
+    const safeFollowUpEvents = followUpEvents.map(e => ({ ...e, _state: undefined, _rng: undefined })); // 참조 제거
+    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), ...safeFollowUpEvents] : safeFollowUpEvents;
     set({
       state: { ...state },
-      log: [...log, ...followUpEvents],
+      log: [...log, ...safeFollowUpEvents],
       lastTurn: lastTurn?.playerId === playerId ? { ...lastTurn, cashAfter: after, events: nextEvents } : lastTurn,
     });
     get().save();
