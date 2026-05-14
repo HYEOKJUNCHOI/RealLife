@@ -55,9 +55,34 @@ const optionGroups = [
 
 export default function Setup({ onStart }) {
   const initGame = useGameStore((s) => s.initGame);
+  const loadGame = useGameStore((s) => s.load);
+  const hasSaved = useGameStore((s) => s.hasSavedGame);
   const customCharacters = useCustomCharacterStore((s) => s.characters);
+  const dialog = useGameDialog();
 
   const [rosterSeed, setRosterSeed] = useState(null);
+
+  // 수술적 수정: 마운트 시 저장된 게임 확인 및 로드 제안
+  useEffect(() => {
+    if (hasSaved?.()) {
+      const checkAndLoad = async () => {
+        const ok = await dialog.confirm({
+          title: '이어서 하기',
+          badgeText: '저장된 게임 발견',
+          message: '이전에 플레이하던 기록이 남아있습니다. 이어서 진행하시겠습니까?',
+          okText: '이어서 하기',
+          cancelText: '새 게임',
+          tone: 'success',
+        });
+        if (ok) {
+          const loaded = loadGame?.();
+          if (loaded) onStart?.();
+        }
+      };
+      checkAndLoad();
+    }
+  }, []);
+
   const roster = useMemo(() => {
     const baseRoster = getAvailableCharacters();
     return rosterSeed === null ? baseRoster : shuffleRoster(baseRoster, rosterSeed);

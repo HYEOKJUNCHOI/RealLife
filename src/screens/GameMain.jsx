@@ -307,7 +307,7 @@ export default function GameMain({ onExit }) {
   };
 
   const cardSettlementKey = turnResult?.kind === 'card'
-    ? `${lastTurn?.playerId ?? ''}|${turnResult.cardKind ?? ''}|${turnResult.cardId ?? ''}|${turnResult.eventId ?? ''}|${turnResult.text ?? ''}`
+    ? `${lastTurn?.playerId ?? ''}|${turnResult.cardKind ?? ''}|${turnResult.cardId ?? ''}|${turnResult.eventId ?? ''}|${JSON.stringify(turnResult.text ?? '')}`
     : null;
   const cardSettlementPending = !!cardSettlementKey && cardSettlementSeenKey !== cardSettlementKey;
 
@@ -325,9 +325,12 @@ export default function GameMain({ onExit }) {
       return;
     }
     if (card?.kind === 'card' && cardSettlementKey) {
+      if (cardSettlementSeenKey === cardSettlementKey) return; // 중복 방지 가드
+
       const playerId = card.playerId ?? lastTurn?.playerId ?? state?.turnIndex ?? 0;
       const cashBefore = card.cashBefore ?? useGameStore.getState().state?.players?.[playerId]?.cash ?? 0;
       const revealedEvent = card.rawEvent ?? card;
+      
       if (revealedEvent?.requiresLottoRoll || (revealedEvent?.cardId === 'lotto' && Array.isArray(revealedEvent?.lottoNumbers) && !revealedEvent?.lottoResolved)) {
         setCardSettlementSeenKey(cardSettlementKey);
         dialog.lottoTurn({
@@ -355,8 +358,11 @@ export default function GameMain({ onExit }) {
         });
         return;
       }
-      revealCardEffect?.(playerId, revealedEvent);
+
+      // 수술적 수정: revealCardEffect 호출 전 상태 확정 및 가드
       setCardSettlementSeenKey(cardSettlementKey);
+      revealCardEffect?.(playerId, revealedEvent);
+
       if (revealedEvent?.cardId === 'teleport') {
         const fromPos = useGameStore.getState().state?.players?.[playerId]?.position ?? revealedEvent.fromPos ?? state?.players?.[playerId]?.position ?? 0;
         setBoardTurn({
