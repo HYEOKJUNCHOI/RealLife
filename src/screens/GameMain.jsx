@@ -871,11 +871,10 @@ export default function GameMain({ onExit }) {
           kind: 'jail_sent',
           speaker: '사회자',
           hostText: '아… 발걸음이 조금 무거워졌습니다. 잠깐 안쪽으로 모시겠습니다.',
-          title: '감옥에 도착했습니다',
-          text: '철창 뷰가 열렸습니다. 다음 선택은 차례가 돌아오면 하겠습니다.',
+          title: '감옥 수감!',
+          text: '다음 차례부터 주사위 더블이나 보석금으로 출소를 시도할 수 있습니다.',
           icon: '🚓',
           color: playerColor(playerId, '#2563eb'),
-          cta: '터치해서 확인',
         });
       }
       if (taxEvent && !pendingBuy && !isCardArrival && !jailNotice) {
@@ -884,11 +883,10 @@ export default function GameMain({ onExit }) {
           kind: 'tax',
           speaker: '사회자',
           hostText: '고지서가 아주 정확한 타이밍에 도착했습니다.',
-          title: isLuxury ? '사치세 고지서' : '소득세 고지서',
-          text: '세금칸에 도착했습니다.',
+          title: isLuxury ? '사치세 납부' : '소득세 납부',
+          text: '지정된 세금이 예금에서 즉시 차감됩니다.',
           icon: isLuxury ? '💎' : '🧾',
           color: '#991b1b',
-          cta: '고지서 확인',
         });
       }
       if (parkingEvent && !pendingBuy && !isCardArrival && !jailNotice) {
@@ -911,11 +909,10 @@ export default function GameMain({ onExit }) {
           speaker: '사회자',
           hostText: exactGo ? '출발점에 정확히 착지했습니다. 오늘 발걸음이 아주 반듯하네요.' : '출발점을 지나쳤습니다. 월급 봉투 챙겨가겠습니다.',
           title: exactGo ? '출발칸 도착 보너스!' : '출발칸 통과!',
-          text: exactGo ? '월급과 정확 도착 보너스를 받습니다.' : '월급을 받습니다.',
+          text: exactGo ? '기본 월급에 정확 도착 보너스까지 더해 지급됩니다.' : '은행으로부터 기본 월급이 지급됩니다.',
           icon: '💰',
           amount: goEvent.amt,
           color: '#f59e0b',
-          cta: '보상 확인',
         });
       }
       if (propertyEvent && !pendingBuy && !rentEvent && !isCardArrival && !jailNotice) {
@@ -926,13 +923,12 @@ export default function GameMain({ onExit }) {
           kind: 'property',
           speaker: '사회자',
           hostText: isOwn ? ownLandEmceeLine(propertyEvent.pos ?? endPos) : `${playerName}님, ${propertyName}에 도착했습니다. 권리증을 확인해볼게요 👀`,
-          title: isOwn ? '잠시 쉬어갑니다' : `${propertyName}\n도착`,
-          text: isOwn ? '내가 보유한 권리증입니다. 이번엔 정산 없이 지나갑니다.' : isMortgaged ? '담보 설정된 권리증이라 통행료 정산은 없습니다.' : '도착 처리를 확인했습니다.',
+          title: isOwn ? '내 땅 방문' : `${propertyName}\n도착`,
+          text: isOwn ? '소유하신 권리증입니다. 이번 턴은 통행료 없이 편안하게 쉬어갑니다.' : isMortgaged ? '담보로 설정된 땅이라 통행료를 내지 않고 통과합니다.' : '도착 처리가 완료되었습니다.',
           icon: isOwn ? '🏠' : '📍',
           previewPos: propertyEvent.pos ?? endPos,
           propertyMode: isOwn ? 'own' : isMortgaged ? 'mortgaged' : 'arrival',
           color: playerColor(playerId, turnBaseMeta.color),
-          cta: '터치해서 닫기',
         });
       }
       if (hubNoticeEvent && !pendingBuy && !isCardArrival && !jailNotice && !rentEvent) {
@@ -981,12 +977,11 @@ export default function GameMain({ onExit }) {
           kind: 'institution',
           speaker: '사회자',
           hostText: `${playerName}님, ${institutionName}에 도착했습니다. 오늘은 명함이 새로 나올 것 같습니다.`,
-          title: `${institutionName}\n기관장 자리 도착!`,
-          text: '기관장 권한을 확인합니다.',
+          title: `${institutionName}\n기관장 취임!`,
+          text: '기관장이 되어 내 차례가 돌아올 때마다 정기적인 기관 월급이 들어옵니다.',
           icon: '🏛️',
           previewPos: institutionEvent.pos ?? endPos,
           color: playerColor(playerId, '#2563eb'),
-          cta: '기관장 확인',
         });
       }
       if (rentEvent && !pendingBuy && !isCardArrival && !jailNotice) {
@@ -3545,6 +3540,9 @@ function summarizeEvent(e) {
       return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
   }
 }
-
-
-
+\uD2B8').replaceAll('_', ' ');
+  }
+}
+d ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
+  }
+}
