@@ -2745,8 +2745,8 @@ function CardEffectNoticeOverlay({ notice, onClose }) {
       <motion.div
         className={cn('w-[min(92vw,620px)] rounded-[24px] border-[3px] border-ink-line p-4 text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', notice.card?.cardKind === 'event' ? 'bg-[linear-gradient(135deg,rgba(5,5,5,0.96)_0%,rgba(69,10,10,0.94)_48%,rgba(220,38,38,0.88)_100%)]' : 'bg-[linear-gradient(135deg,rgba(15,12,10,0.93)_0%,rgba(70,34,22,0.90)_45%,rgba(128,83,20,0.88)_100%)]')}
         initial={{ opacity: 0, scale: 0.95, y: 14 }}
-        animate={{ opacity: 1, scale: 1, y: 0, boxShadow: [`0 6px 0 #0F0C0A,0 22px 54px rgba(0,0,0,0.46)`, `0 6px 0 #0F0C0A,0 0 34px ${tone.glow}`, `0 6px 0 #0F0C0A,0 22px 54px rgba(0,0,0,0.46)`] }}
-        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+        animate={{ opacity: 1, scale: 1, y: 0, boxShadow: `0 6px 0 #0F0C0A, 0 0 34px ${tone.glow}` }}
+        transition={{ type: 'spring', stiffness: 260, damping: 22, boxShadow: { duration: 0.8, ease: "easeOut" } }}
       >
         <div className="min-w-0 text-center">
           <div className="flex items-center justify-center gap-3 sm:justify-start">
