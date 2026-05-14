@@ -1291,7 +1291,7 @@ export default function GameMain({ onExit }) {
             lastDiceRoll={lastDiceRoll}
             diceLocked={diceInputLocked}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
-            turnResult={turnResult}
+            turnResult={effectiveTurnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
             onOpenBoard={toggleBoardInspect}
@@ -1323,7 +1323,7 @@ export default function GameMain({ onExit }) {
             lastDiceRoll={lastDiceRoll}
             diceLocked={diceInputLocked}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
-            turnResult={turnResult}
+            turnResult={effectiveTurnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
             onOpenLoan={openLoanModal}
@@ -1355,7 +1355,7 @@ export default function GameMain({ onExit }) {
             playerIndex={viewPlayerIndex}
             currentIndex={turnIndex}
             turnBriefing={turnBriefing}
-            turnResult={turnResult}
+            turnResult={effectiveTurnResult}
             diceLocked={diceInputLocked}
             onDiceRoll={runManualDiceMove}
             onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
@@ -2449,7 +2449,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
             onOpenLoan={onOpenLoan}
             onOpenBoard={onOpenBoard}
             pendingPurchase={null}
-            turnResult={turnResult}
+            turnResult={effectiveTurnResult}
             onDiceRoll={onDiceRoll}
             diceLocked={diceLocked}
             onUnlockDice={onUnlockDice}
@@ -3501,6 +3501,16 @@ function summarizeEvent(e) {
       return '\uC6B0\uC2B9\uC790\uB294 ' + (e.winner + 1) + 'P\uC785\uB2C8\uB2E4.';
     case 'credit_loan':
       return '\uC2E0\uC6A9\uB300\uCD9C 1,000\uB9CC\uC744 \uC2E0\uCCAD\uD588\uC2B5\uB2C8\uB2E4.';
+    case 'tax':
+      return '세금입니다 😅 ' + e.amt + '만 지출됩니다.';
+    default:
+      return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
+  }
+}
+
+
+
+\uC2E0\uC6A9\uB300\uCD9C 1,000\uB9CC\uC744 \uC2E0\uCCAD\uD588\uC2B5\uB2C8\uB2E4.';
     case 'tax':
       return '세금입니다 😅 ' + e.amt + '만 지출됩니다.';
     default:
