@@ -1728,7 +1728,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   };
   const layer = (
     <div
-      className="pointer-events-auto fixed inset-0 flex items-center justify-center px-3"
+      className="pointer-events-auto fixed inset-0 flex items-center justify-center bg-black/30 px-3 backdrop-blur-[3px]"
       style={{ zIndex: 2147483000, touchAction: 'none' }}
       onPointerDown={absorbPointer}
       onClick={isBuy ? absorbPointer : dismiss}
@@ -3538,11 +3538,5 @@ function summarizeEvent(e) {
       return '세금입니다 😅 ' + e.amt + '만 지출됩니다.';
     default:
       return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
-  }
-}
-\uD2B8').replaceAll('_', ' ');
-  }
-}
-d ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
   }
 }
