@@ -8,6 +8,7 @@ const INFLATION_RATE = 4; // % per year (constant per spec)
 
 export default function GameHeader({
   turnPlayer,
+  cash: propCash, // visualCash 전달받음
   turnIndex,
   turnMeta,
   year,
@@ -15,7 +16,7 @@ export default function GameHeader({
   onExit,
   compact = false,
 }) {
-  const cash = turnPlayer?.cash ?? 0;
+  const cash = propCash ?? turnPlayer?.cash ?? 0;
   const loanPct = Math.round((loanRate ?? 0.02) * 100);
 
   return (

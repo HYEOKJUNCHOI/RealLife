@@ -748,7 +748,7 @@ export default function GameMain({ onExit }) {
     }
     const jailSent = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
     if (jailSent) {
-      return { kind: 'jail_sent', title: '감옥에 도착했습니다', text: '아… 발걸음이 조금 무거워졌습니다. 잠깐 안쪽으로 모시겠습니다.', icon: '🚓', jailTurns: JAIL_TURNS };
+      return { kind: 'jail_sent', title: '감옥 수감', text: '경찰의 안내를 받아 감옥에 수감되었습니다. 다음 차례부터 출소 시도를 할 수 있습니다.', icon: '🚓', jailTurns: JAIL_TURNS };
     }
     const cardEvent = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
     if (cardEvent) {
