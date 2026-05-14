@@ -1626,6 +1626,37 @@ function PropertyShatterOverlay({ effect, state }) {
   return createPortal(layer, document.body);
 }
 
+function NoticeIconCard({ notice, accent = '#22c55e' }) {
+  const title = String(notice?.title ?? '알림').replace(/\n/g, ' ');
+  let headerText = 'NOTICE';
+  if (notice?.kind === 'go_to_jail' || notice?.kind === 'jail_sent') headerText = 'WARRANT';
+  else if (notice?.kind === 'tax' || notice?.kind === 'income_tax' || notice?.kind === 'luxury_tax') headerText = 'BILL';
+  else if (notice?.kind === 'station' || notice?.kind === 'institution') headerText = 'APPOINTMENT';
+  else if (notice?.kind === 'parking_jackpot' || notice?.kind === 'go_reward') headerText = 'REWARD';
+
+  return (
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#fdfcf6] text-ink">
+      <div className="relative flex min-h-[24px] items-center justify-center border-b-2 border-[#0F0C0A] px-2 py-0.5" style={{ backgroundColor: accent }}>
+        <div className="relative font-display text-[9px] font-black uppercase tracking-[0.2em] text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.6)]">
+          {headerText}
+        </div>
+      </div>
+      <div className="relative flex flex-1 flex-col items-center justify-center p-2 text-center">
+        <div className="relative flex h-[90px] w-[90px] items-center justify-center overflow-hidden rounded-xl border-2 border-ink-line bg-[#f0e6d2] shadow-inner">
+          {notice?.image ? (
+            <img src={notice.image} alt={title} className="h-full w-full object-cover object-center" />
+          ) : (
+            <span className="text-[54px] leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.22)]">{notice?.icon ?? '📜'}</span>
+          )}
+        </div>
+        <div className="mt-3 w-full px-1 font-board text-[18px] font-black leading-tight text-ink drop-shadow-sm line-clamp-2">
+          {title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GlobalNoticeBand({ notice, onDismiss }) {
   const [buySubmitting, setBuySubmitting] = useState(false);
   const [buyDeniedPulse, setBuyDeniedPulse] = useState(false);
@@ -1636,7 +1667,17 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   if (!notice || typeof document === 'undefined') return null;
   const amount = Number(notice.amount);
   const showAmount = Number.isFinite(amount) && amount !== 0;
-  const accent = notice.color ?? '#22c55e';
+  let accent = notice.color;
+  if (!accent) {
+    if (notice.kind === 'go_to_jail' || notice.kind === 'jail_sent') accent = '#374151'; // 감옥: 다크 그레이
+    else if (notice.kind === 'tax' || notice.kind === 'income_tax' || notice.kind === 'luxury_tax') accent = '#ea580c'; // 세금: 주황
+    else if (notice.kind === 'station') accent = '#1e3a8a'; // 역장: 네이비
+    else if (notice.kind === 'institution') accent = '#9333ea'; // 기관: 보라
+    else if (notice.kind === 'parking_jackpot' || notice.kind === 'go_reward') accent = '#eab308'; // 보너스: 골드
+    else if (notice.kind === 'chance_draw' || notice.kind === 'welfare_draw' || notice.kind === 'event_card') accent = '#9d174d'; // 찬스: 마젠타
+    else accent = '#22c55e'; // 기본: 에메랄드
+  }
+
   const isTurnStart = notice.kind === 'turn_start';
   const isBuy = notice.kind === 'buy' && notice.previewPos != null;
   const isStationNotice = notice.kind === 'station' && notice.previewPos != null;
@@ -1729,62 +1770,53 @@ function GlobalNoticeBand({ notice, onDismiss }) {
           className={cn('mx-auto grid w-full overflow-hidden border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[520px] grid-rows-[1fr_auto] rounded-[20px] border-0 bg-[#101216] p-3 shadow-none' : 'rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
           style={noticeStyle}
         >
-          {isBuy || isStationNotice || isPropertyNotice ? (
-            isBuy ? (
-              <div className="grid min-h-0 grid-cols-[minmax(190px,250px)_1fr] items-center gap-5 px-2 text-left">
-                <BuyOfferCard notice={notice} accent={accent} />
-                <div className="flex min-w-0 flex-col justify-center text-center sm:text-left">
-                  <div className="flex items-center justify-center gap-3 sm:justify-start">
-                    <motion.span className="text-[43px] leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.22)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧓'}</motion.span>
-                    <div className="whitespace-nowrap font-board text-[clamp(18px,2.35vw,27px)] leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.28)]">{notice.title}</div>
-                  </div>
-                  {notice.cash != null && <BuyCashPreview cash={notice.cash} price={notice.price} active={buySubmitting} />}
-                  <div className="mt-5 grid grid-cols-2 gap-2">
-                    <motion.button
-                      type="button"
-                      disabled={buySubmitting}
-                      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onClick={handleBuyClick}
-                      className={cn(
-                        'rounded-xl border-2 border-ink-line px-3 py-3 font-board text-2xl font-black shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55',
-                        buyDeniedPulse
-                          ? 'bg-monopoly-red text-white'
-                          : 'bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] text-ink',
-                      )}
-                      animate={buyDeniedPulse ? { x: [-8, 8, -7, 7, -4, 4, 0], scale: [1, 1.04, 1], boxShadow: ['0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)', '0 3px 0 #7f1d1d,0 0 24px rgba(239,68,68,0.95)', '0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)'] } : { x: 0, scale: 1 }}
-                      transition={{ duration: 0.72, ease: 'easeInOut' }}
-                    >
-                      {notice.loanHint ? '예금부족' : '매입'}
-                    </motion.button>
-                    <button type="button" disabled={buySubmitting} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl font-black text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55">스킵</button>
-                  </div>
+          {isTurnStart ? (
+            <div className="relative flex min-h-0 items-center justify-center gap-3">
+              {notice.playerCharacter ? (
+                <motion.div
+                  className="absolute left-5 h-20 w-20 shrink-0 rounded-full border-2 border-white/75 bg-white/70 shadow-[0_0_0_4px_rgba(255,255,255,0.22),0_0_24px_rgba(255,255,255,0.34)]"
+                  style={avatarStyle(notice.playerCharacter, noticePlayerImg, accent)}
+                  animate={{ scale: [1, 1.08, 1] }}
+                  transition={{ duration: 0.65 }}
+                />
+              ) : (
+                <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
+              )}
+              <div className={cn('min-w-0', 'translate-x-[45px]')}>
+                <div className={cn('font-board font-black leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', 'text-[clamp(18px,2.55vw,27px)]')}>{notice.title}</div>
+                <div className={cn('mt-1 line-clamp-1 font-board font-black tracking-normal text-monopoly-gold/86', 'text-[clamp(15px,2vw,21px)]')}>{notice.text}</div>
+              </div>
+            </div>
+          ) : isBuy ? (
+            <div className="grid min-h-0 grid-cols-[minmax(190px,250px)_1fr] items-center gap-5 px-2 text-left">
+              <BuyOfferCard notice={notice} accent={accent} />
+              <div className="flex min-w-0 flex-col justify-center text-center sm:text-left">
+                <div className="flex items-center justify-center gap-3 sm:justify-start">
+                  <motion.span className="text-[43px] leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.22)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧓'}</motion.span>
+                  <div className="whitespace-nowrap font-board text-[clamp(18px,2.35vw,27px)] leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.28)]">{notice.title}</div>
+                </div>
+                {notice.cash != null && <BuyCashPreview cash={notice.cash} price={notice.price} active={buySubmitting} />}
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <motion.button
+                    type="button"
+                    disabled={buySubmitting}
+                    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onClick={handleBuyClick}
+                    className={cn(
+                      'rounded-xl border-2 border-ink-line px-3 py-3 font-board text-2xl font-black shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55',
+                      buyDeniedPulse
+                        ? 'bg-monopoly-red text-white'
+                        : 'bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] text-ink',
+                    )}
+                    animate={buyDeniedPulse ? { x: [-8, 8, -7, 7, -4, 4, 0], scale: [1, 1.04, 1], boxShadow: ['0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)', '0 3px 0 #7f1d1d,0 0 24px rgba(239,68,68,0.95)', '0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)'] } : { x: 0, scale: 1 }}
+                    transition={{ duration: 0.72, ease: 'easeInOut' }}
+                  >
+                    {notice.loanHint ? '예금부족' : '매입'}
+                  </motion.button>
+                  <button type="button" disabled={buySubmitting} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl font-black text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55">스킵</button>
                 </div>
               </div>
-            ) : (
-              <div className="grid min-h-0 grid-cols-[minmax(150px,236px)_1fr] items-center gap-5 px-2 text-left">
-                {isStationNotice ? (
-                  <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
-                    <StationRoleCard notice={notice} />
-                  </div>
-                ) : notice.propertyMode === 'own' ? (
-                  <OwnedLandNoticeCard notice={notice} accent={accent} />
-                ) : (
-                  <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
-                    <PropertyDeedMini pos={notice.previewPos} />
-                  </div>
-                )}
-                <div className="min-w-0 text-center sm:text-left">
-                  <div className="flex items-center justify-center gap-3 sm:justify-start">
-                    <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧑‍💼'}</motion.span>
-                    <div className="whitespace-pre-line font-board text-[clamp(28px,4.1vw,50px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
-                  </div>
-                  <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">{notice.text}</div>
-                  <div className="mt-4 rounded-xl border border-white/28 bg-white/12 px-4 py-3 font-board text-[22px] leading-tight text-white/90">
-                    {notice.cta ?? '터치해서 닫기'}
-                  </div>
-                </div>
-              </div>
-            )
+            </div>
           ) : isRent ? (
             <div className="grid min-h-[250px] grid-cols-[minmax(170px,248px)_1fr] items-center gap-5 px-2 text-left">
               <RentLandNoticeCard notice={notice} accent={notice.ownerColor ?? accent} />
@@ -1819,24 +1851,33 @@ function GlobalNoticeBand({ notice, onDismiss }) {
               </div>
             </div>
           ) : (
-            <div className="relative flex min-h-0 items-center justify-center gap-3">
-              {isTurnStart && notice.playerCharacter ? (
-                <motion.div
-                  className="absolute left-5 h-20 w-20 shrink-0 rounded-full border-2 border-white/75 bg-white/70 shadow-[0_0_0_4px_rgba(255,255,255,0.22),0_0_24px_rgba(255,255,255,0.34)]"
-                  style={avatarStyle(notice.playerCharacter, noticePlayerImg, accent)}
-                  animate={{ scale: [1, 1.08, 1] }}
-                  transition={{ duration: 0.65 }}
-                />
+            <div className="grid min-h-0 grid-cols-[minmax(150px,236px)_1fr] items-center gap-5 px-2 text-left">
+              {isPropertyNotice ? (
+                notice.propertyMode === 'own' ? (
+                  <OwnedLandNoticeCard notice={notice} accent={accent} />
+                ) : (
+                  <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
+                    <PropertyDeedMini pos={notice.previewPos} />
+                  </div>
+                )
               ) : (
-                <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
+                <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
+                  <NoticeIconCard notice={notice} accent={accent} />
+                </div>
               )}
-              <div className={cn('min-w-0', isTurnStart && 'translate-x-[45px]')}>
-                <div className={cn('font-board font-black leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', isTurnStart ? 'text-[clamp(18px,2.55vw,27px)]' : notice.subtle ? 'text-[clamp(24px,4.2vw,46px)]' : 'text-[clamp(30px,6vw,74px)]')}>{notice.title}</div>
-                <div className={cn('mt-1 line-clamp-1 font-board font-black tracking-normal text-monopoly-gold/86', isTurnStart ? 'text-[clamp(15px,2vw,21px)]' : notice.subtle ? 'text-[10px]' : 'text-[12px]')}>{isTurnStart ? notice.text : (notice.cta ?? 'tap to close')}</div>
+              <div className="min-w-0 text-center sm:text-left">
+                <div className="flex items-center justify-center gap-3 sm:justify-start">
+                  <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📜'}</motion.span>
+                  <div className="whitespace-pre-line font-board text-[clamp(28px,4.1vw,50px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
+                </div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">{notice.text}</div>
+                <div className="mt-4 inline-block rounded-xl border border-white/28 bg-white/12 px-4 py-3 font-board text-[22px] leading-tight text-white/90">
+                  {notice.cta ?? '터치해서 닫기'}
+                </div>
               </div>
             </div>
           )}
-          {!isBuy && !isRent && (
+          {!isBuy && !isRent && !isTurnStart && (
             <div className={cn('flex items-start justify-center gap-3 font-board', notice.subtle ? 'hidden' : 'text-[clamp(18px,3vw,34px)]')}>
               {showAmount && <span className={amount >= 0 ? 'text-emerald-200' : 'text-red-200'}>{signedMoney(amount)}</span>}
               {notice.cash != null && <span className="text-monopoly-gold">내 예금 {Number(notice.cash).toLocaleString('ko-KR')}만</span>}
@@ -2159,25 +2200,7 @@ function rentEmceeLine({ visitor = '플레이어', owner = '소유자', tile = '
   return lines[seed % lines.length];
 }
 
-function StationRoleCard({ notice }) {
-  const title = String(notice?.title ?? '역장 부임!').replace(/\n/g, ' ');
-  const text = notice?.amount > 0 ? `+${fmt(notice.amount)}만` : '역장 부임';
-  return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border-2 border-[#0F0C0A] bg-[linear-gradient(160deg,rgba(15,36,78,0.98),rgba(47,117,201,0.92)_52%,rgba(255,217,102,0.92)_100%)] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(255,255,255,0.28),transparent_36%)]" />
-      <div className="relative border-b-2 border-[#0F0C0A] bg-black/22 px-2 py-1 text-center font-display text-[7px] font-black uppercase tracking-[0.18em] text-white/70">station master</div>
-      <div className="relative flex flex-1 flex-col items-center justify-center px-2 text-center">
-        <div className="grid h-16 w-16 place-items-center rounded-full border-2 border-white/80 bg-white/18 text-[38px] shadow-[0_4px_0_rgba(15,12,10,0.55),0_0_22px_rgba(255,221,102,0.55)]">🚉</div>
-        <div className="mt-3 font-board text-[25px] leading-[0.92] drop-shadow-[0_3px_0_rgba(0,0,0,0.42)]">
-          <div>역장</div>
-          <div>부임</div>
-        </div>
-        <div className="mt-2 max-w-full truncate rounded-full border border-white/40 bg-black/18 px-2 py-1 font-board text-[12px] text-white/88">{title}</div>
-      </div>
-      <div className="relative border-t-2 border-[#0F0C0A] bg-black/24 px-2 py-1 text-center font-board text-[14px] text-[#ffe483]">{text}</div>
-    </div>
-  );
-}
+
 
 function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos }) {
   const tile = state?.board?.tiles?.[endPos ?? arrival?.pos];
