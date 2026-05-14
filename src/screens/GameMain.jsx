@@ -3510,13 +3510,3 @@ function summarizeEvent(e) {
 
 
 
-\uC2E0\uC6A9\uB300\uCD9C 1,000\uB9CC\uC744 \uC2E0\uCCAD\uD588\uC2B5\uB2C8\uB2E4.';
-    case 'tax':
-      return '세금입니다 😅 ' + e.amt + '만 지출됩니다.';
-    default:
-      return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
-  }
-}
-
-
-
