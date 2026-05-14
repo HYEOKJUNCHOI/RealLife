@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn.js';
 const fmt = (n) => Math.round(n ?? 0).toLocaleString('ko-KR');
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
-export default function AnimatedCash({ value = 0, className, duration = 900, settleDelay = 180 }) {
+export default function AnimatedCash({ value = 0, className, duration = 900, settleDelay = 180, neutralClassName = 'text-ink', rollingEffect = true }) {
   const latestValueRef = useRef(value ?? 0);
   const committedValueRef = useRef(value ?? 0);
   const settleTimerRef = useRef(null);
@@ -75,8 +75,8 @@ export default function AnimatedCash({ value = 0, className, duration = 900, set
     <span
       className={cn(
         'inline-block tabular-nums transition-colors duration-150',
-        rolling && 'cash-roll-active',
-        tone === 'neutral' && 'text-ink',
+        rollingEffect && rolling && 'cash-roll-active',
+        tone === 'neutral' && neutralClassName,
         className,
       )}
       style={style}

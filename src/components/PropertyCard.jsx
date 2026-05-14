@@ -42,7 +42,7 @@ const COLOR_HEX = {
 };
 
 // 플레이어 번호 고정 시그니처색: 1P 빨강 / 2P 파랑 / 3P 노랑 / 4P 초록
-const PLAYER_COLOR = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const PLAYER_COLOR = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
 
 export default function PropertyCard({ pos, compact = false, className }) {
   const state = useGameStore((s) => s.state);
@@ -113,7 +113,7 @@ export default function PropertyCard({ pos, compact = false, className }) {
         {/* 단계 — 빌라 dot / 아파트 완공 한 줄 글로우 */}
         {stage > 0 && (
           <div className="w-[78%]">
-            {stage <= 4 && (
+            {stage <= 3 && (
               <div className="flex items-center justify-center gap-0.5">
                 {Array.from({ length: stage }).map((_, i) => (
                   <div

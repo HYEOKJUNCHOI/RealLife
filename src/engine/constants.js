@@ -6,9 +6,9 @@ export const PRICE_SCALE = 2; // 부동산 매입가 ×2
 export const HOUSE_COST_SCALE = 1; // 빌라/아파트 건설비 원가 적용
 
 // 통행료 = 시세 × 비율 (표준 모노폴리 rent 표 폐기)
-// 빈 / 빌라1 / 빌라2 / 빌라3 / 빌라4 / 아파트
-// 빌라 월세 체감: 2 / 4 / 6 / 8 / 10 비율
-export const RENT_RATIO = [0.2, 0.2, 0.4, 0.6, 0.8, 1.0];
+// 빈 / 빌라1 / 빌라2 / 빌라3 / 아파트
+// stage 4는 사용하지 않음: 빌라3 다음은 stage 5 아파트
+export const RENT_RATIO = [0.2, 0.2, 0.4, 0.6, 0.6, 1.0];
 
 // 컬러셋 독점 보너스
 export const COLOR_MONOPOLY_BONUS = 0.2; // 시세 +20%
@@ -102,9 +102,9 @@ export const APT_LIMIT = 12;
 export const DEATHMATCH_TRIGGER_MIN = 30; // 30분 경과
 export const GAME_DURATION_MIN = 60; // 60분 종료
 
-// 이벤트 카드 발동 주기 (연 단위)
-// 1년 결산마다 이벤트 카드 발동
-export const EVENT_TRIGGER_YEARS = 1;
+// 이벤트 카드 발동 확률
+export const EVENT_CARD_TURN_CHANCE = 0.07; // 데스매치 전: 매 턴 7%
+export const DEATHMATCH_EVENT_TURN_CHANCE = 0.5; // 데스매치 중: 매 턴 50%
 
 // 카드 풀 사이즈
 export const CHANCE_CARD_COUNT = 12;

@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore.js';
 import { HUB_TELEPORT_FEE, JAIL_BAIL, JAIL_TURNS } from '@/engine/constants.js';
+import { currentPrice } from '@/engine/inflation.js';
 import charactersData from '@/data/characters.json';
 import voicelines from '@/data/voicelines.json';
 
@@ -18,6 +19,9 @@ import OtherPlayersStrip from '@/components/OtherPlayersStrip.jsx';
 import PropertyModal from '@/components/modals/PropertyModal.jsx';
 import PropertyDeedMini from '@/components/PropertyDeedMini.jsx';
 import CardArtwork from '@/components/CardArtwork.jsx';
+import AssetFrame from '@/components/AssetFrame.jsx';
+import AnimatedCash from '@/components/AnimatedCash.jsx';
+import CashDeltaFloat from '@/components/CashDeltaFloat.jsx';
 import TradeModal from '@/components/modals/TradeModal.jsx';
 import TradeSelectModal from '@/components/modals/TradeSelectModal.jsx';
 import EventModal from '@/components/modals/EventModal.jsx';
@@ -56,7 +60,7 @@ const AVATAR_SIZE = {
 };
 
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
-const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
 const playerColor = (playerId, fallback = '#DC2626') => PLAYER_SIGNATURE_COLORS[playerId] ?? fallback;
 
 const displayPlayerName = (player, fallback) => {
@@ -71,6 +75,7 @@ export default function GameMain({ onExit }) {
   const log = useGameStore((s) => s.log);
   const lastTurn = useGameStore((s) => s.lastTurn);
   const step = useGameStore((s) => s.step);
+  const startTurn = useGameStore((s) => s.startTurn);
   const dialog = useGameDialog();
   const [jailDialogOpen, setJailDialogOpen] = useState(false);
   const [skipDialogOpen, setSkipDialogOpen] = useState(false);
@@ -88,6 +93,7 @@ export default function GameMain({ onExit }) {
   const openPropertyModal = useGameStore((s) => s.openPropertyModal);
   const buyProperty = useGameStore((s) => s.buyProperty);
   const revealCardEffect = useGameStore((s) => s.revealCardEffect);
+  const settleLottoRoll = useGameStore((s) => s.settleLottoRoll);
   const closeTradeModal = useGameStore((s) => s.closeTradeModal);
   const closeTradeSelect = useGameStore((s) => s.closeTradeSelect);
   const closeRecoveryModal = useGameStore((s) => s.closeRecoveryModal);
@@ -106,6 +112,7 @@ export default function GameMain({ onExit }) {
   const resignStationAction = useGameStore((s) => s.resignStation);
   const initialDealPlayedRef = useRef(false);
   const prevTurnIndexRef = useRef(null);
+  const loanReturnPurchaseRef = useRef(null);
   const jailPromptKeyRef = useRef(null);
   const skipPromptKeyRef = useRef(null);
   const [showInitialDeal, setShowInitialDeal] = useState(false);
@@ -125,6 +132,8 @@ export default function GameMain({ onExit }) {
   const [lastDiceRoll, setLastDiceRoll] = useState(null);
   const [bgmEnabled, setBgmEnabled] = useState(() => getBgmPreference());
   const [globalNotice, setGlobalNotice] = useState(null);
+  const [cardEffectNotice, setCardEffectNotice] = useState(null);
+  const [settlementLocked, setSettlementLocked] = useState(false);
   const [turnStartNoticeKey, setTurnStartNoticeKey] = useState(null);
   const [viewPlayerIndex, setViewPlayerIndex] = useState(null);
   const [propertyShatter, setPropertyShatter] = useState(null);
@@ -254,6 +263,8 @@ export default function GameMain({ onExit }) {
     setDiceLocked(false);
     setTurnMovedKey(null);
     setCardSettlementSeenKey(null);
+    setCardEffectNotice(null);
+    setSettlementLocked(false);
     setLastDiceRoll(null);
     const activePlayer = state?.players?.[state?.turnIndex ?? 0];
     const activeBaseMeta = activePlayer
@@ -279,6 +290,7 @@ export default function GameMain({ onExit }) {
         color: playerColor(state?.turnIndex ?? 0, activeBaseMeta.color),
         playerCharacter: activePlayer.character,
         cta: '터치해서 시작',
+        action: () => startTurn?.(state?.turnIndex ?? 0),
       });
     }
   }, [state?.round, state?.turnIndex, showInitialDeal, turnStartNoticeKey]);
@@ -300,10 +312,12 @@ export default function GameMain({ onExit }) {
   const cardSettlementPending = !!cardSettlementKey && cardSettlementSeenKey !== cardSettlementKey;
 
   const turnBriefing = useMemo(() => {
-    if (cardSettlementPending) return null;
+    const settlementBlocked = settlementLocked || cardSettlementPending || modalProperty || boardTurn || globalNotice || cardEffectNotice || hubTeleport || aiTurnSummary;
+    if (settlementBlocked) return null;
+    if (lastTurn?.playerId !== state?.turnIndex) return null;
     if (lastTurn?.events?.length && state) return buildTurnBriefing(lastTurn, state);
     return null;
-  }, [lastTurn, state, cardSettlementPending]);
+  }, [lastTurn, state, settlementLocked, cardSettlementPending, modalProperty, boardTurn, globalNotice, cardEffectNotice, hubTeleport, aiTurnSummary]);
 
   const handleOpenResultCard = (card) => {
     if (card?.kind === 'buy') {
@@ -311,17 +325,91 @@ export default function GameMain({ onExit }) {
       return;
     }
     if (card?.kind === 'card' && cardSettlementKey) {
-      revealCardEffect?.(lastTurn?.playerId ?? state?.turnIndex ?? 0, card.rawEvent ?? card);
-      setCardSettlementSeenKey(cardSettlementKey);
-      pushGlobalNotice({
-        kind: 'card_revealed',
-        speaker: '사회자',
-        title: card.cardName ?? card.title ?? '카드 공개',
-        text: card.revealText ?? card.text ?? '카드 효과를 정산합니다.',
-        icon: card.icon ?? '💡',
-        subtle: false,
-      });
+      const playerId = card.playerId ?? lastTurn?.playerId ?? state?.turnIndex ?? 0;
+      const cashBefore = card.cashBefore ?? useGameStore.getState().state?.players?.[playerId]?.cash ?? 0;
       const revealedEvent = card.rawEvent ?? card;
+      if (revealedEvent?.requiresLottoRoll || (revealedEvent?.cardId === 'lotto' && Array.isArray(revealedEvent?.lottoNumbers) && !revealedEvent?.lottoResolved)) {
+        setCardSettlementSeenKey(cardSettlementKey);
+        dialog.lottoTurn({
+          title: card.cardName ?? '로또 찬스',
+          badgeText: card.cardKind === 'welfare' ? '휴게소 로또' : '로또 찬스',
+          numbers: revealedEvent.lottoNumbers,
+          prize: revealedEvent.lottoPrize ?? 500,
+          onRoll: () => {
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            const sum = d1 + d2;
+            const settled = settleLottoRoll?.(playerId, revealedEvent, { d1, d2, sum });
+            return { d1, d2, sum, hit: !!settled?.hit, prize: settled?.prize ?? revealedEvent.lottoPrize ?? 500 };
+          },
+        }).then(() => {
+          const latest = useGameStore.getState().state;
+          setCardEffectNotice({
+            id: Date.now() + Math.random(),
+            card,
+            event: revealedEvent,
+            playerId,
+            cashBefore,
+            cashAfter: latest?.players?.[playerId]?.cash ?? cashBefore,
+          });
+        });
+        return;
+      }
+      revealCardEffect?.(playerId, revealedEvent);
+      setCardSettlementSeenKey(cardSettlementKey);
+      if (revealedEvent?.cardId === 'teleport') {
+        const fromPos = useGameStore.getState().state?.players?.[playerId]?.position ?? revealedEvent.fromPos ?? state?.players?.[playerId]?.position ?? 0;
+        setBoardTurn({
+          phase: 'teleport_select',
+          playerId,
+          startPos: fromPos,
+          displayPos: fromPos,
+          endPos: fromPos,
+          card,
+          arrival: revealedEvent,
+          nonce: Date.now(),
+        });
+        setHubTeleport({ playerId, fromPos, fee: 0, title: '찬스 환승', source: 'chance', card });
+        return;
+      }
+      const showEffectNotice = () => {
+        const latest = useGameStore.getState().state;
+        setCardEffectNotice({
+          id: Date.now() + Math.random(),
+          card,
+          event: revealedEvent,
+          playerId,
+          cashBefore,
+          cashAfter: latest?.players?.[playerId]?.cash ?? cashBefore,
+        });
+      };
+      if (revealedEvent?.moveSteps && revealedEvent?.fromPos != null && revealedEvent?.toPos != null) {
+        const boardSize = state?.board?.tiles?.length ?? 40;
+        const dir = revealedEvent.moveSteps > 0 ? 1 : -1;
+        const steps = Math.abs(revealedEvent.moveSteps);
+        const path = Array.from({ length: steps }, (_, idx) => ((revealedEvent.fromPos + dir * (idx + 1)) % boardSize + boardSize) % boardSize);
+        setBoardTurn((prev) => ({
+          ...(prev ?? {}),
+          phase: 'moving',
+          playerId,
+          startPos: revealedEvent.fromPos,
+          displayPos: revealedEvent.fromPos,
+          endPos: revealedEvent.toPos,
+          path,
+          nonce: Date.now(),
+        }));
+        path.forEach((pathPos, idx) => {
+          window.setTimeout(() => {
+            setBoardTurn((prev) => prev ? { ...prev, phase: 'moving', displayPos: pathPos } : prev);
+          }, 220 + idx * 210);
+        });
+        window.setTimeout(() => {
+          setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', displayPos: revealedEvent.toPos, endPos: revealedEvent.toPos } : prev);
+          showEffectNotice();
+        }, 320 + steps * 230);
+      } else {
+        showEffectNotice();
+      }
       if (revealedEvent?.lossPos != null && ['war', 'multihouse', 'fire'].includes(revealedEvent.kind)) {
         window.setTimeout(() => triggerPropertyShatter(revealedEvent.lossPos, revealedEvent.effectText ?? '부동산 피해'), 360);
       }
@@ -347,7 +435,7 @@ export default function GameMain({ onExit }) {
 
   const handleBuyProperty = (playerId, pos) => {
     const tile = state?.board?.tiles?.[pos];
-    const price = tile ? (state.tileState?.[pos]?.price ?? undefined) : undefined;
+    const price = tile ? (tile.basePrice ?? tile.price ?? state.tileState?.[pos]?.price ?? 0) : 0;
     const ownedPropertyCount = Object.entries(state?.tileState ?? {}).filter(([ownedPos, tileState]) => {
       const ownedTile = state?.board?.tiles?.[Number(ownedPos)];
       return ownedTile?.type === 'property' && tileState?.owner === playerId;
@@ -380,9 +468,49 @@ export default function GameMain({ onExit }) {
       amount: price,
       cash: useGameStore.getState().state?.players?.[playerId]?.cash,
     });
-    pushGlobalNotice({ kind: 'bought', speaker: '중개 NPC', title: '매입 완료!', text: `${tileName} · ${signedMoney(-(price ?? 0))} 지출`, icon: '🏠', amount: -(price ?? 0), cash: useGameStore.getState().state?.players?.[playerId]?.cash });
+    setBoardTurn(null);
     closePropertyModal?.();
     return true;
+  };
+
+  const openLoanForPurchase = (purchase, playerId) => {
+    if (!purchase) return;
+    loanReturnPurchaseRef.current = purchase;
+    openLoanModal?.(playerId);
+  };
+
+  const handlePurchaseLoanSigned = () => {
+    const purchase = loanReturnPurchaseRef.current;
+    if (!purchase) return;
+    loanReturnPurchaseRef.current = null;
+    closeLoanModal?.();
+    window.setTimeout(() => reopenPurchaseNotice(purchase), 180);
+  };
+
+  const reopenPurchaseNotice = (purchase = pendingPurchase) => {
+    if (!purchase || !state) return;
+    const playerId = purchase.visitorId ?? state.turnIndex ?? 0;
+    const baseMeta = CHAR_META[state.players?.[playerId]?.character] ?? CHAR_META.sejong;
+    const tile = state.board?.tiles?.[purchase.pos];
+    const price = tile?.basePrice ?? tile?.price ?? state.tileState?.[purchase.pos]?.price ?? 0;
+    const cash = state.players?.[playerId]?.cash ?? 0;
+    pushGlobalNotice({
+      kind: 'buy',
+      speaker: '부동산 아주머니',
+      title: buyOfferLine(purchase.pos),
+      hostText: cash < price ? loanOfferLine(purchase.pos) : undefined,
+      text: '',
+      icon: '🧓',
+      cta: '매입 / 스킵',
+      previewPos: purchase.pos,
+      price,
+      cash,
+      loanHint: cash < price,
+      color: playerColor(playerId, baseMeta.color),
+      onBuy: () => handleBuyProperty(playerId, purchase.pos),
+      onLoan: () => openLoanForPurchase(purchase, playerId),
+      onPass: () => { setBoardTurn(null); closePropertyModal?.(); },
+    });
   };
 
   const hostLine = useMemo(() => {
@@ -433,12 +561,12 @@ export default function GameMain({ onExit }) {
     return () => window.clearTimeout(timer);
   }, [modalEvent]);
 
-  const showJailTurnResult = (events, choice) => {
+  const buildJailTurnResult = (events, choice) => {
     const jail = events.find((event) => event.kind === 'jail_turn');
-    if (!jail) return;
+    if (!jail) return null;
     const diceText = jail.d1 != null && jail.d2 != null ? `${jail.d1} + ${jail.d2} = ${jail.sum}` : '보석금 납부';
     const forced = jail.released && jail.bailPaid > 0 && choice !== 'bail';
-    setTurnResult({
+    return {
       kind: 'jail',
       title: jail.released ? '감옥 탈출 성공' : '감옥 탈출 실패',
       text: choice === 'bail'
@@ -455,7 +583,13 @@ export default function GameMain({ onExit }) {
       isDouble: !!jail.isDouble,
       released: !!jail.released,
       bailPaid: jail.bailPaid ?? 0,
-    });
+    };
+  };
+
+  const showJailTurnResult = (events, choice) => {
+    const result = buildJailTurnResult(events, choice);
+    if (result) setTurnResult(result);
+    return result;
   };
 
   const promptJailTurn = async () => {
@@ -468,34 +602,19 @@ export default function GameMain({ onExit }) {
         setTurnMovedKey(`${state.round ?? 0}-${state.turnIndex ?? 0}`);
         setTurnResult({ kind: 'jail', title: '감옥 탈출 시도', text: choice === 'bail' ? '보석금을 납부합니다.' : '주사위를 굴려 더블을 노립니다.', icon: '🚓' });
         const events = step({ jailChoice: choice, deferAdvance: true });
-        window.setTimeout(() => showJailTurnResult(events, choice), 420);
+        const result = buildJailTurnResult(events, choice);
+        if (result) setTurnResult(result);
+        return result;
       };
 
-      if ((turnPlayer.cash ?? 0) < JAIL_BAIL) {
-        await dialog.alert({
-          title: '감옥 탈출 시도',
-          badgeText: `남은 ${jailTurnsLeft}턴`,
-          message: `보석금 ${JAIL_BAIL}만이 부족합니다.
-
-주사위를 굴려 더블이면 탈출, 아니면 감옥에 남습니다.`,
-          okText: '주사위 굴리기',
-          tone: 'warn',
-        });
-        runJailChoice('roll');
-        return;
-      }
-      const payBail = await dialog.confirm({
+      await dialog.jailTurn({
         title: '감옥 탈출 선택',
         badgeText: `남은 ${jailTurnsLeft}턴`,
-        message: `보석금은 ${JAIL_BAIL}만입니다.
-
-보석금을 내면 바로 탈출하고,
-주사위는 더블이 나와야 탈출합니다.`,
-        okText: `${JAIL_BAIL}만 내기`,
-        cancelText: '주사위 굴리기',
-        tone: 'warn',
+        bailAmount: JAIL_BAIL,
+        canPayBail: (turnPlayer.cash ?? 0) >= JAIL_BAIL,
+        onBail: () => runJailChoice('bail'),
+        onRoll: () => runJailChoice('roll'),
       });
-      runJailChoice(payBail ? 'bail' : 'roll');
     } finally {
       setJailDialogOpen(false);
     }
@@ -552,6 +671,7 @@ export default function GameMain({ onExit }) {
     setPendingPurchase(null);
     setTurnResult(null);
     setHubTeleport(null);
+    setCardEffectNotice(null);
     return endTurn?.();
   };
 
@@ -563,13 +683,17 @@ export default function GameMain({ onExit }) {
       return false;
     }
     diceSnapshotRef.current = null;
-    setDiceLocked(false);
-    setPendingPurchase(null);
-    setTurnResult(null);
-    setBoardTurn(null);
-    setAiTurnSummary(null);
-    setHubTeleport(null);
-    return endTurn?.();
+    const prevPlayerId = state?.turnIndex ?? 0;
+    const prevPos = state?.players?.[prevPlayerId]?.position ?? 0;
+    const cashBeforeEnd = state?.players?.[prevPlayerId]?.cash ?? 0;
+    const events = endTurn?.();
+    const eventCard = Array.isArray(events) ? events.find((event) => event.kind === 'event_card' || event.card) : null;
+    if (eventCard) {
+      const result = summarizeTurnResult(events, prevPlayerId, null);
+      setTurnResult({ ...result, playerId: prevPlayerId, cashBefore: cashBeforeEnd });
+      setBoardTurn({ phase: 'arrived', playerId: prevPlayerId, startPos: prevPos, displayPos: prevPos, endPos: prevPos, card: result, arrival: eventCard, nonce: Date.now() });
+    }
+    return events;
   };
 
   const handleStep = async () => {
@@ -592,19 +716,11 @@ export default function GameMain({ onExit }) {
     }
     const jailSent = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
     if (jailSent) {
-      const reason = jailSent.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸 도착';
-      return { kind: 'jail_sent', title: '감옥 수감', text: `${reason} · 감옥으로 이동했습니다. 다음 차례부터 최대 ${JAIL_TURNS}턴 동안 출소 시도`, icon: '🚓', jailTurns: JAIL_TURNS };
+      return { kind: 'jail_sent', title: '감옥에 도착했습니다', text: '아… 발걸음이 조금 무거워졌습니다. 잠깐 안쪽으로 모시겠습니다.', icon: '🚓', jailTurns: JAIL_TURNS };
     }
     const cardEvent = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
     if (cardEvent) {
-      const cardDelta = cardEvent.delta ?? cardEvent.allDelta ?? cardEvent.collected;
-      const cardText = cardEvent.effectText
-        ? `${cardEvent.card ?? '카드'} · ${cardEvent.effectText}`
-        : cardDelta != null
-          ? `${cardEvent.card ?? cardEvent.description ?? '카드'} · ${signedMoney(cardDelta)}`
-          : cardEvent.upgraded != null
-            ? `${cardEvent.card ?? '카드'} · 업그레이드`
-            : `${cardEvent.card ?? '카드'} · ${cardEvent.description ?? '카드 효과'}`;
+      const cardText = '카드를 뒤집기 전까지 결과는 비밀입니다.';
       const eventCardKinds = new Set(['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate']);
       const isEventCard = cardEvent.kind === 'event_card' || (cardEvent.card && eventCardKinds.has(cardEvent.kind));
       const cardTitle = cardEvent.kind === 'welfare_draw' ? '일상 카드' : isEventCard ? '이벤트 카드' : '찬스 카드';
@@ -613,7 +729,7 @@ export default function GameMain({ onExit }) {
       return { kind: 'card', title: `${cardTitle} 도착`, cardName: cardEvent.card ?? cardEvent.description ?? cardTitle, revealText: cardText, text: '카드를 뒤집어야 결과가 공개됩니다.', icon: cardEvent.kind === 'welfare_draw' ? '🏠' : isEventCard ? '🌪️' : '💡', cardKind, cardId, eventId: cardEvent.kind, rawEvent: cardEvent };
     }
     const taxEvent = events.find((event) => event.kind === 'income_tax' || event.kind === 'luxury_tax');
-    if (taxEvent) return { kind: 'tax', title: taxEvent.kind === 'luxury_tax' ? '사치세' : '소득세', text: `${taxEvent.amt ?? taxEvent.amount ?? 0}만 납부`, icon: taxEvent.kind === 'luxury_tax' ? '💎' : '🧾' };
+    if (taxEvent) return { kind: 'tax', title: taxEvent.kind === 'luxury_tax' ? '사치세 고지서' : '소득세 고지서', text: '고지서가 아주 정확한 타이밍에 도착했습니다.', icon: taxEvent.kind === 'luxury_tax' ? '💎' : '🧾' };
     const stationEvent = events.find((event) => event.kind === 'arrive_station');
     if (stationEvent) {
       const tileName = tileNameForPos(state, stationEvent.pos);
@@ -657,6 +773,8 @@ export default function GameMain({ onExit }) {
     setDiceLocked(true);
     setTurnResult(null);
     setGlobalNotice(null);
+    setCardEffectNotice(null);
+    setSettlementLocked(true);
     setBoardTurn({ phase: 'rolling', playerId, startPos, displayPos: startPos, manualSteps, nonce: Date.now() });
     const events = step({ manualSteps, deferPropertyModal: true, deferAdvance: true, deferCardEffects: !ai });
     const latestState = useGameStore.getState().state ?? state;
@@ -690,7 +808,14 @@ export default function GameMain({ onExit }) {
     }, 180);
     const arrivalDelay = Math.max(980, 360 + path.length * 175);
     window.setTimeout(() => {
-      setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', roll, arrival, card, endPos, displayPos: endPos } : prev);
+      if (jailNoticeForEnd) {
+        setBoardTurn((prev) => prev ? { ...prev, phase: 'moving', roll, arrival, card, endPos, displayPos: endPos } : prev);
+        window.setTimeout(() => {
+          setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', roll, arrival, card, endPos, displayPos: endPos } : prev);
+        }, 720);
+      } else {
+        setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', roll, arrival, card, endPos, displayPos: endPos } : prev);
+      }
       window.setTimeout(() => {
       const toastMessage = buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos });
       const isCardArrival = !!card;
@@ -698,9 +823,66 @@ export default function GameMain({ onExit }) {
       const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
       const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
       const endTileForNotice = state.board?.tiles?.[endPos];
-      const stationEvent = events.find((event) => event.kind === 'arrive_station') ?? ((endTileForNotice?.type === 'railroad') ? { kind: 'arrive_station', pos: endPos, collected: 0 } : null);
+      const stationEvent = events.find((event) => event.kind === 'arrive_station') ?? ((endTileForNotice?.type === 'railroad' && endTileForNotice?.subType === 'station') ? { kind: 'arrive_station', pos: endPos, collected: 0 } : null);
+      const hubNoticeEvent = events.find((event) => event.kind === 'arrive_hub') ?? ((endTileForNotice?.type === 'railroad' && endTileForNotice?.subType === 'hub') ? { kind: 'arrive_hub', pos: endPos, type: 'visit' } : null);
+      const institutionEvent = events.find((event) => event.kind === 'arrive_institution') ?? ((endTileForNotice?.type === 'utility') ? { kind: 'arrive_institution', pos: endPos } : null);
       const propertyEvent = events.find((event) => event.kind === 'arrive_property');
+      const taxEvent = events.find((event) => event.kind === 'income_tax' || event.kind === 'luxury_tax');
+      const parkingEvent = events.find((event) => event.kind === 'parking_jackpot');
+      const goEvent = events.find((event) => event.kind === 'go_pass' || event.kind === 'go_exact');
       const playerName = displayPlayerName(turnPlayer, turnBaseMeta.name);
+      if (jailNotice && !pendingBuy && !isCardArrival) {
+        pushGlobalNotice({
+          kind: 'jail_sent',
+          speaker: '사회자',
+          hostText: '아… 발걸음이 조금 무거워졌습니다. 잠깐 안쪽으로 모시겠습니다.',
+          title: '감옥에 도착했습니다',
+          text: '철창 뷰가 열렸습니다. 다음 선택은 차례가 돌아오면 하겠습니다.',
+          icon: '🚓',
+          color: playerColor(playerId, '#2563eb'),
+          cta: '터치해서 확인',
+        });
+      }
+      if (taxEvent && !pendingBuy && !isCardArrival && !jailNotice) {
+        const isLuxury = taxEvent.kind === 'luxury_tax';
+        pushGlobalNotice({
+          kind: 'tax',
+          speaker: '사회자',
+          hostText: '고지서가 아주 정확한 타이밍에 도착했습니다.',
+          title: isLuxury ? '사치세 고지서' : '소득세 고지서',
+          text: '세금칸에 도착했습니다.',
+          icon: isLuxury ? '💎' : '🧾',
+          color: '#991b1b',
+          cta: '고지서 확인',
+        });
+      }
+      if (parkingEvent && !pendingBuy && !isCardArrival && !jailNotice) {
+        pushGlobalNotice({
+          kind: 'parking',
+          speaker: '사회자',
+          hostText: '잠깐 쉬어가려 했는데, 작은 행운이 따라왔습니다!',
+          title: '휴게소 로또!',
+          text: '지정 숫자 3개와 추가 주사위로 보너스를 확인합니다.',
+          icon: '🎲',
+          amount: parkingEvent.amt,
+          color: '#16a34a',
+          cta: '로또 확인',
+        });
+      }
+      if (goEvent && !pendingBuy && !isCardArrival && !jailNotice && !taxEvent && !parkingEvent && !propertyEvent && !stationEvent && !hubNoticeEvent && !institutionEvent && !rentEvent) {
+        const exactGo = goEvent.kind === 'go_exact';
+        pushGlobalNotice({
+          kind: 'go_reward',
+          speaker: '사회자',
+          hostText: exactGo ? '출발점에 정확히 착지했습니다. 오늘 발걸음이 아주 반듯하네요.' : '출발점을 지나쳤습니다. 월급 봉투 챙겨가겠습니다.',
+          title: exactGo ? '출발칸 도착 보너스!' : '출발칸 통과!',
+          text: exactGo ? '월급과 정확 도착 보너스를 받습니다.' : '월급을 받습니다.',
+          icon: '💰',
+          amount: goEvent.amt,
+          color: '#f59e0b',
+          cta: '보상 확인',
+        });
+      }
       if (propertyEvent && !pendingBuy && !rentEvent && !isCardArrival && !jailNotice) {
         const propertyName = tileNameForPos(state, propertyEvent.pos ?? endPos);
         const isOwn = propertyEvent.type === 'own';
@@ -708,30 +890,68 @@ export default function GameMain({ onExit }) {
         pushGlobalNotice({
           kind: 'property',
           speaker: '사회자',
-          hostText: isOwn ? `${playerName}님, ${propertyName}에 도착했습니다. 여긴 이미 내 땅입니다 🏠` : `${playerName}님, ${propertyName}에 도착했습니다. 권리증을 확인해볼게요 👀`,
-          title: `${propertyName}\n도착`,
+          hostText: isOwn ? ownLandEmceeLine(propertyEvent.pos ?? endPos) : `${playerName}님, ${propertyName}에 도착했습니다. 권리증을 확인해볼게요 👀`,
+          title: isOwn ? '잠시 쉬어갑니다' : `${propertyName}\n도착`,
           text: isOwn ? '내가 보유한 권리증입니다. 이번엔 정산 없이 지나갑니다.' : isMortgaged ? '담보 설정된 권리증이라 통행료 정산은 없습니다.' : '도착 처리를 확인했습니다.',
           icon: isOwn ? '🏠' : '📍',
           previewPos: propertyEvent.pos ?? endPos,
+          propertyMode: isOwn ? 'own' : isMortgaged ? 'mortgaged' : 'arrival',
           color: playerColor(playerId, turnBaseMeta.color),
           cta: '터치해서 닫기',
         });
       }
+      if (hubNoticeEvent && !pendingBuy && !isCardArrival && !jailNotice && !rentEvent) {
+        const hubName = tileNameForPos(state, hubNoticeEvent.pos ?? endPos);
+        const hubType = hubNoticeEvent.type;
+        const hubText = hubType === 'buy'
+          ? '환승 허브 권리를 확보했습니다.'
+          : hubType === 'self_repair'
+            ? '내 환승 허브 수리비를 정산합니다.'
+            : hubType === 'self_teleport_free'
+              ? '무료 환승 선택권이 열렸습니다.'
+              : hubType === 'unowned'
+                ? '아직 주인이 없는 환승 허브입니다.'
+                : '환승 허브에 도착했습니다.';
+        pushGlobalNotice({
+          kind: 'hub',
+          speaker: '사회자',
+          hostText: `${playerName}님, ${hubName}에 도착했습니다. 노선도가 살짝 빛나기 시작합니다.`,
+          title: `${hubName}\n환승 허브 도착!`,
+          text: hubText,
+          icon: '🚆',
+          amount: hubNoticeEvent.price ? -hubNoticeEvent.price : hubNoticeEvent.fee ? -hubNoticeEvent.fee : undefined,
+          previewPos: hubNoticeEvent.pos ?? endPos,
+          color: playerColor(playerId, '#2563eb'),
+          cta: '환승 확인',
+        });
+      }
       if (stationEvent && !pendingBuy && !isCardArrival && !jailNotice) {
         const stationName = tileNameForPos(state, stationEvent.pos ?? endPos);
-        const collected = stationEvent.collected ?? 0;
         pushGlobalNotice({
           kind: 'station',
           speaker: '사회자',
-          hostText: `${playerName}님, ${stationName}에 도착했습니다. 오늘부터 새 역장입니다 🚉`,
-          title: `${stationName}\n역장 부임!`,
-          text: collected > 0 ? `쌓여 있던 역 적립금 ${collected}만을 수령했습니다.` : '아직 적립금은 없지만, 역장 자리는 접수했습니다.',
+          hostText: `${playerName}님, ${stationName}에 도착했습니다. 플랫폼 분위기가 바뀌네요.`,
+          title: `${stationName}\n역장 자리 도착!`,
+          text: '역장 권한을 확인합니다.',
           icon: '🚉',
-          amount: collected,
-          cash: state.players?.[playerId]?.cash,
           previewPos: stationEvent.pos ?? endPos,
+          amount: stationEvent.collected,
           color: playerColor(playerId, '#2f75c9'),
-          cta: collected > 0 ? `+${fmt(collected)}만 수령 · 터치해서 닫기` : '역장 부임 · 터치해서 닫기',
+          cta: '역장 확인',
+        });
+      }
+      if (institutionEvent && !pendingBuy && !isCardArrival && !jailNotice) {
+        const institutionName = tileNameForPos(state, institutionEvent.pos ?? endPos);
+        pushGlobalNotice({
+          kind: 'institution',
+          speaker: '사회자',
+          hostText: `${playerName}님, ${institutionName}에 도착했습니다. 오늘은 명함이 새로 나올 것 같습니다.`,
+          title: `${institutionName}\n기관장 자리 도착!`,
+          text: '기관장 권한을 확인합니다.',
+          icon: '🏛️',
+          previewPos: institutionEvent.pos ?? endPos,
+          color: playerColor(playerId, '#2563eb'),
+          cta: '기관장 확인',
         });
       }
       if (rentEvent && !pendingBuy && !isCardArrival && !jailNotice) {
@@ -745,10 +965,13 @@ export default function GameMain({ onExit }) {
           kind: 'rent',
           speaker: '사회자',
           hostText: rentEmceeLine({ visitor: playerName, owner: ownerName, tile: rentTileName, amount: rentAmount }),
-          title: '통행료 정산',
-          text: `${ownerName}님의 ${rentTileName}`,
+          title: `${playerId + 1}P ${ownerName}의 땅을 밟았습니다.`,
+          text: '통행료를 지불합니다.',
           icon: '💸',
           amount: -rentAmount,
+          previewPos: rentEvent.pos ?? endPos,
+          ownerId,
+          visitorId: playerId,
           visitorName: playerName,
           ownerName,
           tileName: rentTileName,
@@ -757,20 +980,25 @@ export default function GameMain({ onExit }) {
           ownerColor: playerColor(ownerId, ownerBase.color),
         });
       }
-      if (pendingBuy || jailNotice) {
+      if (pendingBuy) {
+        const buyCash = state.players?.[playerId]?.cash ?? 0;
+        const buyPrice = pendingBuy.buyPrice ?? 0;
         pushGlobalNotice({
-          kind: pendingBuy ? 'buy' : 'jail_sent',
+          kind: 'buy',
           speaker: '사회자',
-          title: pendingBuy ? `좋은 땅인데\n매입하시겠어요? 호호` : `${playerName} 감옥 수감!`,
-          hostText: pendingBuy ? `부동산 아주머니가 ${tileNameForPos(state, pendingBuy.pos)} 권리증을 슬쩍 내밉니다 🧑‍💼` : undefined,
-          text: pendingBuy ? `${tileNameForPos(state, pendingBuy.pos)}` : (toastMessage ?? '감옥으로 이동합니다 😭'),
-          icon: pendingBuy ? '🧑‍💼' : '🚓',
-          cta: pendingBuy ? '매입 / 스킵' : '터치해서 닫기',
-          previewPos: pendingBuy?.pos,
-          price: pendingBuy?.buyPrice,
-          color: pendingBuy ? playerColor(playerId, turnBaseMeta.color) : undefined,
-          onBuy: pendingBuy ? () => handleBuyProperty(playerId, pendingBuy.pos) : undefined,
-          onPass: pendingBuy ? () => { setPendingPurchase(null); closePropertyModal?.(); } : undefined,
+          title: buyOfferLine(pendingBuy.pos),
+          hostText: buyCash < buyPrice ? loanOfferLine(pendingBuy.pos) : `동네 부동산 아주머니가 권리증을 슬쩍 내밉니다 🧓`,
+          text: '',
+          icon: '🧓',
+          cta: '매입 / 스킵',
+          previewPos: pendingBuy.pos,
+          price: buyPrice,
+          cash: buyCash,
+          loanHint: buyCash < buyPrice,
+          color: playerColor(playerId, turnBaseMeta.color),
+          onBuy: () => handleBuyProperty(playerId, pendingBuy.pos),
+          onLoan: () => openLoanForPurchase({ pos: pendingBuy.pos, visitorId: playerId, turnKey }, playerId),
+          onPass: () => { setBoardTurn(null); closePropertyModal?.(); },
         });
       }
       }, 1400);
@@ -794,7 +1022,7 @@ export default function GameMain({ onExit }) {
         const summary = buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore: cashBeforeMove });
         setAiTurnSummary(summary);
         setBoardTurn(null);
-      } else {
+      } else if (!pendingBuy && !card) {
         window.setTimeout(() => setBoardTurn(null), 820);
       }
     }, arrivalDelay + 520);
@@ -840,10 +1068,13 @@ export default function GameMain({ onExit }) {
     setTurnResult(null);
     setBoardTurn(null);
     setHubTeleport(null);
+    setCardEffectNotice(null);
+    setSettlementLocked(false);
   };
 
   const closeBoardToStatus = () => {
     setBoardTurn(null);
+    setSettlementLocked(false);
   };
 
   const toggleBoardInspect = () => {
@@ -853,17 +1084,48 @@ export default function GameMain({ onExit }) {
   const resolveHubTeleport = (destPos) => {
     if (!hubTeleport) return false;
     const ok = hubTeleportAction?.(hubTeleport.playerId, destPos, hubTeleport.fee ?? 0);
-    if (!ok) {
-      return false;
-    }
-    const tile = state?.board?.tiles?.[destPos];
+    if (!ok) return false;
+    const latest = useGameStore.getState().state ?? state;
+    const boardSize = latest?.board?.tiles?.length ?? 40;
+    const fromPos = hubTeleport.fromPos ?? latest?.players?.[hubTeleport.playerId]?.position ?? 0;
+    const forwardSteps = (destPos - fromPos + boardSize) % boardSize;
+    const path = Array.from({ length: forwardSteps || 1 }, (_, idx) => (fromPos + idx + 1) % boardSize);
+    const tile = latest?.board?.tiles?.[destPos];
+    const tileName = tile?.names?.ko ?? tile?.name ?? '선택한 칸';
+    const isChanceTeleport = hubTeleport.source === 'chance';
+    setHubTeleport(null);
     setTurnResult({
       kind: 'arrival',
-      title: hubTeleport.fee > 0 ? '환승 완료' : '무료 환승 완료',
-      text: `${tile?.names?.ko ?? tile?.name ?? '선택한 칸'}(으)로 이동`,
-      icon: '🧭',
+      title: isChanceTeleport ? '찬스 환승 완료' : hubTeleport.fee > 0 ? '환승 완료' : '무료 환승 완료',
+      text: `${tileName}(으)로 이동`,
+      icon: isChanceTeleport ? '🎴' : '🧭',
     });
-    setHubTeleport(null);
+    setBoardTurn({
+      phase: 'moving',
+      playerId: hubTeleport.playerId,
+      startPos: fromPos,
+      displayPos: fromPos,
+      endPos: destPos,
+      path,
+      arrival: { kind: 'hub_teleport', pos: destPos, tileName, source: hubTeleport.source },
+      nonce: Date.now(),
+    });
+    path.forEach((pathPos, idx) => {
+      window.setTimeout(() => setBoardTurn((prev) => prev ? { ...prev, phase: 'moving', displayPos: pathPos } : prev), 160 + idx * 115);
+    });
+    window.setTimeout(() => {
+      setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', displayPos: destPos, endPos: destPos } : prev);
+      pushGlobalNotice({
+        kind: 'teleport_done',
+        speaker: '사회자',
+        hostText: isChanceTeleport ? `찬스 환승 성공! ${tileName}까지 말이 이동했습니다 🎴` : `환승 완료! ${tileName}까지 말이 이동했습니다 🚉`,
+        title: isChanceTeleport ? '찬스 환승 완료' : '환승 완료',
+        text: hubTeleport.fee > 0 ? `요금 ${hubTeleport.fee}만 정산 후 이동했습니다.` : '요금 없이 이동했습니다.',
+        icon: isChanceTeleport ? '🎴' : '🚉',
+        color: playerColor(hubTeleport.playerId, CHAR_META[latest?.players?.[hubTeleport.playerId]?.character]?.color ?? '#2f75c9'),
+        cta: '터치해서 닫기',
+      });
+    }, 520 + path.length * 115);
     return true;
   };
 
@@ -946,6 +1208,7 @@ export default function GameMain({ onExit }) {
     setPendingPurchase(null);
     setTurnResult(null);
     setGlobalNotice(null);
+    setCardEffectNotice(null);
     setDiceLocked(false);
     setViewPlayerIndex(null);
     closePropertyModal?.();
@@ -975,7 +1238,7 @@ export default function GameMain({ onExit }) {
     <>
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[linear-gradient(135deg,rgba(255,251,238,0.04),rgba(6,116,82,0.08))]" />
 
-      <div className="relative flex h-full min-h-dvh flex-col gap-1.5 overflow-hidden p-1.5 md:min-h-full md:gap-1.5 md:p-2">
+      <div className="relative flex h-full min-h-dvh flex-col gap-1 overflow-hidden p-1.5 md:min-h-full md:gap-1 md:p-2">
         {/* === STAGE === */}
         <div className="hidden flex-1 min-h-0 md:flex">
           <CurrentPlayerStage
@@ -1001,6 +1264,8 @@ export default function GameMain({ onExit }) {
             onExit={onExit}
             onOpenBoard={toggleBoardInspect}
             pendingPurchase={pendingPurchase}
+            onPendingPurchaseContract={reopenPurchaseNotice}
+            onLoanSigned={handlePurchaseLoanSigned}
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
@@ -1032,6 +1297,8 @@ export default function GameMain({ onExit }) {
             onOpenLoan={openLoanModal}
             onOpenBoard={toggleBoardInspect}
             pendingPurchase={pendingPurchase}
+            onPendingPurchaseContract={reopenPurchaseNotice}
+            onLoanSigned={handlePurchaseLoanSigned}
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
@@ -1074,7 +1341,11 @@ export default function GameMain({ onExit }) {
           <BoardTurnOverlay
             state={state}
             replay={boardTurn}
+            cardResult={cardSettlementPending && turnResult?.kind === 'card' ? turnResult : null}
+            onRevealCard={() => handleOpenResultCard(turnResult)}
             onRoll={handleBoardDiceRoll}
+            teleportRequest={hubTeleport?.source === 'chance' ? hubTeleport : null}
+            onTeleportSelect={resolveHubTeleport}
             onClose={closeBoardToStatus}
           />
         )}
@@ -1109,13 +1380,14 @@ export default function GameMain({ onExit }) {
                   color: playerColor(state?.turnIndex ?? 0, activeBaseMeta.color),
                   playerCharacter: activePlayer.character,
                   cta: '터치해서 시작',
+                  action: () => startTurn?.(state?.turnIndex ?? 0),
                 });
               }
             }}
           />
         )}
 
-        {!state.finished && hubTeleport && (
+        {!state.finished && hubTeleport && hubTeleport.source !== 'chance' && (
           <HubTeleportModal
             state={state}
             request={hubTeleport}
@@ -1176,9 +1448,9 @@ export default function GameMain({ onExit }) {
             needAmount={modalRecovery.needAmount}
           />
         )}
-        <GlobalNoticeBand notice={globalNotice} onDismiss={(item) => { setGlobalNotice(null); item?.action?.(); }} />
-        {cardSettlementPending && turnResult?.kind === 'card' && (
-          <CardRevealOverlay card={turnResult} onReveal={() => handleOpenResultCard(turnResult)} />
+        <GlobalNoticeBand notice={globalNotice} onDismiss={(item) => { setGlobalNotice(null); item?.action?.(); if (item?.kind !== 'turn_start') setSettlementLocked(false); }} />
+        {cardEffectNotice && (
+          <CardEffectNoticeOverlay notice={cardEffectNotice} onClose={() => { setCardEffectNotice(null); setBoardTurn(null); setSettlementLocked(false); }} />
         )}
         <PropertyShatterOverlay effect={propertyShatter} state={state} />
       </div>
@@ -1189,9 +1461,9 @@ export default function GameMain({ onExit }) {
 
 
 const CARD_REVEAL_TONE = {
-  chance: { label: 'Chance', mark: '💡', from: '#090A0D', mid: '#181A20', to: '#C89421', glow: 'rgba(255,211,77,0.52)' },
+  chance: { label: 'Chance', mark: '💡', from: '#020617', mid: '#111827', to: '#FACC15', glow: 'rgba(250,204,21,0.58)' },
   welfare: { label: 'Daily', mark: '🏠', from: '#EAF8F2', mid: '#7BC9B1', to: '#245D5E', glow: 'rgba(82,211,178,0.42)' },
-  event: { label: 'Event', mark: '🌪️', from: '#100D24', mid: '#392365', to: '#7B4CE0', glow: 'rgba(139,92,246,0.54)' },
+  event: { label: 'Event', mark: '🌪️', from: '#050505', mid: '#7F1D1D', to: '#DC2626', glow: 'rgba(220,38,38,0.62)' },
 };
 
 function CardRevealOverlay({ card, onReveal }) {
@@ -1320,6 +1592,12 @@ function PropertyShatterOverlay({ effect, state }) {
 }
 
 function GlobalNoticeBand({ notice, onDismiss }) {
+  const [buySubmitting, setBuySubmitting] = useState(false);
+  const [buyDeniedPulse, setBuyDeniedPulse] = useState(false);
+  useEffect(() => {
+    setBuySubmitting(false);
+    setBuyDeniedPulse(false);
+  }, [notice?.id]);
   if (!notice || typeof document === 'undefined') return null;
   const amount = Number(notice.amount);
   const showAmount = Number.isFinite(amount) && amount !== 0;
@@ -1331,8 +1609,14 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   const isRent = notice.kind === 'rent';
   const hostText = notice.hostText ?? notice.text;
   const noticeStyle = notice.color ? {
-    background: `linear-gradient(135deg, rgba(15,12,10,0.92) 0%, ${accent}88 58%, rgba(255,255,255,0.18) 100%)`,
-    boxShadow: `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${accent}aa, 0 0 42px ${accent}8f, inset 0 0 30px ${accent}22`,
+    background: isBuy
+      ? 'linear-gradient(135deg,rgba(15,12,10,0.9)_0%,rgba(70,34,22,0.84)_48%,rgba(128,83,20,0.76)_100%)'
+      : `linear-gradient(135deg, rgba(15,12,10,0.92) 0%, ${accent}88 58%, rgba(255,255,255,0.18) 100%)`,
+    boxShadow: isBuy
+      ? '0 4px 0 #0F0C0A, 0 16px 36px rgba(0,0,0,0.34)'
+      : isTurnStart
+        ? `0 0 0 4px ${accent}cc, 0 0 0 8px ${accent}35, 0 0 54px ${accent}b8, inset 0 0 34px ${accent}30`
+        : `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${accent}aa, 0 0 42px ${accent}8f, inset 0 0 30px ${accent}22`,
   } : undefined;
   const visitorImg = notice.visitorCharacter ? getCharacterImg(notice.visitorCharacter) : null;
   const ownerImg = notice.ownerCharacter ? getCharacterImg(notice.ownerCharacter) : null;
@@ -1346,77 +1630,164 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   });
   const absorbPointer = (event) => { event.preventDefault(); event.stopPropagation(); };
   const dismiss = (event) => { event.preventDefault(); event.stopPropagation(); onDismiss?.(notice); };
+  const handleBuyClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (buySubmitting) return;
+    const cash = Number(notice.cash) || 0;
+    const price = Number(notice.price) || 0;
+    if (price > cash) {
+      setBuyDeniedPulse(false);
+      window.setTimeout(() => setBuyDeniedPulse(true), 0);
+      window.setTimeout(() => setBuyDeniedPulse(false), 760);
+      return;
+    }
+    setBuySubmitting(true);
+    window.setTimeout(() => {
+      const bought = notice.onBuy?.();
+      if (bought !== false) onDismiss?.(notice);
+      else setBuySubmitting(false);
+    }, 920);
+  };
+  const handleLoanClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    notice.onLoan?.();
+    onDismiss?.(notice);
+  };
   const layer = (
     <div
       className="pointer-events-auto fixed inset-0 flex items-center justify-center px-3"
       style={{ zIndex: 2147483000, touchAction: 'none' }}
       onPointerDown={absorbPointer}
-      onClick={dismiss}
+      onClick={isBuy ? absorbPointer : dismiss}
     >
       <motion.div
         key={`${notice.kind}-${notice.title}-${notice.text}`}
-        className={cn('flex w-full flex-col items-center', isTurnStart ? 'max-w-[440px]' : 'max-w-[920px]')}
+        className={cn('flex w-full flex-col items-center', isTurnStart ? 'max-w-[520px]' : 'max-w-[920px]')}
         initial={{ opacity: 0, scale: 0.96, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: -10 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
       >
         {hostText && !isTurnStart && (
-          <div className="mb-[5px] flex max-w-[860px] items-center justify-center gap-2 rounded-[18px] border border-emerald-200/75 bg-[linear-gradient(180deg,rgba(236,253,245,0.78),rgba(16,185,129,0.34))] px-4 py-2 text-center text-[#08372b] shadow-[0_12px_28px_-22px_rgba(6,95,70,0.78),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-[16px]">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
-            <span className="font-board text-[clamp(15px,2vw,21px)] font-extrabold leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{hostText}</span>
+          <div className={cn('mb-[5px] flex w-full max-w-[960px] items-center gap-2 rounded-[18px] border px-5 py-2 text-center shadow-[0_12px_28px_-22px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-[16px]', isBuy ? 'justify-between border-emerald-200/42 bg-[linear-gradient(135deg,rgba(5,5,5,0.92)_0%,rgba(7,30,24,0.88)_42%,rgba(16,185,129,0.58)_100%)] text-white' : 'justify-center border-emerald-200/75 bg-[linear-gradient(135deg,rgba(5,5,5,0.9)_0%,rgba(7,30,24,0.82)_45%,rgba(16,185,129,0.42)_100%)] text-white')}>
+            <div className="flex min-w-0 items-center justify-start gap-2">
+              <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-full text-white', isBuy ? 'border border-white/35 bg-black' : 'bg-emerald-500')}>🎙️</span>
+              <span className={cn('font-board font-extrabold leading-tight', isBuy ? 'text-[clamp(14px,1.75vw,18px)]' : 'text-[clamp(15px,2vw,21px)]')} style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{hostText}</span>
+            </div>
+            {isBuy && notice.loanHint && (
+              <motion.button
+                type="button"
+                onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onClick={handleLoanClick}
+                className="shrink-0 rounded-full border-2 border-emerald-950 bg-[linear-gradient(180deg,#ecfdf5_0%,#34d399_100%)] px-4 py-1.5 font-board text-[16px] font-black leading-none text-emerald-950 shadow-[0_2px_0_#064e3b] active:translate-y-1 active:shadow-none"
+                animate={{ scale: [1, 1.06, 1], boxShadow: ['0 2px 0 #064e3b,0 0 0 rgba(16,185,129,0)', '0 2px 0 #064e3b,0 0 20px rgba(16,185,129,0.95)', '0 2px 0 #064e3b,0 0 0 rgba(16,185,129,0)'] }}
+                transition={{ duration: 0.9, repeat: Infinity }}
+              >
+                대출상담
+              </motion.button>
+            )}
           </div>
         )}
         <div
-          className={cn('mx-auto grid w-full overflow-hidden border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[440px] grid-rows-[1fr_auto] rounded-[20px] border-2 p-3 shadow-[0_4px_0_#0F0C0A,0_16px_34px_rgba(0,0,0,0.34)] bg-[linear-gradient(135deg,rgba(15,12,10,0.90)_0%,rgba(42,63,92,0.86)_100%)]' : 'rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
+          className={cn('mx-auto grid w-full overflow-hidden border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[520px] grid-rows-[1fr_auto] rounded-[20px] border-0 bg-[#101216] p-3 shadow-none' : 'rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
           style={noticeStyle}
         >
           {isBuy || isStationNotice || isPropertyNotice ? (
-            <div className="grid min-h-0 grid-cols-[minmax(120px,190px)_1fr] items-center gap-4 px-2 text-left">
-              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
-                {isStationNotice ? <StationRoleCard notice={notice} /> : <PropertyDeedMini pos={notice.previewPos} />}
-              </div>
-              <div className="min-w-0 text-center sm:text-left">
-                <div className="flex items-center justify-center gap-3 sm:justify-start">
-                  <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧑‍💼'}</motion.span>
-                  <div className="whitespace-pre-line font-board text-[clamp(30px,4.5vw,54px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
-                </div>
-                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">{notice.text}</div>
-                {isBuy ? (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onBuy?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">매입</button>
-                    <button type="button" onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl text-ink shadow-[0_4px_0_#0F0C0A] active:translate-y-1 active:shadow-none">스킵</button>
+            isBuy ? (
+              <div className="grid min-h-0 grid-cols-[minmax(190px,250px)_1fr] items-center gap-5 px-2 text-left">
+                <BuyOfferCard notice={notice} accent={accent} />
+                <div className="flex min-w-0 flex-col justify-center text-center sm:text-left">
+                  <div className="flex items-center justify-center gap-3 sm:justify-start">
+                    <motion.span className="text-[43px] leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.22)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧓'}</motion.span>
+                    <div className="whitespace-nowrap font-board text-[clamp(18px,2.35vw,27px)] leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.28)]">{notice.title}</div>
                   </div>
+                  {notice.cash != null && <BuyCashPreview cash={notice.cash} price={notice.price} active={buySubmitting} />}
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <motion.button
+                      type="button"
+                      disabled={buySubmitting}
+                      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={handleBuyClick}
+                      className={cn(
+                        'rounded-xl border-2 border-ink-line px-3 py-3 font-board text-2xl font-black shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55',
+                        buyDeniedPulse
+                          ? 'bg-monopoly-red text-white'
+                          : 'bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] text-ink',
+                      )}
+                      animate={buyDeniedPulse ? { x: [-8, 8, -7, 7, -4, 4, 0], scale: [1, 1.04, 1], boxShadow: ['0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)', '0 3px 0 #7f1d1d,0 0 24px rgba(239,68,68,0.95)', '0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)'] } : { x: 0, scale: 1 }}
+                      transition={{ duration: 0.72, ease: 'easeInOut' }}
+                    >
+                      {notice.loanHint ? '예금부족' : '매입'}
+                    </motion.button>
+                    <button type="button" disabled={buySubmitting} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); notice.onPass?.(); onDismiss?.(); }} className="rounded-xl border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] px-3 py-3 font-board text-2xl font-black text-ink shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55">스킵</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid min-h-0 grid-cols-[minmax(150px,236px)_1fr] items-center gap-5 px-2 text-left">
+                {isStationNotice ? (
+                  <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
+                    <StationRoleCard notice={notice} />
+                  </div>
+                ) : notice.propertyMode === 'own' ? (
+                  <OwnedLandNoticeCard notice={notice} accent={accent} />
                 ) : (
+                  <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] bg-white shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: `${accent}cc`, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${accent}80` }}>
+                    <PropertyDeedMini pos={notice.previewPos} />
+                  </div>
+                )}
+                <div className="min-w-0 text-center sm:text-left">
+                  <div className="flex items-center justify-center gap-3 sm:justify-start">
+                    <motion.span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '🧑‍💼'}</motion.span>
+                    <div className="whitespace-pre-line font-board text-[clamp(28px,4.1vw,50px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">{notice.title}</div>
+                  </div>
+                  <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">{notice.text}</div>
                   <div className="mt-4 rounded-xl border border-white/28 bg-white/12 px-4 py-3 font-board text-[22px] leading-tight text-white/90">
                     {notice.cta ?? '터치해서 닫기'}
                   </div>
-                )}
-              </div>
-            </div>
-          ) : isRent ? (
-            <div className="flex min-h-[230px] flex-col items-center justify-center gap-3 px-4">
-              <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/62">통행료 정산</div>
-              <div className="font-board text-[clamp(24px,4vw,44px)] font-extrabold leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.38)]">{notice.text}</div>
-              <div className="mt-1 flex items-center justify-center gap-5">
-                <div className="relative flex flex-col items-center gap-1">
-                  <motion.div className="absolute -top-8 rounded-full bg-red-500 px-3 py-1 font-display text-[18px] font-black text-white shadow-[0_3px_0_#0F0C0A]" animate={{ y: [10, -8, -16], opacity: [0, 1, 0] }} transition={{ duration: 1.25, repeat: 1 }}>-{fmt(Math.abs(amount))}만</motion.div>
-                  <div className="relative h-20 w-20 rounded-full border-3 border-white bg-white/70 shadow-[0_4px_0_#0F0C0A]" style={avatarStyle(notice.visitorCharacter, visitorImg, '#d83b2f')}><span className="absolute -right-2 -top-3 text-3xl">😭</span></div>
-                  <div className="max-w-[120px] truncate font-board text-[15px] text-white/86">{notice.visitorName}</div>
                 </div>
-                <div className="font-display text-[34px] text-monopoly-gold">→</div>
-                <div className="relative flex flex-col items-center gap-1">
-                  <motion.div className="absolute -top-8 rounded-full bg-emerald-500 px-3 py-1 font-display text-[18px] font-black text-white shadow-[0_3px_0_#0F0C0A]" animate={{ y: [10, -8, -16], opacity: [0, 1, 0] }} transition={{ duration: 1.25, repeat: 1 }}>+{fmt(Math.abs(amount))}만</motion.div>
-                  <motion.div className="relative h-20 w-20 rounded-full border-3 border-white bg-white/70 shadow-[0_4px_0_#0F0C0A]" animate={{ x: [-3, 4, -2, 3, 0], rotate: [-2, 2, -2, 2, 0] }} transition={{ duration: 0.9, repeat: 2 }} style={avatarStyle(notice.ownerCharacter, ownerImg, notice.ownerColor ?? '#22c55e')}><span className="absolute -right-2 -top-3 text-3xl">😏</span></motion.div>
-                  <div className="max-w-[120px] truncate font-board text-[15px] text-white/86">{notice.ownerName}</div>
+              </div>
+            )
+          ) : isRent ? (
+            <div className="grid min-h-[250px] grid-cols-[minmax(170px,248px)_1fr] items-center gap-5 px-2 text-left">
+              <RentLandNoticeCard notice={notice} accent={notice.ownerColor ?? accent} />
+              <div className="flex min-w-0 flex-col items-center justify-center gap-3 text-center">
+                <div className="font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/62">통행료 정산</div>
+                <div className="flex flex-wrap items-center justify-center gap-2 font-board text-[clamp(22px,3.1vw,34px)] font-extrabold leading-tight drop-shadow-[0_4px_0_rgba(0,0,0,0.38)]">
+                  <PlayerNameCapsule playerId={notice.ownerId} name={notice.ownerName} color={notice.ownerColor ?? accent} />
+                  <span>의 땅을 밟았습니다.</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-white/28 bg-white/12 px-4 py-2 font-board text-[clamp(16px,2vw,22px)] leading-tight text-white/90">
+                  <span>통행료를</span>
+                  <PlayerNameCapsule playerId={notice.ownerId} name={notice.ownerName} color={notice.ownerColor ?? accent} compact />
+                  <span>님에게 지불합니다.</span>
+                </div>
+                <div className="mt-1 flex items-center justify-center gap-5">
+                  <div className="relative flex flex-col items-center gap-1">
+                    <div className="relative h-20 w-20 rounded-full border-3 border-white bg-white/70 shadow-[0_4px_0_#0F0C0A]" style={avatarStyle(notice.visitorCharacter, visitorImg, '#d83b2f')}>
+                      <span className="absolute -right-2 -top-3 text-3xl">😭</span>
+                      <motion.div className="absolute left-1/2 top-[45%] z-10 -translate-x-1/2 rounded-full bg-red-500 px-1.5 py-0.5 font-display text-[10px] font-black leading-none text-white shadow-[0_2px_0_#0F0C0A]" animate={{ scale: [0.9, 1.08, 0.96, 1.05, 1], opacity: [0, 1, 0, 1, 1] }} transition={{ duration: 1.7, ease: 'easeInOut' }}>-{fmt(Math.abs(amount))}만원</motion.div>
+                    </div>
+                    <PlayerNameCapsule playerId={notice.visitorId} name={notice.visitorName} color={playerColor(notice.visitorId ?? 0, '#d83b2f')} compact />
+                  </div>
+                  <div className="font-display text-[34px] text-monopoly-gold">→</div>
+                  <div className="relative flex flex-col items-center gap-1">
+                    <motion.div className="relative h-20 w-20 rounded-full border-3 border-white bg-white/70 shadow-[0_4px_0_#0F0C0A]" animate={{ x: [-3, 4, -2, 3, 0], rotate: [-2, 2, -2, 2, 0] }} transition={{ duration: 0.9, repeat: 2 }} style={avatarStyle(notice.ownerCharacter, ownerImg, notice.ownerColor ?? '#22c55e')}>
+                      <span className="absolute -right-2 -top-3 text-3xl">😏</span>
+                      <motion.div className="absolute left-1/2 top-[45%] z-10 -translate-x-1/2 rounded-full bg-emerald-500 px-1.5 py-0.5 font-display text-[10px] font-black leading-none text-white shadow-[0_2px_0_#0F0C0A]" animate={{ scale: [0.9, 1.08, 0.96, 1.05, 1], opacity: [0, 1, 0, 1, 1] }} transition={{ duration: 1.7, ease: 'easeInOut' }}>+{fmt(Math.abs(amount))}만원</motion.div>
+                    </motion.div>
+                    <PlayerNameCapsule playerId={notice.ownerId} name={notice.ownerName} color={notice.ownerColor ?? '#22c55e'} compact />
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex min-h-0 items-center justify-center gap-3">
+            <div className="relative flex min-h-0 items-center justify-center gap-3">
               {isTurnStart && notice.playerCharacter ? (
                 <motion.div
-                  className="h-16 w-16 shrink-0 rounded-full border-2 border-white/75 bg-white/70 shadow-[0_3px_0_#0F0C0A,0_0_22px_rgba(255,255,255,0.26)]"
+                  className="absolute left-5 h-20 w-20 shrink-0 rounded-full border-2 border-white/75 bg-white/70 shadow-[0_0_0_4px_rgba(255,255,255,0.22),0_0_24px_rgba(255,255,255,0.34)]"
                   style={avatarStyle(notice.playerCharacter, noticePlayerImg, accent)}
                   animate={{ scale: [1, 1.08, 1] }}
                   transition={{ duration: 0.65 }}
@@ -1424,9 +1795,9 @@ function GlobalNoticeBand({ notice, onDismiss }) {
               ) : (
                 <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
               )}
-              <div className="min-w-0">
-                <div className={cn('font-board font-black leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', isTurnStart ? 'text-[clamp(20px,2.8vw,30px)]' : notice.subtle ? 'text-[clamp(24px,4.2vw,46px)]' : 'text-[clamp(30px,6vw,74px)]')}>{notice.title}</div>
-                <div className={cn('mt-1 line-clamp-1 font-board font-black tracking-normal text-monopoly-gold/86', isTurnStart ? 'text-[clamp(17px,2.2vw,23px)]' : notice.subtle ? 'text-[10px]' : 'text-[12px]')}>{isTurnStart ? notice.text : (notice.cta ?? 'tap to close')}</div>
+              <div className={cn('min-w-0', isTurnStart && 'translate-x-[45px]')}>
+                <div className={cn('font-board font-black leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', isTurnStart ? 'text-[clamp(18px,2.55vw,27px)]' : notice.subtle ? 'text-[clamp(24px,4.2vw,46px)]' : 'text-[clamp(30px,6vw,74px)]')}>{notice.title}</div>
+                <div className={cn('mt-1 line-clamp-1 font-board font-black tracking-normal text-monopoly-gold/86', isTurnStart ? 'text-[clamp(15px,2vw,21px)]' : notice.subtle ? 'text-[10px]' : 'text-[12px]')}>{isTurnStart ? notice.text : (notice.cta ?? 'tap to close')}</div>
               </div>
             </div>
           )}
@@ -1441,6 +1812,316 @@ function GlobalNoticeBand({ notice, onDismiss }) {
     </div>
   );
   return createPortal(layer, document.body);
+}
+
+function buyOfferLine(seed = 0) {
+  const lines = [
+    '좋은 땅인데 매입하시겠어요? 호호',
+    '이 땅 괜찮은데 잡아둘까요? 호호',
+    '지금 사두면 든든하겠는데요? 호호',
+    '이 정도면 탐나는 자리예요, 호호',
+    '눈 딱 감고 하나 들이실래요? 호호',
+  ];
+  return lines[Math.abs(Number(seed) || 0) % lines.length];
+}
+
+function loanOfferLine(seed = 0) {
+  const lines = [
+    '조금만 보태면 바로 잡는 자리예요',
+    '대출 살짝 끼면 이 땅 놓치기 아까워요',
+    '지금은 부족해도 상담 한 번이면 돼요',
+    '좋은 땅은 기다려주지 않아요',
+    '예금 모자라면 대출로 잡아두면 되죠',
+  ];
+  return lines[Math.abs(Number(seed) || 0) % lines.length];
+}
+
+function PlayerNameCapsule({ playerId, name, color = '#22c55e', compact = false }) {
+  const safeId = Number.isInteger(playerId) ? playerId : 0;
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center gap-1 overflow-hidden rounded-full border-2 border-white/82 font-board font-black leading-none text-white shadow-[0_2px_0_rgba(15,12,10,0.62),0_0_14px_rgba(255,255,255,0.16)]',
+        compact ? 'px-2 py-1 text-[12px]' : 'px-3 py-1.5 text-[clamp(15px,2vw,20px)]',
+      )}
+      style={{ background: `linear-gradient(135deg, ${color} 0%, ${color}dd 58%, rgba(15,12,10,0.42) 100%)` }}
+    >
+      <span className={cn('shrink-0 rounded-full border border-white/65 bg-black/24 px-1.5 font-display font-black text-white', compact ? 'text-[9px] leading-[13px]' : 'text-[11px] leading-[15px]')}>
+        {safeId + 1}P
+      </span>
+      <span className={cn('min-w-0 truncate text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.45)]', compact ? 'max-w-[76px]' : 'max-w-[126px]')}>
+        {name ?? `${safeId + 1}P`}
+      </span>
+    </span>
+  );
+}
+
+function BuyCashPreview({ cash = 0, price = 0, active = false }) {
+  const safeCash = Number(cash) || 0;
+  const safePrice = Number(price) || 0;
+  const afterCash = Math.max(0, safeCash - safePrice);
+  const displayCash = active ? afterCash : safeCash;
+  return (
+    <div className="relative mt-4 overflow-visible rounded-2xl border-2 border-white/40 bg-black/28 px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+      <CashDeltaFloat value={displayCash} className="left-1/2 top-[18px] -translate-x-1/2 !text-[20px]" />
+      <div className="inline-flex rounded-full border border-white/40 bg-emerald-500 px-3 py-1 font-board text-[13px] font-black leading-none text-white shadow-[0_2px_0_rgba(15,12,10,0.45)]">예금액</div>
+      <div className="mt-2 flex min-h-[42px] items-center justify-center font-board leading-none">
+        <AnimatedCash
+          value={displayCash}
+          duration={820}
+          settleDelay={0}
+          neutralClassName="text-white"
+          className="text-[clamp(28px,4vw,43px)] font-black leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.35)]"
+        />
+        <span className="ml-1 text-[clamp(13px,1.8vw,18px)] font-black text-white drop-shadow-[0_2px_0_rgba(0,0,0,0.32)]">만원</span>
+      </div>
+    </div>
+  );
+}
+
+function BuyOfferCard({ notice, accent = '#22c55e' }) {
+  const state = useGameStore((s) => s.state);
+  const pos = notice?.previewPos;
+  const tile = state?.board?.tiles?.[pos];
+  const ts = state?.tileState?.[pos] ?? {};
+  const name = tile?.names?.ko ?? tile?.name ?? notice?.text ?? '부동산';
+  const price = notice?.price ?? ts.price ?? tile?.price ?? tile?.basePrice ?? 0;
+  const skylineSlot = {
+    brown: 'skyline.brown',
+    lightblue: 'skyline.lightblue',
+    pink: 'skyline.pink',
+    orange: 'skyline.orange',
+    red: 'skyline.red',
+    yellow: 'skyline.yellow',
+    green: 'skyline.green',
+    darkblue: 'skyline.darkblue',
+  }[tile?.color];
+  const groupTiles = (state?.board?.tiles ?? []).filter((item) => item.type === 'property' && item.color === tile?.color);
+  const slots = groupTiles.length ? groupTiles : [tile].filter(Boolean);
+  const fallbackColor = {
+    brown: '#955436',
+    lightblue: '#49B8E8',
+    pink: '#D93A96',
+    orange: '#F7941D',
+    red: '#ED1B24',
+    yellow: '#D8B300',
+    green: '#1FB25A',
+    darkblue: '#0072BB',
+  }[tile?.color] ?? accent;
+
+  return (
+    <div className="mx-auto w-full max-w-[236px] rounded-[18px] border-[3px] bg-[#fffaf0] p-2 text-[#17120c] shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: fallbackColor, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${fallbackColor}9a` }}>
+      <div className="overflow-hidden rounded-[14px] border-2 border-[#17120c] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="relative h-[74px] overflow-hidden border-b-2 border-[#17120c]" style={{ background: `linear-gradient(135deg, ${fallbackColor}, #fff2a8)` }}>
+          {skylineSlot ? (
+            <AssetFrame slot={skylineSlot} rounded="rounded-none" className="absolute inset-0 !aspect-auto h-full w-full scale-110" style={{ opacity: 0.9 }} />
+          ) : (
+            <div className="grid h-full w-full place-items-center text-[48px]">🏙️</div>
+          )}
+          <div className="absolute inset-x-0 top-2 flex justify-center">
+            <span className="rounded-full border border-white/50 bg-black/54 px-3 py-1 font-display text-[8px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-[4px]">for sale</span>
+          </div>
+        </div>
+        <div className="px-3 py-2.5 text-center">
+          <div className="mx-auto max-w-full truncate font-board text-[21px] font-black leading-[1.08] text-[#17120c]">{name}</div>
+          <div className="mx-auto mt-2 rounded-xl border-[3px] border-[#17120c] bg-[linear-gradient(180deg,#fff8dc_0%,#ffd56a_100%)] px-3 py-1.5 font-board text-[19px] font-black leading-none shadow-[0_2px_0_#0F0C0A]">
+            매입가 {fmt(price)}만원
+          </div>
+          <div className={cn('mt-4 gap-1.5', slots.length === 2 ? 'flex justify-center' : 'grid grid-cols-3')}>
+            {slots.slice(0, 3).map((groupTile) => {
+              const ownerId = state?.tileState?.[groupTile.pos]?.owner;
+              const owner = Number.isInteger(ownerId) ? state?.players?.[ownerId] : null;
+              const ownerBase = owner ? CHAR_META[owner.character] : null;
+              const ownerColor = owner ? playerColor(ownerId, ownerBase?.color ?? fallbackColor) : null;
+              return (
+                <div key={groupTile.pos} className={cn('relative flex h-10 min-w-0 items-center justify-center rounded-[6px] border-2 border-[#17120c] bg-[#fffaf0] px-0.5 font-board text-[10px] font-black leading-[1.08] text-[#17120c] shadow-[0_2px_0_rgba(15,12,10,0.58),0_4px_8px_rgba(15,12,10,0.14)]', slots.length === 2 && 'w-[54px]')} title={groupTile.names?.ko ?? groupTile.name}>
+                  {owner && (
+                    <span className="absolute left-1/2 -top-[9px] -translate-x-1/2 rounded-full border border-white px-1 font-display text-[7px] font-black leading-[11px] text-white shadow-[0_1px_2px_rgba(0,0,0,0.45)]" style={{ backgroundColor: ownerColor }}>
+                      {ownerId + 1}P
+                    </span>
+                  )}
+                  <span className="block max-w-full whitespace-nowrap leading-[1.08]">{groupTile.names?.ko ?? groupTile.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const PROPERTY_NOTICE_COLORS = {
+  brown: '#955436',
+  lightblue: '#49B8E8',
+  pink: '#D93A96',
+  orange: '#F7941D',
+  red: '#ED1B24',
+  yellow: '#D8B300',
+  green: '#1FB25A',
+  darkblue: '#0072BB',
+};
+
+function propertyGroupSlots(state, tile) {
+  const groupTiles = (state?.board?.tiles ?? []).filter((item) => item.type === 'property' && item.color === tile?.color);
+  return groupTiles.length ? groupTiles : [tile].filter(Boolean);
+}
+
+function LandGroupMarks({ state, tile, highlightOwnerId = null, accent = '#22c55e' }) {
+  const slots = propertyGroupSlots(state, tile).slice(0, 3);
+  return (
+    <div className={cn('mt-3 gap-1.5', slots.length === 2 ? 'flex justify-center' : 'grid grid-cols-3')}>
+      {slots.map((groupTile) => {
+        const ownerId = state?.tileState?.[groupTile.pos]?.owner;
+        const owner = Number.isInteger(ownerId) ? state?.players?.[ownerId] : null;
+        const ownerBase = owner ? CHAR_META[owner.character] : null;
+        const ownerColor = owner ? playerColor(ownerId, ownerBase?.color ?? accent) : null;
+        const active = highlightOwnerId == null ? groupTile.pos === tile?.pos : ownerId === highlightOwnerId;
+        return (
+          <div
+            key={groupTile.pos}
+            className={cn('relative grid h-9 place-items-center rounded-[6px] border-2 border-[#17120c] px-0.5 shadow-[0_2px_0_rgba(15,12,10,0.58)]', slots.length === 2 && 'w-[56px]')}
+            style={{ background: active ? accent : '#fffaf0', boxShadow: active ? `0 2px 0 rgba(15,12,10,0.58), 0 0 10px ${accent}aa` : '0 2px 0 rgba(15,12,10,0.58)' }}
+            title={groupTile.names?.ko ?? groupTile.name}
+          >
+            {owner && (
+              <span className="absolute left-1/2 -top-[10px] -translate-x-1/2 rounded-full border border-white px-1 font-display text-[7px] font-black leading-[11px] text-white shadow-[0_1px_2px_rgba(0,0,0,0.45)]" style={{ backgroundColor: ownerColor }}>
+                {ownerId + 1}P
+              </span>
+            )}
+            <span className={cn('max-w-full truncate font-board text-[8px] font-black leading-none', active ? 'text-white' : 'text-[#17120c66]')}>
+              {groupTile.names?.ko ?? groupTile.name}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function BuildingMarks({ stage = 0, accent = '#22c55e' }) {
+  const safeStage = Math.max(0, Math.min(5, Number(stage) || 0));
+  return (
+    <div className="mt-2 grid grid-cols-4 gap-1.5">
+      {Array.from({ length: 4 }, (_, idx) => {
+        const active = safeStage === 5 || idx < safeStage;
+        return (
+          <div
+            key={idx}
+            className="grid h-7 place-items-center rounded-[6px] border-2 border-[#17120c] font-display text-[10px] font-black text-white shadow-[0_2px_0_rgba(15,12,10,0.58)]"
+            style={{ background: active ? accent : '#fffaf0', color: active ? '#fff' : '#17120c66' }}
+          >
+            {safeStage === 5 ? 'APT' : active ? 'B' : ''}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function OwnedLandNoticeCard({ notice, accent = '#22c55e' }) {
+  const state = useGameStore((s) => s.state);
+  const pos = notice?.previewPos;
+  const tile = state?.board?.tiles?.[pos];
+  const ts = state?.tileState?.[pos] ?? {};
+  const name = tile?.names?.ko ?? tile?.name ?? '내 땅';
+  const basePrice = tile?.basePrice ?? tile?.price ?? 0;
+  const marketPrice = tile ? currentPrice(state, pos) : basePrice;
+  const color = PROPERTY_NOTICE_COLORS[tile?.color] ?? accent;
+  const skylineSlot = {
+    brown: 'skyline.brown',
+    lightblue: 'skyline.lightblue',
+    pink: 'skyline.pink',
+    orange: 'skyline.orange',
+    red: 'skyline.red',
+    yellow: 'skyline.yellow',
+    green: 'skyline.green',
+    darkblue: 'skyline.darkblue',
+  }[tile?.color];
+
+  return (
+    <div className="mx-auto w-full max-w-[236px] rounded-[18px] border-[3px] bg-[#fffaf0] p-2 text-[#17120c] shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: color, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${color}9a` }}>
+      <div className="overflow-hidden rounded-[14px] border-2 border-[#17120c] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="relative h-[68px] overflow-hidden border-b-2 border-[#17120c]" style={{ background: `linear-gradient(135deg, ${color}, #fff2a8)` }}>
+          {skylineSlot ? <AssetFrame slot={skylineSlot} rounded="rounded-none" className="absolute inset-0 !aspect-auto h-full w-full scale-110" style={{ opacity: 0.9 }} /> : <div className="grid h-full w-full place-items-center text-[44px]">🏙️</div>}
+          <div className="absolute inset-x-0 top-2 flex justify-center">
+            <span className="rounded-full border border-white/55 bg-black/58 px-3 py-1 font-display text-[8px] font-black uppercase tracking-[0.18em] text-white backdrop-blur-[4px]">my land</span>
+          </div>
+        </div>
+        <div className="px-3 py-2.5 text-center">
+          <div className="mx-auto max-w-full truncate font-board text-[21px] font-black leading-[1.08] text-[#17120c]">{name}</div>
+          <div className="mt-2 rounded-xl border-[3px] border-[#17120c] bg-[linear-gradient(180deg,#fff8dc_0%,#ffd56a_100%)] px-2 py-1.5 font-board text-[15px] font-black leading-none shadow-[0_2px_0_#0F0C0A]">
+            매입가 {fmt(basePrice)}만원 <span className="text-[#17120c66]">|</span> 현시세 {fmt(marketPrice)}만원
+          </div>
+          <LandGroupMarks state={state} tile={tile} highlightOwnerId={ts.owner} accent={color} />
+          <BuildingMarks stage={ts.stage ?? 0} accent={color} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RentLandNoticeCard({ notice, accent = '#22c55e' }) {
+  const state = useGameStore((s) => s.state);
+  const pos = notice?.previewPos;
+  const tile = state?.board?.tiles?.[pos];
+  const ts = state?.tileState?.[pos] ?? {};
+  const name = tile?.names?.ko ?? tile?.name ?? notice?.tileName ?? '남의 땅';
+  const rent = Math.abs(Number(notice?.amount) || 0);
+  const color = PROPERTY_NOTICE_COLORS[tile?.color] ?? accent;
+  const skylineSlot = {
+    brown: 'skyline.brown',
+    lightblue: 'skyline.lightblue',
+    pink: 'skyline.pink',
+    orange: 'skyline.orange',
+    red: 'skyline.red',
+    yellow: 'skyline.yellow',
+    green: 'skyline.green',
+    darkblue: 'skyline.darkblue',
+  }[tile?.color];
+
+  return (
+    <div className="mx-auto w-full max-w-[236px] rounded-[18px] border-[3px] bg-[#fffaf0] p-2 text-[#17120c] shadow-[0_5px_0_#0F0C0A]" style={{ borderColor: color, boxShadow: `0 5px 0 #0F0C0A, 0 0 24px ${color}9a` }}>
+      <div className="overflow-hidden rounded-[14px] border-2 border-[#17120c] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="relative h-[78px] overflow-hidden border-b-2 border-[#17120c]" style={{ background: `linear-gradient(135deg, ${color}, #111827)` }}>
+          {skylineSlot ? <AssetFrame slot={skylineSlot} rounded="rounded-none" className="absolute inset-0 !aspect-auto h-full w-full scale-110" style={{ opacity: 0.82 }} /> : <div className="grid h-full w-full place-items-center text-[44px]">🏙️</div>}
+          <div className="absolute inset-x-0 top-2 flex justify-center">
+            <span className="rounded-full border border-white/55 bg-black/62 px-3 py-1 font-display text-[8px] font-black uppercase tracking-[0.18em] text-white backdrop-blur-[4px]">toll</span>
+          </div>
+        </div>
+        <div className="px-3 py-2.5 text-center">
+          <div className="mx-auto max-w-full truncate font-board text-[21px] font-black leading-[1.08] text-[#17120c]">{name}</div>
+          <div className="mt-2 rounded-xl border-[3px] border-[#17120c] bg-[linear-gradient(180deg,#fee2e2_0%,#fb7185_100%)] px-3 py-1.5 font-board text-[19px] font-black leading-none text-[#7f1d1d] shadow-[0_2px_0_#0F0C0A]">
+            임대료 {fmt(rent)}만원
+          </div>
+          <LandGroupMarks state={state} tile={tile} highlightOwnerId={ts.owner} accent={color} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ownLandEmceeLine(seed = 0) {
+  const lines = [
+    '잠시 쉬어갑니다. 여유가 있다면 건물이라도 올려보시면 어떨까요?',
+    '여긴 내 땅입니다. 오늘은 지갑보다 마음이 편한 칸이네요.',
+    '안전지대 도착입니다. 숨 한 번 돌리고 건설 타이밍을 봐도 좋겠습니다.',
+    '집주인이 직접 방문했네요. 빈손으로 보내긴 아까우니 개발 계획 한 번 보시죠.',
+    '통행료 걱정은 없습니다. 대신 땅값 올릴 기회는 놓치지 마세요.',
+  ];
+  return lines[Math.abs(Number(seed) || 0) % lines.length];
+}
+
+function rentEmceeLine({ visitor = '플레이어', owner = '소유자', tile = '땅', amount = 0 } = {}) {
+  const seed = Math.abs(String(`${visitor}${owner}${tile}${amount}`).split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0));
+  const lines = [
+    `아이고 ${visitor}님… ${owner}님의 ${tile}입니다 😭 통행료 ${fmt(amount)}만원, 눈물 한 방울만 닦고 가시죠.`,
+    `발끝이 살짝 선을 넘었습니다 😭 ${tile} 주인은 ${owner}님, 통행료 정산 들어갑니다.`,
+    `${visitor}님, 오늘 길이 조금 비쌌습니다 😭 ${owner}님께 ${fmt(amount)}만원 지불합니다.`,
+    `여기서 딱 걸렸네요 😭 ${owner}님 웃음소리가 들리는 듯하지만, 선은 지키겠습니다.`,
+    `남의 땅은 역시 차갑습니다 😭 ${tile} 통행료 내고 다음 칸에서 복수합시다.`,
+  ];
+  return lines[seed % lines.length];
 }
 
 function StationRoleCard({ notice }) {
@@ -1495,10 +2176,23 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
     ? { name: tileName(pendingBuy.pos), price: pendingBuy.buyPrice ?? 0 }
     : null;
   const moneyRows = [];
-  const pushMoney = (label, amount, { showZero = false } = {}) => {
+  const pushMoney = (label, amount) => {
     const safe = Number(amount) || 0;
-    if (safe !== 0 || showZero) moneyRows.push({ label, amount: safe });
+    if (safe !== 0) moneyRows.push({ label, amount: safe, order: moneyRows.length });
   };
+  const developmentByPos = new Map();
+  for (const event of events) {
+    if (event.kind !== 'develop_property') continue;
+    const key = event.pos ?? 'unknown';
+    const prev = developmentByPos.get(key);
+    developmentByPos.set(key, {
+      pos: event.pos,
+      firstStage: prev?.firstStage ?? event.fromStage,
+      lastStage: event.toStage,
+      amount: (prev?.amount ?? 0) + (Number(event.amount) || 0),
+      order: prev?.order ?? moneyRows.length + developmentByPos.size,
+    });
+  }
 
   for (const event of events) {
     switch (event.kind) {
@@ -1520,13 +2214,13 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
         pushMoney(event.kind === 'luxury_tax' ? '사치세' : '소득세', -event.amt);
         break;
       case 'chance_draw':
-        pushMoney(`찬스카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? 0, { showZero: event.upgraded != null || event.delta == null });
+        pushMoney(`찬스카드 ${event.card ?? ''}`, event.delta ?? 0);
         break;
       case 'welfare_draw':
-        pushMoney(`일상카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.delta ?? event.allDelta ?? event.collected ?? 0, { showZero: event.upgraded != null });
+        pushMoney(`일상카드 ${event.card ?? ''}`, event.delta ?? event.allDelta ?? event.collected ?? 0);
         break;
       case 'event_card':
-        pushMoney(`이벤트카드 ${event.card ?? ''} · ${event.effectText ?? event.description ?? ''}`.trim(), event.sale ?? 0, { showZero: true });
+        pushMoney(`이벤트카드 ${event.card ?? ''}`, event.sale ?? 0);
         break;
       case 'parking_jackpot':
         pushMoney('무료주차 보너스', event.amt);
@@ -1539,13 +2233,30 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
         if (event.price) pushMoney(`${tileName(event.pos)} 허브 매입`, -event.price);
         break;
       case 'hub_teleport':
-        pushMoney(`${tileName(event.destPos)} 환승 이동`, -(event.fee ?? 0), { showZero: true });
+        pushMoney(`${tileName(event.destPos)} 환승 이동`, -(event.fee ?? 0));
         break;
       default:
         break;
     }
   }
+  for (const item of developmentByPos.values()) {
+    if (item.firstStage === item.lastStage || item.amount === 0) continue;
+    const label = item.lastStage > item.firstStage
+      ? `${tileName(item.pos)} 건설 최종 ${stageSummaryLabel(item.lastStage)}`
+      : `${tileName(item.pos)} 철거 최종 ${stageSummaryLabel(item.lastStage)}`;
+    moneyRows.push({ label, amount: item.amount, order: item.order });
+  }
   if (bought) pushMoney(`${bought.name} 매입`, -bought.price);
+  const mergedRows = new Map();
+  for (const row of moneyRows) {
+    const prev = mergedRows.get(row.label);
+    if (prev) prev.amount += row.amount;
+    else mergedRows.set(row.label, { ...row });
+  }
+  const finalMoneyRows = [...mergedRows.values()]
+    .filter((row) => row.amount !== 0)
+    .sort((a, b) => a.order - b.order)
+    .map(({ label, amount }) => ({ label, amount }));
 
   const cashAfter = player?.cash ?? cashBefore;
   return {
@@ -1556,8 +2267,8 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
     arrivalText: describeArrival(arrival, arrival?.pos != null ? state.board?.tiles?.[arrival.pos] : state.board?.tiles?.[player?.position ?? 0]),
     card: card ? (card.card ?? card.description ?? (card.kind === 'chance_draw' ? '찬스 카드' : '카드')) : null,
     bought,
-    moneyRows,
-    totalDelta: (cashAfter ?? 0) - (cashBefore ?? 0),
+    moneyRows: finalMoneyRows,
+    totalDelta: finalMoneyRows.reduce((sum, row) => sum + row.amount, 0),
   };
 }
 
@@ -1719,7 +2430,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
   );
 }
 
-function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
+function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRoll, teleportRequest = null, onTeleportSelect, onClose }) {
   const openTradeSelect = useGameStore((s) => s.openTradeSelect);
   const tiles = state.board?.tiles ?? [];
   const player = state.players?.[replay.playerId];
@@ -1742,7 +2453,9 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
           ? `${endName} 도착`
           : '';
 
-  const closeOnTouch = replay.phase === 'inspect' || replay.phase === 'arrived';
+  const isTeleportSelect = replay.phase === 'teleport_select' && !!teleportRequest;
+  const showCardPanel = replay.phase === 'arrived' && !!cardResult;
+  const closeOnTouch = !showCardPanel && !isTeleportSelect && (replay.phase === 'inspect' || replay.phase === 'arrived');
   const cameraGrid = boardGridStyle(pos);
   const cameraCol = Number(cameraGrid.gridColumn) || 6;
   const cameraRow = Number(cameraGrid.gridRow) || 6;
@@ -1777,7 +2490,7 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
               const ownerId = state.tileState?.[tile.pos]?.owner;
               const owner = typeof ownerId === 'number' ? state.players?.[ownerId] : null;
               const ownerColor = owner ? playerColor(ownerId, CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
-              const isCenterSpecial = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax'].includes(tile.type);
+              const isCenterSpecial = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax', 'railroad', 'utility'].includes(tile.type);
               return (
                 <div
                   key={tile.pos}
@@ -1787,6 +2500,15 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
                   {owner && <div className="board-turn-owner-bookmark" style={{ backgroundColor: ownerColor }} title={`${owner.name || `${ownerId + 1}P`} 소유`} />}
                   {!isCenterSpecial && <div className="h-1.5 rounded-sm" style={{ backgroundColor: tile.color ?? (tile.type === 'tax' ? '#e44' : tile.type === 'community_chest' ? '#4f7edb' : '#d6b15d') }} />}
                   <div className={cn('board-turn-tile-name', isCenterSpecial && 'board-turn-tile-name-special')} title={tile.names?.ko ?? tile.name ?? String(tile.pos)}>{isCenterSpecial ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
+                  {isTeleportSelect && tile.pos !== teleportRequest.fromPos && (
+                    <button
+                      type="button"
+                      className="absolute inset-0 z-20 rounded-md border-2 border-yellow-300/85 bg-yellow-200/16 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.24),0_0_14px_rgba(250,204,21,0.46)] transition hover:bg-yellow-200/34 active:scale-95"
+                      title={`${tile.names?.ko ?? tile.name ?? tile.pos}로 환승`}
+                      onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+                      onClick={(event) => { event.preventDefault(); event.stopPropagation(); onTeleportSelect?.(tile.pos); }}
+                    />
+                  )}
                   <div className="board-turn-pieces">
                     {state.players.map((piecePlayer, pieceIndex) => {
                       const renderPos = pieceIndex === replay.playerId ? pos : (piecePlayer.position ?? 0);
@@ -1810,7 +2532,11 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
             })}
             <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
               <div className="space-y-3">
-                {replay.phase === 'arrived' ? (
+                {showCardPanel ? (
+                  <BoardCardRevealPanel card={cardResult} onReveal={onRevealCard} />
+                ) : isTeleportSelect ? (
+                  <BoardTeleportSelectPanel request={teleportRequest} player={player} playerColor={activePlayerColor} />
+                ) : replay.phase === 'arrived' ? (
                   <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} activeColor={activePlayerColor} />
                 ) : replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
@@ -1847,12 +2573,233 @@ function BoardTurnOverlay({ state, replay, onRoll, onClose }) {
   );
 }
 
+function BoardTeleportSelectPanel({ request, player, playerColor = '#FACC15' }) {
+  const name = player?.name ?? `${(request?.playerId ?? 0) + 1}P`;
+  return (
+    <div className="mx-auto w-[min(48vw,300px)] rounded-[20px] border-[3px] border-[#17120c] bg-[linear-gradient(145deg,#020617_0%,#111827_58%,#facc15_160%)] p-4 text-center text-white shadow-[0_6px_0_#17120c,0_0_26px_rgba(250,204,21,0.42)]">
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border-2 border-white/70 bg-white/16 text-[30px] shadow-[0_3px_0_rgba(0,0,0,0.45)]">🎴</div>
+      <div className="mt-2 font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/54">chance transfer</div>
+      <div className="mt-1 font-board text-[24px] leading-none" style={{ color: playerColor }}>환승역 찬스</div>
+      <div className="mt-2 rounded-xl border border-white/18 bg-white/12 px-3 py-2 font-board text-[15px] leading-tight text-white/86">
+        {name}님, 보드판에서 이동할 칸을 눌러주세요.
+      </div>
+      <div className="mt-2 font-display text-[10px] font-black uppercase tracking-[0.14em] text-yellow-200/80">노란빛 칸 선택 → 말 이동 → 정리 멘트</div>
+    </div>
+  );
+}
+
+function BoardCardRevealPanel({ card, onReveal }) {
+  const [flipped, setFlipped] = useState(false);
+  const tone = CARD_REVEAL_TONE[card?.cardKind] ?? CARD_REVEAL_TONE.chance;
+  const hiddenCardLabel = card?.cardKind === 'welfare' ? '일상 카드' : card?.cardKind === 'event' ? '이벤트 카드' : '찬스 카드';
+  const reveal = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (flipped) return;
+    setFlipped(true);
+    window.setTimeout(() => onReveal?.(), 620);
+  };
+  return (
+    <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={reveal} className="mx-auto block w-[min(42vw,245px)] text-center focus:outline-none">
+      <div className="mb-2 rounded-full border-2 border-[#17120c] bg-[#fff7df] px-3 py-1 font-board text-[15px] font-black text-[#17120c] shadow-[0_2px_0_#17120c]">
+        {flipped ? '효과 발동 중' : '카드를 뒤집어 주세요'}
+      </div>
+      <motion.div
+        className="relative mx-auto h-[250px] w-[178px] [perspective:900px]"
+        animate={flipped
+          ? { rotate: [0, -2, 2, 0], scale: [1, 1.05, 1] }
+          : { rotate: [-1.6, 1.6, -1.1, 1.1, 0], y: [0, -3, 0, 2, 0] }}
+        transition={flipped
+          ? { duration: 0.42 }
+          : { duration: 1.05, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <motion.div
+          className="relative h-full w-full overflow-hidden rounded-[18px] border-[3px] border-[#17120c] bg-white text-ink shadow-[0_6px_0_#0F0C0A,0_0_24px_rgba(0,0,0,0.36)]"
+          animate={flipped ? { boxShadow: [`0 6px 0 #0F0C0A,0 0 24px rgba(0,0,0,0.36)`, `0 6px 0 #0F0C0A,0 0 38px ${tone.glow}`, `0 6px 0 #0F0C0A,0 0 24px rgba(0,0,0,0.36)`] } : {}}
+          transition={{ duration: 0.55, ease: [0.2, 0.8, 0.2, 1] }}
+        >
+          {flipped ? (
+            <CardArtwork type={card?.cardKind ?? 'chance'} id={String(card?.cardId ?? card?.eventId ?? '')} className="absolute inset-0 h-full w-full rounded-none" framed={false} />
+          ) : (
+            <div
+              className="absolute inset-0 grid place-items-center overflow-hidden text-white"
+              style={{ background: `radial-gradient(circle at 50% 22%, rgba(255,255,255,0.30) 0%, transparent 26%), linear-gradient(145deg, ${tone.from} 0%, ${tone.mid} 54%, ${tone.to} 100%)` }}
+            >
+              <div className="absolute inset-3 rounded-[14px] border border-white/24" />
+              <div className="relative text-center">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-white/48 bg-white/16 text-[34px] shadow-[0_0_26px_rgba(255,255,255,0.18)]">{tone.mark}</div>
+                <div className="mt-5 font-display text-[8px] font-black uppercase tracking-[0.24em] text-white/62">The RealLife</div>
+                <div className="mt-2 rounded-full border border-white/36 bg-black/18 px-4 py-1 font-board text-[18px] font-black leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">{hiddenCardLabel}</div>
+              </div>
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,12,10,0)_0%,rgba(15,12,10,0.72)_34%,rgba(15,12,10,0.92)_100%)] px-3 pb-3 pt-12 text-white">
+            <div className="font-display text-[8px] font-black uppercase tracking-[0.2em] text-white/62">{card?.cardKind ?? 'card'}</div>
+            <div className="mt-1 font-board text-[22px] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.7)]">{flipped ? (card?.cardName ?? card?.title ?? '카드 공개') : '결과는 비밀'}</div>
+          </div>
+        </motion.div>
+      </motion.div>
+      <div className="mt-2 font-board text-[14px] font-black text-[#17120c]/62">{flipped ? '바로 효과창으로 이어집니다' : '결과는 뒤집기 전까지 비밀'}</div>
+    </button>
+  );
+}
+
+function CashEffectCounter({ from = 0, to = 0 }) {
+  const [value, setValue] = useState(from);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setValue(to), 120);
+    return () => window.clearTimeout(timer);
+  }, [to]);
+  return (
+    <div className="mt-2 font-board text-[34px] leading-none text-white">
+      <AnimatedCash value={value} duration={900} settleDelay={0} rollingEffect={false} />만
+    </div>
+  );
+}
+
+function cardHostEmoji(notice) {
+  const cardKind = notice?.card?.cardKind;
+  const cardId = String(notice?.card?.cardId ?? notice?.event?.cardId ?? notice?.event?.id ?? '');
+  const eventKind = String(notice?.event?.kind ?? notice?.card?.eventId ?? '');
+  const title = `${notice?.card?.cardName ?? notice?.event?.card ?? notice?.event?.name ?? ''}`;
+  const propertyRelated = ['subscription_win', '8', 'lottery_estate', 'redev', 'redevelopment', 'gtx'].includes(cardId)
+    || ['lottery_estate', 'redev', 'redevelopment', 'gtx'].includes(eventKind)
+    || title.includes('청약')
+    || title.includes('부동산')
+    || title.includes('재개발')
+    || title.includes('GTX');
+  if (propertyRelated) return '🧓';
+
+  if (cardKind === 'event') {
+    if (['war'].includes(eventKind)) return '🧑‍✈️';
+    if (['fire'].includes(eventKind)) return '👨‍🚒';
+    if (['multihouse', 'regulation'].includes(eventKind)) return '👮‍♀️';
+    if (['bubble'].includes(eventKind)) return '😰';
+    return '🧑‍💼';
+  }
+
+  const chanceHosts = {
+    marriage: '👰',
+    job_change: '🧑‍💼',
+    promotion: '👨‍💼',
+    startup: '👩‍💻',
+    childbirth: '🤱',
+    honor_retire: '👴',
+    military: '🧑‍✈️',
+    holiday_bonus: '🙇',
+    accident: '👨‍⚕️',
+    lotto: '🕺',
+    teleport: '🧙',
+    life_change: '🧑‍🎤',
+    defense_card: '🛡️',
+  };
+  if (chanceHosts[cardId]) return chanceHosts[cardId];
+
+  const welfareHosts = {
+    1: '😷',
+    2: '👷',
+    3: '👵',
+    4: '👩‍⚕️',
+    5: '👴',
+    6: '👨‍👩‍👧',
+    7: '🤵',
+    9: '🤱',
+    10: '👮',
+  };
+  if (cardKind === 'welfare' && welfareHosts[cardId]) return welfareHosts[cardId];
+  if (cardKind === 'welfare') return '🧑‍💼';
+  return '🎙️';
+}
+
+function CardEffectNoticeOverlay({ notice, onClose }) {
+  if (!notice || typeof document === 'undefined') return null;
+  const amount = notice.cashAfter - notice.cashBefore;
+  const isMoney = amount !== 0;
+  const tone = CARD_REVEAL_TONE[notice.card?.cardKind] ?? CARD_REVEAL_TONE.chance;
+  const title = notice.card?.cardName ?? notice.card?.title ?? '카드 효과';
+  const text = notice.event?.effectText ?? notice.card?.revealText ?? notice.card?.text ?? '카드 효과가 발동되었습니다.';
+  const hostEmoji = cardHostEmoji(notice);
+  const militaryTurns = notice.event?.cardId === 'military' || notice.card?.cardId === 'military'
+    ? Number(notice.event?.skipTurns ?? 3)
+    : 0;
+  return createPortal(
+    <div className="pointer-events-auto fixed inset-0 z-[2147483001] flex items-center justify-center bg-black/22 px-3 backdrop-blur-[2px]" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }} onClick={(event) => { event.preventDefault(); event.stopPropagation(); onClose?.(); }}>
+      <motion.div
+        className={cn('w-[min(92vw,620px)] rounded-[24px] border-[3px] border-ink-line p-4 text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', notice.card?.cardKind === 'event' ? 'bg-[linear-gradient(135deg,rgba(5,5,5,0.96)_0%,rgba(69,10,10,0.94)_48%,rgba(220,38,38,0.88)_100%)]' : 'bg-[linear-gradient(135deg,rgba(15,12,10,0.93)_0%,rgba(70,34,22,0.90)_45%,rgba(128,83,20,0.88)_100%)]')}
+        initial={{ opacity: 0, scale: 0.95, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0, boxShadow: [`0 6px 0 #0F0C0A,0 22px 54px rgba(0,0,0,0.46)`, `0 6px 0 #0F0C0A,0 0 34px ${tone.glow}`, `0 6px 0 #0F0C0A,0 22px 54px rgba(0,0,0,0.46)`] }}
+        transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+      >
+        <div className="min-w-0 text-center">
+          <div className="flex items-center justify-center gap-3 sm:justify-start">
+            <motion.span className="text-[43px] leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.22)]" animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{hostEmoji}</motion.span>
+            <div className="font-board text-[clamp(21px,3vw,34px)] leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.28)]">{title}</div>
+          </div>
+          <div className={cn('mt-3 rounded-xl border px-4 py-3 text-center sm:text-left', notice.card?.cardKind === 'event' ? 'border-red-200/65 bg-[linear-gradient(180deg,rgba(254,226,226,0.18),rgba(220,38,38,0.14))]' : 'border-emerald-200/65 bg-[linear-gradient(180deg,rgba(236,253,245,0.18),rgba(16,185,129,0.12))]')}>
+            <div className={cn('font-display text-[9px] font-black uppercase tracking-[0.22em]', notice.card?.cardKind === 'event' ? 'text-red-100/85' : 'text-emerald-200/80')}>사회자 멘트</div>
+            <div className="mt-1 font-board text-[clamp(16px,2.2vw,23px)] leading-tight text-white/90">{text}</div>
+          </div>
+          {militaryTurns > 0 && (
+            <motion.div
+              className="mt-4 flex items-center justify-center gap-3 rounded-2xl border-[3px] border-white/42 bg-[linear-gradient(135deg,rgba(47,58,32,0.96)_0%,rgba(107,125,56,0.92)_58%,rgba(215,196,106,0.88)_100%)] px-4 py-3 text-white shadow-[0_4px_0_#0F0C0A,0_0_24px_rgba(215,196,106,0.52)]"
+              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: [1, 1.03, 1] }}
+              transition={{ duration: 0.45 }}
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-[3px] border-white bg-monopoly-red font-display text-[27px] font-black leading-none text-white shadow-[0_3px_0_#0F0C0A]">!</span>
+              <span className="text-[30px] leading-none">🪖</span>
+              <div className="text-left">
+                <div className="font-board text-[25px] font-black leading-none">군입대 중!</div>
+                <div className="mt-1 font-display text-[11px] font-black uppercase tracking-[0.14em] text-white/78">{militaryTurns}턴 동안 차례를 쉽니다</div>
+              </div>
+            </motion.div>
+          )}
+          {isMoney && (
+            <div className="relative mt-4 overflow-visible rounded-2xl border-2 border-white/35 bg-black/24 px-4 py-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+              <CashDeltaFloat value={amount} className="left-1/2 top-[14px] -translate-x-1/2 !text-[20px]" />
+              <div className="inline-flex rounded-full border border-white/40 bg-emerald-500 px-3 py-1 font-board text-[13px] font-black leading-none text-white">예금액</div>
+              <CashEffectCounter from={notice.cashBefore} to={notice.cashAfter} />
+            </div>
+          )}
+
+        </div>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
+
 function BoardArrivalCard({ state, pos, event, activeColor = '#d83b2f' }) {
   const isJailArrival = event?.kind === 'go_to_jail' || event?.kind === 'three_doubles_jail';
   if (isJailArrival) return <JailArrivalCard reason={event.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸'} />;
   const tile = state?.board?.tiles?.[pos];
   if (!tile) return <FallbackArrivalCard title="도착 처리" icon="📍" text="도착 정보를 확인했습니다." />;
   const ts = state.tileState?.[pos] ?? {};
+  const isRentArrival = (event?.kind === 'arrive_property' && event?.type === 'rent') || (event?.kind === 'arrive_hub' && event?.type === 'rent_forced') || event?.kind === 'rent';
+  if (isRentArrival) {
+    const ownerId = event.ownerId ?? ts.owner;
+    const owner = Number.isInteger(ownerId) ? state.players?.[ownerId] : null;
+    const ownerMeta = owner ? CHAR_META[owner.character] : null;
+    return (
+      <motion.div
+        className="board-arrival-card-slot mx-auto w-[min(52vw,250px)]"
+        initial={{ y: 18, scale: 0.84, opacity: 0, rotate: -2 }}
+        animate={{ y: 0, scale: 1, opacity: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+      >
+        <RentLandNoticeCard
+          notice={{
+            previewPos: event.pos ?? pos,
+            tileName: tile.names?.ko ?? tile.name,
+            amount: -(event.rent ?? event.fee ?? event.amount ?? 0),
+            ownerId,
+            ownerName: owner?.name ?? (ownerId != null ? `${ownerId + 1}P` : '소유자'),
+          }}
+          accent={Number.isInteger(ownerId) ? playerColor(ownerId, ownerMeta?.color ?? activeColor) : activeColor}
+        />
+      </motion.div>
+    );
+  }
   const owner = Number.isInteger(ts.owner) ? state.players?.[ts.owner] : null;
   const ownerMeta = owner ? CHAR_META[owner.character] : null;
   const name = tile.names?.ko ?? tile.name ?? `${pos}번 칸`;
@@ -1970,6 +2917,8 @@ function specialTileContent(tile) {
   if (tile?.type === 'chance') return make('💡', '찬스');
   if (tile?.type === 'community_chest') return make('🏠', '일상');
   if (tile?.type === 'tax') return tile.taxKind === 'luxury' ? make('💎', '사치세') : make('🧾', '소득세');
+  if (tile?.type === 'railroad') return make('🚆', shortTileName(name));
+  if (tile?.type === 'utility') return tile.utilityKind === 'water' ? make('🚰', '수도') : make('⚡', '전기');
   return name;
 }
 
@@ -2338,17 +3287,36 @@ const signedMoney = (amount) => {
   return `${safe >= 0 ? '+' : '-'}${Math.abs(safe).toLocaleString('ko-KR')}만`;
 };
 
+function stageSummaryLabel(stage) {
+  const safe = Number(stage) || 0;
+  if (safe >= 5) return '아파트';
+  if (safe <= 0) return '빈 땅';
+  return `건물 ${safe}개`;
+}
+
 function buildTurnBriefing(turn, state) {
   const rows = [];
   let rowOrder = 0;
-  const push = (label, amount, { showZero = false, priority = null } = {}) => {
+  const push = (label, amount, { showZero = false } = {}) => {
     if (!amount && !showZero) return;
     const safeAmount = Number(amount) || 0;
-    const computedPriority = priority ?? (safeAmount > 0 ? 20 : safeAmount < 0 ? 40 : 60);
-    rows.push({ label, amount: safeAmount, priority: computedPriority, order: rowOrder++ });
+    rows.push({ label, amount: safeAmount, order: rowOrder++ });
   };
   const tileName = (pos) => state?.board?.tiles?.[pos]?.names?.ko ?? state?.board?.tiles?.[pos]?.name ?? '부동산';
   const playerName = (id) => state?.players?.[id]?.name || `${(id ?? 0) + 1}P`;
+  const developmentByPos = new Map();
+  for (const event of turn.events ?? []) {
+    if (event.kind !== 'develop_property') continue;
+    const key = event.pos ?? 'unknown';
+    const prev = developmentByPos.get(key);
+    developmentByPos.set(key, {
+      pos: event.pos,
+      firstStage: prev?.firstStage ?? event.fromStage,
+      lastStage: event.toStage,
+      amount: (prev?.amount ?? 0) + (Number(event.amount) || 0),
+      order: prev?.order ?? rowOrder++,
+    });
+  }
 
   for (const event of turn.events ?? []) {
     switch (event.kind) {
@@ -2357,13 +3325,13 @@ function buildTurnBriefing(turn, state) {
         push('월급', event.amt);
         break;
       case 'institution_pay':
-        push('기관 월급', event.amt, { priority: 10 });
+        push('기관 월급', event.amt);
         break;
       case 'apartment_income':
-        push('아파트 월세', event.amt, { priority: 11 });
+        push('아파트 월세', event.amt);
         break;
       case 'living':
-        push('생활비', -event.amt, { priority: 0 });
+        push('생활비', -event.amt);
         break;
       case 'mortgage_interest':
         push('담보 이자', -event.amt);
@@ -2388,15 +3356,10 @@ function buildTurnBriefing(turn, state) {
         push(`${playerName(event.ownerId)}에게 통행료`, -event.rent);
         break;
       case 'buy_property':
-        push(`${tileName(event.pos)} 매입`, -event.price);
+        push('매입가', -event.price);
         break;
-      case 'develop_property': {
-        const label = event.toStage > event.fromStage
-          ? event.toStage === 5 ? '아파트 건설' : `건물 ${event.toStage}단계 건설`
-          : event.toStage === 0 ? '건물 철거' : `건물 ${event.toStage}단계 조정`;
-        push(`${tileName(event.pos)} ${label}`, event.amount);
+      case 'develop_property':
         break;
-      }
       case 'parking_jackpot':
         push('무료주차 보너스', event.amt);
         break;
@@ -2404,7 +3367,7 @@ function buildTurnBriefing(turn, state) {
         if (event.collected) push(`${tileName(event.pos)} 적립금`, event.collected);
         break;
       case 'arrive_hub':
-        if (event.type === 'buy') push(`${tileName(event.pos)} 매입`, -event.price);
+        if (event.type === 'buy') push('매입가', -event.price);
         if (event.type === 'self_repair') push(`${tileName(event.pos)} 수리비`, -event.fee);
         if (event.type === 'rent_forced') push(`${playerName(event.ownerId)} 허브 통행료`, -event.fee);
         break;
@@ -2428,8 +3391,8 @@ function buildTurnBriefing(turn, state) {
       case 'recover':
         for (const item of event.log ?? []) {
           if (item.step === 'mortgage') push(`${tileName(item.pos)} 담보대출`, item.amt);
-          else if (item.step === 'sell_house') push(`${tileName(item.pos)} 건물 매각`, item.refund);
-          else if (item.step === 'sell_bank') push(`${tileName(item.pos)} 은행매각`, item.net);
+          else if (item.step === 'sell_house') push('매도 정산금', item.refund);
+          else if (item.step === 'sell_bank') push('매도 정산금', item.net);
           else if (item.step === 'credit') push('신용대출', item.amt);
           else if (item.step === 'loanshark') push('사채', item.amt);
         }
@@ -2439,23 +3402,34 @@ function buildTurnBriefing(turn, state) {
     }
   }
 
+  for (const item of developmentByPos.values()) {
+    if (item.firstStage === item.lastStage || item.amount === 0) continue;
+    const label = item.lastStage > item.firstStage
+      ? `${tileName(item.pos)} 건설 최종 ${stageSummaryLabel(item.lastStage)}`
+      : `${tileName(item.pos)} 철거 최종 ${stageSummaryLabel(item.lastStage)}`;
+    rows.push({ label, amount: item.amount, order: item.order });
+  }
+
   const eventCard = (turn.events ?? []).find((event) => event.card && ['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate'].includes(event.kind));
   const total = (turn.cashAfter ?? 0) - (turn.cashBefore ?? 0);
   const visibleTotal = rows.reduce((sum, row) => sum + row.amount, 0);
   const hiddenDelta = total - visibleTotal;
   if (hiddenDelta !== 0) push('표시 외 현금 변동', hiddenDelta);
-  const sortedRows = [...rows]
-    .sort((a, b) => {
-      const priorityDiff = (a.priority ?? 50) - (b.priority ?? 50);
-      if (priorityDiff) return priorityDiff;
-      const amountDiff = Math.abs(b.amount) - Math.abs(a.amount);
-      return amountDiff || a.order - b.order;
-    })
+  const merged = new Map();
+  for (const row of rows) {
+    const prev = merged.get(row.label);
+    if (prev) prev.amount += row.amount;
+    else merged.set(row.label, { label: row.label, amount: row.amount, order: row.order });
+  }
+  const sortedRows = [...merged.values()]
+    .filter((row) => row.amount !== 0)
+    .sort((a, b) => a.order - b.order)
     .map(({ label, amount }) => ({ label, amount }));
   return {
     title: '이번 턴 정산',
     rows: sortedRows,
     total: sortedRows.reduce((sum, row) => sum + row.amount, 0),
+    balance: turn.cashAfter ?? state?.players?.[turn.playerId]?.cash ?? 0,
     event: eventCard ? `${eventCard.card} 이벤트 발생` : null,
   };
 }

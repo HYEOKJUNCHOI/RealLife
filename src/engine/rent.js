@@ -1,15 +1,15 @@
 // 통행료 / 도착 처리
 //
 // 빌라 1채: 월세 강제 (RENT_RATIO[1] = 20%)
-// 빌라 2~4채: 월세(시세 × 40/60/80%) OR 임대(고정 100/120/130만) 중 보유자 선택
+// 빌라 2~3채: 월세(시세 × 40/60%) OR 임대(고정 100/120만) 중 보유자 선택
 // 아파트: 시세 × 100% (큰 한 방, 강제)
 
 import { rentFromStage, currentPrice, incrementPremium } from './inflation.js';
 import { isProperty } from './board.js';
 import { round10 } from './constants.js';
 
-// 빌라 임대 모드 고정가 (빌라 2/3/4채)
-const VILLA_LEASE_FIXED = { 2: 100, 3: 120, 4: 130 };
+// 빌라 임대 모드 고정가 (빌라 2/3채)
+const VILLA_LEASE_FIXED = { 2: 100, 3: 120 };
 
 // 보유자 선택: 통행료 모드 ('monthly' = 월세, 'lease' = 임대)
 // 단순화 시뮬: 더 큰 금액 선택
@@ -32,7 +32,7 @@ export const computeRent = (state, visitorId, pos) => {
   if (ts.owner === visitorId) return 0; // 자기 부동산
   if (ts.mortgaged) return 0; // 대출 중 = 임대료 X
   const stage = ts.stage ?? 0;
-  if (stage >= 2 && stage <= 4) {
+  if (stage >= 2 && stage <= 3) {
     const mode = chooseRentMode(state, pos);
     if (mode === 'lease') return VILLA_LEASE_FIXED[stage];
   }
@@ -56,7 +56,7 @@ export const handlePropertyArrival = (state, visitorId, pos) => {
   if (!ts || ts.owner == null) {
     return {
       type: 'unowned',
-      buyPrice: currentPrice(state, pos),
+      buyPrice: state.board.tiles[pos]?.basePrice ?? currentPrice(state, pos),
       pos,
     };
   }

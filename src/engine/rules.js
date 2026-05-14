@@ -45,7 +45,8 @@ import {
   GO_SALARY,
   GO_BONUS,
   BOARD_SIZE,
-  EVENT_TRIGGER_YEARS,
+  EVENT_CARD_TURN_CHANCE,
+  DEATHMATCH_EVENT_TURN_CHANCE,
   DEATHMATCH_TRIGGER_MIN,
   GAME_DURATION_MIN,
   APARTMENT_INCOME_RATIO,
@@ -238,7 +239,8 @@ export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
   const log = [];
 
   if (player.bankrupt) {
-    state.turnIndex = (state.turnIndex + 1) % state.players.length;
+    log.push({ kind: 'bankrupt_skip', playerId });
+    advanceTurn(state, rng, log);
     return { events: log };
   }
 
@@ -264,7 +266,7 @@ export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
       return { events: log };
     }
     // 탈출 후 그 주사위로 이동
-    onTurnStart(state, playerId, log);
+    if (!turnOptions.skipTurnStart) onTurnStart(state, playerId, log);
     if (player.cash < 0) {
       const rec = tryRecover(state, playerId, state.options.loanshark);
       log.push({ kind: 'recover', ...rec });
@@ -285,7 +287,7 @@ export const playTurn = (state, rng, agentHook = null, turnOptions = {}) => {
   }
 
   // 정상 턴
-  onTurnStart(state, playerId, log);
+  if (!turnOptions.skipTurnStart) onTurnStart(state, playerId, log);
   if (player.cash < 0) {
     const rec = tryRecover(state, playerId, state.options.loanshark);
     log.push({ kind: 'recover_pre_turn', ...rec });
@@ -358,9 +360,8 @@ export const advanceTurn = (state, rng, log) => {
   // 매턴 (누구턴이든) 역장 적립
   accrueStationFunds(state);
 
-  state.turnIndex = (state.turnIndex + 1) % state.players.length;
-  // 한 라운드 끝 = 모든 플레이어 1턴씩
-  if (state.turnIndex === 0) {
+  const handleRoundBoundary = () => {
+    if (state.turnIndex !== 0) return;
     state.round += 1;
     if (!state._ignoreTimeCap && !state.realTimeMode) state.elapsedMin += MIN_PER_ROUND;
 
@@ -376,17 +377,32 @@ export const advanceTurn = (state, rng, log) => {
       state.deathmatch = true;
       log.push({ kind: 'deathmatch_start' });
     }
-    // 데스매치 = 매 라운드 이벤트 카드 (eventCards 옵션은 매년 결산만 게이팅, 데스매치는 별도 트리거)
-    if (state.deathmatch) {
-      const r = triggerEventCard(state, rng);
-      log.push({ kind: 'event_card', ...r });
-    }
-
     // 게임 종료 체크
     const gameDurationMin = state.options?.totalGameMinutes ?? GAME_DURATION_MIN;
     if (state.elapsedMin >= gameDurationMin) {
       finishGame(state, log);
     }
+  };
+
+  state.turnIndex = (state.turnIndex + 1) % state.players.length;
+  handleRoundBoundary();
+
+  // 이벤트 카드: 데스매치 전에는 매 턴 7%, 데스매치 중에는 매 턴 50% 확률로 발생
+  if (!state.finished && state.options.eventCards) {
+    const chance = state.deathmatch ? DEATHMATCH_EVENT_TURN_CHANCE : EVENT_CARD_TURN_CHANCE;
+    if (rng.next() < chance) {
+      const r = triggerEventCard(state, rng);
+      log.push({ kind: 'event_card', ...r, deathmatch: !!state.deathmatch });
+    }
+  }
+
+  // 파산자는 턴을 잡지 않고 다음 생존자로 넘긴다.
+  let guard = 0;
+  while (!state.finished && state.players[state.turnIndex]?.bankrupt && guard < state.players.length) {
+    log.push({ kind: 'bankrupt_skip', playerId: state.turnIndex });
+    state.turnIndex = (state.turnIndex + 1) % state.players.length;
+    handleRoundBoundary();
+    guard += 1;
   }
 
   // 파산자 체크
@@ -415,13 +431,7 @@ const yearEndSettlement = (state, rng, log) => {
   state.loanRate = rollNewLoanRate(rng);
   log.push({ kind: 'loan_rate_update', rate: state.loanRate });
 
-  // 매년 결산 시 이벤트 카드 (데스매치 모드 X일 때만)
-  if (state.options.eventCards && !state.deathmatch && state.year % EVENT_TRIGGER_YEARS === 0) {
-    const r = triggerEventCard(state, rng);
-    log.push({ kind: 'event_card', ...r });
-  }
-
-  // 연말 세금/이벤트 후 음수 현금이 남으면 즉시 회생/파산 처리
+  // 연말 세금 후 음수 현금이 남으면 즉시 회생/파산 처리
   for (let i = 0; i < state.players.length; i++) {
     if (state.players[i].bankrupt || state.players[i].cash >= 0) continue;
     const rec = tryRecover(state, i, state.options.loanshark);

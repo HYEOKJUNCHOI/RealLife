@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { createGameState } from '@/engine/gameState.js';
 import { createRng } from '@/engine/rng.js';
-import { advanceTurn, finishGame, handleTileArrival, playTurn } from '@/engine/rules.js';
+import { advanceTurn, finishGame, handleTileArrival, onTurnStart, playTurn } from '@/engine/rules.js';
 import { applyDeferredCardEffect } from '@/engine/cards.js';
 import { handleInstitutionArrival, stationResign } from '@/engine/station.js';
 import { currentPrice, hasColorMonopoly, rentFromStage } from '@/engine/inflation.js';
@@ -102,13 +102,37 @@ export const useGameStore = create((set, get) => ({
     return false;
   },
 
+  // 턴 시작 안내를 닫은 순간 실제 턴 시작 비용/수입을 반영
+  startTurn: (playerId = null) => {
+    const { state, log } = get();
+    if (!state || state.finished) return [];
+    const activeId = playerId ?? state.turnIndex;
+    if (activeId !== state.turnIndex) return [];
+    const key = `${state.round ?? 0}-${state.turnIndex ?? 0}`;
+    if (state._turnStartAppliedKey === key) return [];
+    const events = [];
+    const cashBefore = state.players[activeId]?.cash ?? 0;
+    onTurnStart(state, activeId, events);
+    state._turnStartAppliedKey = key;
+    const cashAfter = state.players[activeId]?.cash ?? cashBefore;
+    set({
+      state: { ...state },
+      log: [...log, ...events],
+      lastTurn: { playerId: activeId, cashBefore, cashAfter, events },
+    });
+    get().save();
+    return events;
+  },
+
   // 자기 턴 1회 실행
   step: (turnOptions = {}) => {
     const { state, rng, log } = get();
     if (!state || state.finished) return [];
     const playerId = state.turnIndex;
+    const turnKey = `${state.round ?? 0}-${state.turnIndex ?? 0}`;
+    const turnStartAlreadyApplied = state._turnStartAppliedKey === turnKey;
     const cashBefore = state.players[playerId]?.cash ?? 0;
-    const { events } = playTurn(state, rng, null, turnOptions);
+    const { events } = playTurn(state, rng, null, { ...turnOptions, skipTurnStart: turnOptions.skipTurnStart || turnStartAlreadyApplied });
     const cashAfter = state.players[playerId]?.cash ?? cashBefore;
     const eventKinds = new Set(['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate']);
     const eventCard = events.find((event) => event.card && eventKinds.has(event.kind));
@@ -121,7 +145,12 @@ export const useGameStore = create((set, get) => ({
     set({
       state: { ...state },
       log: [...log, ...events],
-      lastTurn: { playerId, cashBefore, cashAfter, events },
+      lastTurn: {
+        playerId,
+        cashBefore: turnStartAlreadyApplied && get().lastTurn?.playerId === playerId ? get().lastTurn.cashBefore : cashBefore,
+        cashAfter,
+        events: turnStartAlreadyApplied && get().lastTurn?.playerId === playerId ? [...(get().lastTurn.events ?? []), ...events] : events,
+      },
       modal: nextModal,
     });
     // 자동 저장
@@ -136,9 +165,10 @@ export const useGameStore = create((set, get) => ({
     set({
       state: { ...state },
       log: [...log, ...events],
+      lastTurn: null,
     });
     get().save();
-    return true;
+    return events;
   },
   restoreSnapshot: (snapshot) => {
     if (!snapshot?.state) return false;
@@ -208,7 +238,7 @@ export const useGameStore = create((set, get) => ({
     const { state } = get();
     if (!state) return false;
     const tile = state.board.tiles[pos];
-    const price = currentPrice(state, pos);
+    const price = tile?.basePrice ?? currentPrice(state, pos);
     const player = state.players[playerId];
     if (!tile || !player || player.cash < price) return false;
     const ownedPropertyCount = Object.entries(state.tileState ?? {}).filter(([ownedPos, tileState]) => {
@@ -582,9 +612,42 @@ export const useGameStore = create((set, get) => ({
     get().save();
   },
 
+  // 카드 옆 메뉴 일반 매도: 현재 시세 70%
+  sellPropertyMarket: (playerId, pos) => {
+    const { state, log, lastTurn } = get();
+    if (!state) return false;
+    const ts = state.tileState[pos];
+    if (!ts || ts.owner !== playerId || ts.mortgaged) return false;
+    const player = state.players[playerId];
+    if (!player) return false;
+    const cashBefore = player.cash ?? 0;
+    const sellAmount = round10(currentPrice(state, pos) * 0.7);
+    player.cash += sellAmount;
+    ts.owner = null;
+    ts.stage = 0;
+    ts.premium = 0;
+    ts.mortgaged = false;
+    ts.mortgageAmount = 0;
+    ts.mortgageYear = null;
+    player.properties = (player.properties ?? []).filter((p) => p !== pos);
+    player.propertyLoans = (player.propertyLoans ?? []).filter((loan) => loan.pos !== pos);
+    const event = { kind: 'sell_property_market', playerId, pos, amount: sellAmount };
+    const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), event] : [event];
+    set({
+      state: { ...state },
+      modal: { ...get().modal, property: null },
+      log: [...log, event],
+      lastTurn: lastTurn?.playerId === playerId
+        ? { ...lastTurn, cashAfter: player.cash ?? 0, events: nextEvents }
+        : { playerId, cashBefore, cashAfter: player.cash ?? 0, events: nextEvents },
+    });
+    get().addToast({ type: 'income', amount: sellAmount });
+    get().save();
+    return true;
+  },
+
   openLoanModal: (playerId) => {
-    const current = get().modal?.loan;
-    set({ modal: { ...get().modal, loan: current?.playerId === playerId ? null : { playerId } } });
+    set({ modal: { ...get().modal, loan: { playerId } } });
   },
   closeLoanModal: () => {
     set({ modal: { ...get().modal, loan: null } });

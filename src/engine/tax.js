@@ -21,7 +21,7 @@ export const computeNetWorth = (state, playerId) => {
       // 빌라/아파트 가치도 포함 (건설가 합)
       const tile = state.board.tiles[pos];
       const stage = ts.stage ?? 0;
-      if (stage >= 1 && stage <= 4) total += tile.houseCost * stage;
+      if (stage >= 1 && stage <= 3) total += tile.houseCost * stage;
       if (stage === 5) total += tile.houseCost * 5;
     }
   }

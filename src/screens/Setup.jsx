@@ -8,7 +8,7 @@ import { getAvailableCharacters } from '@/lib/characterRoster.js';
 import { getBgmPreference, pauseBgm, playBgm } from '@/lib/bgm.js';
 import AssetFrame from '@/components/AssetFrame.jsx';
 
-const PLAYER_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const PLAYER_COLORS = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
 
 const SETUP_PREFS_KEY = 'reallife:setupPrefs';
 
@@ -66,7 +66,7 @@ export default function Setup({ onStart }) {
   const rosterSlots = [...roster, ...Array.from({ length: Math.max(0, rosterSlotCount - roster.length) }, (_, index) => ({ id: `locked-${index}`, locked: true }))].slice(0, rosterSlotCount);
   const customCount = customCharacters.filter((character) => character.active !== false).length;
   const setupPrefs = loadSetupPrefs();
-  const [numPlayers, setNumPlayers] = useState(() => Math.min(4, Math.max(2, Number(setupPrefs?.numPlayers ?? 2) || 2)));
+  const [numPlayers, setNumPlayers] = useState(4);
   const [options, setOptions] = useState(() => ({
     ...DEFAULT_OPTIONS,
     startingCash: 1500,
@@ -77,7 +77,7 @@ export default function Setup({ onStart }) {
     ...(setupPrefs?.options ?? {}),
   }));
   const [picked, setPicked] = useState([]);
-  const [playerTypes, setPlayerTypes] = useState(() => Array.from({ length: Math.min(4, Math.max(2, Number(setupPrefs?.numPlayers ?? 2) || 2)) }, (_, i) => setupPrefs?.playerTypes?.[i] ?? 'human'));
+  const [playerTypes, setPlayerTypes] = useState(() => Array.from({ length: 4 }, (_, i) => setupPrefs?.playerTypes?.[i] ?? 'human'));
   const [names, setNames] = useState({});
   const [numberPad, setNumberPad] = useState(null);
   const [preloading, setPreloading] = useState(false);

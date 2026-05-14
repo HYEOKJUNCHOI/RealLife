@@ -14,7 +14,7 @@ const displayPlayerName = (player, fallback) => {
 };
 const PROP_TILES = koreaBoard.tiles.filter((t) => t.type === 'property');
 const fmt = (n) => (n ?? 0).toLocaleString('ko-KR');
-const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
 
 // 캐릭터별 동그란 아바타 background-position — 모자 크기/얼굴 높이 따라 미세조정
 const AVATAR_POSITION = {
@@ -89,7 +89,7 @@ function propertyStats(state, playerId) {
     if (ts?.owner !== playerId) continue;
     deeds += 1;
     const stage = ts.stage ?? 0;
-    if (stage >= 1 && stage <= 4) houses += stage; // 빌라 N채
+    if (stage >= 1 && stage <= 3) houses += stage; // 빌라 N채
     if (stage === 5) apts += 1;
   }
   return { deeds, houses, apts };
@@ -102,10 +102,10 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
 
   return (
     <footer
-      className="relative z-30 flex min-h-[62px] items-stretch gap-1.5 overflow-visible rounded-xl border border-white/65 bg-white/42 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_12px_28px_-24px_rgba(36,57,74,0.72)] backdrop-blur-[14px]"
+      className="relative z-30 mx-2.5 -mt-1 flex min-h-[66px] items-stretch gap-2.5 overflow-visible rounded-2xl border border-slate-300/68 bg-white/14 px-2 pb-1.5 pt-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22)]"
       data-component="OtherPlayersStrip"
     >
-      <div className="flex flex-1 items-stretch gap-1.5 overflow-x-auto overflow-y-visible no-scrollbar">
+      <div className="flex flex-1 items-stretch gap-2.5 overflow-visible no-scrollbar">
         {others.map(({ p, i }) => (
           <PlayerChip key={i} player={p} index={i} state={state} onClick={() => onViewPlayer?.(i)} />
         ))}
@@ -151,13 +151,13 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
       onClick={onClick}
       data-player-strip-index={i}
       className={cn(
-        'relative flex h-full shrink-0 items-center gap-1.5 overflow-visible rounded-lg border-2 bg-white/90 px-1.5 py-1 text-left transition active:translate-y-[1px] active:shadow-none backdrop-blur-[10px]',
+        'relative flex h-full shrink-0 items-center gap-1.5 overflow-visible rounded-lg border border-white/60 bg-white/92 py-1 pl-1 pr-1.5 text-left transition active:translate-y-[1px] active:shadow-none',
         (p.bankrupt || isCashBankrupt) && 'opacity-55 grayscale saturate-50',
       )}
       style={{
         minWidth: 188,
-        borderColor: frameColor,
-        boxShadow: `0 0 0 1px rgba(255,255,255,0.72), 0 0 14px ${frameColor}55, 0 10px 20px -16px ${frameColor}`,
+        '--player-strip-color': frameColor,
+        boxShadow: `0 0 0 2px ${frameColor}9a, 0 0 10px ${frameColor}8a, 0 0 24px ${frameColor}72, inset 0 0 16px ${frameColor}1c`,
       }}
     >
       {stationCount > 0 && (
@@ -168,9 +168,9 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
         </>
       )}
       {/* 캐릭터 — 동그랗게 얼굴 잘 보이게 (캐릭터별 모자 높이 따라 position 분기) */}
-      <div className="ml-1 shrink-0">
+      <div className="ml-0 shrink-0">
         <div
-          className="h-9 w-9 rounded-full border-2 shadow-[0_2px_0_0_#0F0C0A,0_0_0_3px_rgba(255,255,255,0.22)]"
+          className="h-11 w-11 rounded-full border-2 shadow-[0_0_0_2px_rgba(255,255,255,0.18),0_0_8px_rgba(255,213,79,0.24)]"
           style={{
             backgroundImage: characterImg ? `url(${characterImg})` : undefined,
             backgroundSize: AVATAR_SIZE[p.character] ?? '155%',

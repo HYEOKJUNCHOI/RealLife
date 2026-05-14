@@ -31,7 +31,7 @@ export const sellPropertyToBank = (state, playerId, pos) => {
   const tile = state.board.tiles[pos];
   let houseRefund = 0;
   if ((ts.stage ?? 0) > 0) {
-    houseRefund = round10(tile.houseCost * (ts.stage <= 4 ? ts.stage : 5) * HOUSE_SELL_RATIO);
+    houseRefund = round10(tile.houseCost * (ts.stage === 5 ? 5 : Math.min(ts.stage, 3)) * HOUSE_SELL_RATIO);
     ts.stage = 0;
   }
   const sale = round10(currentPrice(state, pos) * NPC_SELL_RATIO);

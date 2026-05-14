@@ -493,6 +493,7 @@ html.initial-deal-live [data-deed-slot="3"] .deed-slot-card { animation-delay: 0
 html.initial-deal-live [data-current-player-deal-target],
 html.initial-deal-live [data-player-strip-index] {
   animation: initial-deal-target-tap 0.42s ease-out both;
+  box-shadow: 0 0 0 3px var(--player-strip-color, rgba(255,255,255,0.75)), 0 0 24px var(--player-strip-color, rgba(255,255,255,0.55)), inset 0 0 18px rgba(255,255,255,0.22) !important;
 }
 
 html.initial-deal-live [data-current-player-deal-target] { animation-delay: 0.12s; }

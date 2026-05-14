@@ -76,7 +76,7 @@ const COLOR_STAGE_FILL = {
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
 
 // 플레이어 번호 고정 시그니처색: 1P 빨강 / 2P 파랑 / 3P 노랑 / 4P 초록
-const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
 const playerColor = (_state, playerId) => PLAYER_SIGNATURE_COLORS[playerId] ?? '#666';
 
 // ?대え?곗퐯?쇰줈 ?④퀎 ?쒗쁽
@@ -92,7 +92,7 @@ const VILLA_STAGES = [1, 2, 3]; // 빌라 단계는 아이콘 개수로 표시
 // BRAINSTORM 7-2: ?쒖꽭 횞 RENT_RATIO[stage] 鍮꾩쑉 ?듯뻾猷?// ?뺣낫??????owner ?놁뼱??projection 蹂댁씠寃?媛吏?owner 二쇱엯
 function stageRents(state, pos) {
   const ts = state.tileState[pos] ?? {};
-  return [0, 1, 2, 3, 4, 5].map((key) => {
+  return [0, 1, 2, 3, 5].map((key) => {
     const fakeState = {
       ...state,
       tileState: {
@@ -141,7 +141,7 @@ function PremiumStars({ premium }) {
   );
 }
 
-export default function PropertyDeedMini({ pos, className }) {
+export default function PropertyDeedMini({ pos, className, mutedPreview = false, purchasePreview = false }) {
   const state = useGameStore((s) => s.state);
   const openTradeFromSelect = useGameStore((s) => s.openTradeFromSelect);
   if (!state || pos == null) return null;
@@ -150,7 +150,7 @@ export default function PropertyDeedMini({ pos, className }) {
   if (!tile || tile.type !== 'property') return null;
 
   const ts = state.tileState[pos] ?? {};
-  const price = currentPrice(state, pos);
+  const price = purchasePreview ? (tile.basePrice ?? currentPrice(state, pos)) : currentPrice(state, pos);
   const currentStage = ts.stage ?? 0;
   const ownerColor = ts.owner != null ? playerColor(state, ts.owner) : null;
   const skylineSlot = COLOR_TO_SKYLINE[tile.color];
@@ -162,9 +162,9 @@ export default function PropertyDeedMini({ pos, className }) {
     <div
       className={cn(
         'relative flex h-full w-full flex-col overflow-hidden',
-        'border-2 border-white/38 rounded-md',
+        'border-2 rounded-md',
+        ts.mortgaged ? 'border-ink-line opacity-70 saturate-50' : 'border-white/38',
         'bg-[linear-gradient(135deg,rgba(255,255,255,0.32),rgba(255,255,255,0.14),rgba(54,207,255,0.08))] ring-1 ring-inset ring-white/34 backdrop-blur-[10px]',
-        ts.mortgaged && 'opacity-60 saturate-50',
         className,
       )}
       style={{
@@ -178,6 +178,7 @@ export default function PropertyDeedMini({ pos, className }) {
         className={cn(
           'relative shrink-0 overflow-hidden border-b-2 border-ink-line',
           COLOR_HEADER_BG[tile.color] || 'bg-neutral-600',
+          mutedPreview && 'grayscale saturate-0',
         )}
         style={{ aspectRatio: '5 / 1.9' }}
       >
@@ -216,7 +217,7 @@ export default function PropertyDeedMini({ pos, className }) {
       </div>
 
       {/* ?? 2. ?꾩떆紐??? */}
-      <div className="shrink-0 border-b border-white/32 bg-white/16 px-1.5 py-1 text-center">
+      <div className={cn('shrink-0 border-b border-white/32 bg-white/16 px-1.5 py-1 text-center', mutedPreview && 'grayscale saturate-0')}> 
         <div className="rounded-full border-2 border-ink-line bg-white/92 px-2 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_2px_0_#0F0C0A,0_5px_10px_rgba(15,12,10,0.22)]">
           <h3 className="font-board font-extrabold text-[16px] leading-none text-ink tracking-tight">
             {tile.names.ko}
@@ -229,42 +230,46 @@ export default function PropertyDeedMini({ pos, className }) {
         </div>
       </div>
 
-      <div className="shrink-0 border-b border-white/28 bg-white/12 px-1 py-1">
-        <div
-          className="grid grid-cols-[1fr_auto_1fr] items-center rounded-[5px] px-1.5 py-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-          style={{ backgroundColor: '#1A1612' }}
-        >
-          <div className="text-center">
-            <div className="font-display text-[5.5px] font-bold uppercase leading-none tracking-[0.12em] text-white">
-              매입가
-            </div>
-            <div className="mt-0.5 flex items-baseline justify-center gap-0.5">
-              <span className="font-display text-[12px] font-bold leading-none tabular-nums text-white">
-                {tile.basePrice ?? '-'}
-              </span>
-              <span className="font-display text-[5.5px] font-semibold text-white/55">만</span>
-            </div>
-          </div>
-          <span className="h-6 w-px bg-white/20" aria-hidden="true" />
-          <div className="text-center">
-            <div className="font-display text-[5.5px] font-bold uppercase leading-none tracking-[0.12em] text-[#FFD700]">
-              현시세
-            </div>
-            <div className="mt-0.5 flex items-baseline justify-center gap-0.5">
-              <span
-                className={cn(
-                  'font-display text-[12px] font-bold leading-none tabular-nums',
-                  price < (tile.basePrice ?? 0)
-                    ? 'text-monopoly-red'
-                    : 'text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.45)]',
-                )}
-              >
-                {price}
-              </span>
-              <span className="font-display text-[5.5px] font-semibold text-white/55">만</span>
+      <div className={cn('shrink-0 border-b border-white/28 bg-white/12 px-1 py-1', mutedPreview && !purchasePreview && 'grayscale saturate-0')}> 
+        {purchasePreview ? (
+          <div
+            className="flex items-center justify-center rounded-[5px] px-1.5 py-[4px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            style={{ backgroundColor: '#1A1612' }}
+          >
+            <div className="text-center">
+              <div className="font-display text-[5.5px] font-bold uppercase leading-none tracking-[0.12em] text-[#FFD700]">
+                매매가
+              </div>
+              <div className="mt-0.5 flex items-baseline justify-center gap-0.5">
+                <span className="font-display text-[13px] font-bold leading-none tabular-nums text-[#FFD700]">
+                  {price}
+                </span>
+                <span className="font-display text-[5.5px] font-semibold text-[#FFD700]/70">만</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className="grid grid-cols-[1fr_auto_1fr] items-center rounded-[5px] px-1.5 py-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            style={{ backgroundColor: '#1A1612' }}
+          >
+            <div className="text-center">
+              <div className="font-display text-[5.5px] font-bold uppercase leading-none tracking-[0.12em] text-white">매입가</div>
+              <div className="mt-0.5 flex items-baseline justify-center gap-0.5">
+                <span className="font-display text-[12px] font-bold leading-none tabular-nums text-white">{tile.basePrice ?? '-'}</span>
+                <span className="font-display text-[5.5px] font-semibold text-white/55">만</span>
+              </div>
+            </div>
+            <span className="h-6 w-px bg-white/20" aria-hidden="true" />
+            <div className="text-center">
+              <div className="font-display text-[5.5px] font-bold uppercase leading-none tracking-[0.12em] text-[#FFD700]">현시세</div>
+              <div className="mt-0.5 flex items-baseline justify-center gap-0.5">
+                <span className={cn('font-display text-[12px] font-bold leading-none tabular-nums', price < (tile.basePrice ?? 0) ? 'text-monopoly-red' : 'text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.45)]')}>{price}</span>
+                <span className="font-display text-[5.5px] font-semibold text-white/55">만</span>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -329,7 +334,7 @@ export default function PropertyDeedMini({ pos, className }) {
       </div>
 
       {/* 임대료 + 단계 게이지 — 임대료는 독립 컨테이너로 분리 */}
-      <div className="flex-1 min-h-0 border-t border-white/26 bg-white/12 px-[5px] py-[5px]">
+      <div className={cn('flex-1 min-h-0 border-t border-white/26 bg-white/12 px-[5px] py-[5px]', mutedPreview && 'grayscale saturate-0')}> 
         {(() => {
           const currentRent = rents.find((r) => r.key === currentStage)?.rent ?? 0;
           const apartmentDone = currentStage === 5;
@@ -397,8 +402,8 @@ export default function PropertyDeedMini({ pos, className }) {
       {ts.mortgaged && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <div
-            className="rotate-[-14deg] border-[4px] border-monopoly-deep bg-monopoly-red/25 px-4 py-2 font-display text-[28px] font-extrabold uppercase tracking-[0.2em] text-monopoly-deep shadow-[0_3px_0_0_#9F1F1F,0_0_18px_rgba(159,31,31,0.55)]"
-            style={{ textShadow: '0 1px 0 rgba(255,255,255,0.45)' }}
+            className="rotate-[-14deg] border-[4px] border-red-950 bg-monopoly-red px-4 py-2 font-display text-[28px] font-black uppercase tracking-[0.2em] text-white shadow-[0_3px_0_0_#7f1d1d,0_0_20px_rgba(220,38,38,0.75)]"
+            style={{ textShadow: '0 2px 0 rgba(127,29,29,0.85)' }}
           >
             담보
           </div>

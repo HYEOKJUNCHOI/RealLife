@@ -34,7 +34,7 @@ export const buildingValue = (tile, stage) => {
   const hc = tile?.houseCost ?? 0;
   if (!stage || stage <= 0) return 0;
   if (stage === 5) return hc * 5; // 아파트
-  return hc * stage; // 빌라 1~4동
+  return hc * stage; // 빌라 1~3동
 };
 
 // 부동산 현시세 — 룰 §9: (매입가 + 건물가치) × 1.04^년수
@@ -57,7 +57,7 @@ export const currentPrice = (state, pos) => {
 };
 
 // 월세 — 시세 비율 (표준 모노폴리 rent 배열 폐기)
-// 빈=20% / 빌라1=20% / 빌라2=40% / 빌라3=60% / 빌라4=80% / 아파트=100%
+// 빈=20% / 빌라1=20% / 빌라2=40% / 빌라3=60% / 아파트=100%
 // 색깔독점 보너스는 currentPrice 단계에서 +20% 곱해지므로 자동 반영됨
 // 대출 상태(저당)면 월세 0
 export const rentFromStage = (state, pos) => {

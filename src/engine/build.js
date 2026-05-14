@@ -17,7 +17,7 @@ const countHouses = (state) => {
   let apts = 0;
   for (const pos in state.tileState) {
     const stage = state.tileState[pos]?.stage ?? 0;
-    if (stage >= 1 && stage <= 4) villas += stage;
+    if (stage >= 1 && stage <= 3) villas += stage;
     else if (stage === 5) apts += 1;
   }
   return { villas, apts };
@@ -60,19 +60,19 @@ export const canBuild = (state, playerId, pos) => {
 
   // 한정 체크
   const { villas, apts } = countHouses(state);
-  if (stage < 4 && villas >= HOUSE_LIMIT) return { ok: false, reason: '빌라 한정' };
-  if (stage === 4 && apts >= APT_LIMIT) return { ok: false, reason: '아파트 한정' };
+  if (stage < 3 && villas >= HOUSE_LIMIT) return { ok: false, reason: '빌라 한정' };
+  if (stage === 3 && apts >= APT_LIMIT) return { ok: false, reason: '아파트 한정' };
 
   return { ok: true, cost };
 };
 
-// 빌라 1채 건설 (stage 0→1, 1→2, ..., 4→5=아파트)
+// 빌라 1채 건설 (stage 0→1, 1→2, 2→3, 3→5=아파트)
 export const build = (state, playerId, pos) => {
   const c = canBuild(state, playerId, pos);
   if (!c.ok) throw new Error(`건설 불가: ${c.reason}`);
   const ts = state.tileState[pos];
   state.players[playerId].cash -= c.cost;
-  ts.stage = (ts.stage ?? 0) + 1;
+  ts.stage = (ts.stage ?? 0) === 3 ? 5 : (ts.stage ?? 0) + 1;
   return { pos, newStage: ts.stage, cost: c.cost };
 };
 

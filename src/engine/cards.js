@@ -281,7 +281,7 @@ export const triggerEventCard = (state, rng) => {
         const lossPos = rng.pick(owned);
         const ts = state.tileState[lossPos];
         ts.priceModifier = (ts.priceModifier ?? 1) * 0.7;
-        if ((ts.stage ?? 0) >= 1 && ts.stage <= 4) ts.stage -= 1;
+        if ((ts.stage ?? 0) >= 1 && ts.stage <= 3) ts.stage -= 1;
         log.target = target;
         log.lossPos = lossPos;
         log.effectText = `${playerName(state, target)}의 ${tileName(state, lossPos)} 가치 -30% 및 건물 피해`;

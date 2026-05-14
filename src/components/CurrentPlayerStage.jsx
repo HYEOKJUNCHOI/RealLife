@@ -25,7 +25,17 @@ import { cn } from '@/lib/cn.js';
 import { getCharacterImg } from '@/lib/assets.js';
 
 const CHAR_META = Object.fromEntries(charactersData.korea.map((c) => [c.id, c]));
-const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#FACC15', '#16A34A'];
+const PLAYER_SIGNATURE_COLORS = ['#DC2626', '#2563EB', '#F97316', '#16A34A'];
+const PROPERTY_COLOR_HEX = {
+  brown: '#955436',
+  lightblue: '#AAE0FA',
+  pink: '#D93A96',
+  orange: '#F7941D',
+  red: '#ED1B24',
+  yellow: '#FEF200',
+  green: '#1FB25A',
+  darkblue: '#0072BB',
+};
 const displayPlayerName = (player, fallback) => {
   const name = player?.name?.trim();
   return name && name !== player?.character ? name : fallback;
@@ -188,6 +198,8 @@ export default function CurrentPlayerStage({
   onOpenLoan,
   onOpenBoard,
   pendingPurchase,
+  onPendingPurchaseContract,
+  onLoanSigned,
   diceMode = 'keypad',
   onDiceModeChange,
   onAppDiceRoll,
@@ -212,6 +224,12 @@ export default function CurrentPlayerStage({
   const owned = getOwnedPositions(state, index);
   const totalWorth = quickWorth(state, index);
   const livingCost = getLivingCost(totalWorth);
+  const settlementContent = turnBriefing ?? {
+    title: '이번 턴 정산',
+    rows: [],
+    total: 0,
+    balance: player.cash ?? 0,
+  };
   const activePassives = getActivePassives(player);
   const totalSalary = BASE_SALARY + (player.salaryBonus ?? 0);
   const aptCount = countApartments(state, index);
@@ -266,20 +284,22 @@ export default function CurrentPlayerStage({
       restartSameGame?.();
     }, 650);
   };
+  const settingsButtonBaseClass = 'w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none';
+  const settingsPlainButtonClass = cn(settingsButtonBaseClass, 'bg-white text-ink');
 
   // 쉬는 턴 상태
   const currentTile = state.board?.tiles?.[player.position];
   const currentTileState = state.tileState?.[player.position];
   const pendingOwner = pendingPurchase?.pos != null ? state.tileState?.[pendingPurchase.pos]?.owner : null;
   const hasPendingPurchasePreview = pendingPurchase?.visitorId === index && pendingOwner == null;
-  const pendingPreviewSlot = -1;
+  const pendingPreviewSlot = hasPendingPurchasePreview && owned.length < OWNED_SLOTS ? owned.length : -1;
 
   const isSkipping = !!player.inJail || (player.skipTurns ?? 0) > 0;
   const jailTurnsRemaining = Math.max(0, JAIL_TURNS - (player.jailTurns ?? 0));
   const skipReason = player.inJail
     ? { icon: '/icons/police-car.svg', emoji: '\uD83D\uDE93', label: '\uAC10\uC625', turns: jailTurnsRemaining, tone: 'red' }
     : (player.skipTurns ?? 0) > 0
-      ? { emoji: '\uD83D\uDCA4', label: '\uD734\uC2DD', turns: player.skipTurns ?? 0, tone: 'amber' }
+      ? { emoji: '🪖', label: '군복무', turns: player.skipTurns ?? 0, tone: 'military', message: '군입대 중!' }
       : null;
 
   return (
@@ -291,7 +311,9 @@ export default function CurrentPlayerStage({
             'flex items-center gap-3 rounded-md border-[4px] border-ink-line px-5 py-3 shadow-[0_5px_0_0_#0F0C0A,0_18px_34px_-16px_rgba(0,0,0,0.72)]',
             skipReason.tone === 'red'
               ? 'bg-monopoly-red text-white'
-              : 'bg-monopoly-gold text-ink',
+              : skipReason.tone === 'military'
+                ? 'bg-[linear-gradient(135deg,#2f3a20_0%,#6b7d38_58%,#d7c46a_100%)] text-white'
+                : 'bg-monopoly-gold text-ink',
           )}
         >
           {skipReason.icon ? (
@@ -304,6 +326,11 @@ export default function CurrentPlayerStage({
           ) : (
             <span className="text-[24px] leading-none">{skipReason.emoji}</span>
           )}
+          {skipReason.tone === 'military' && (
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-[3px] border-white bg-monopoly-red font-display text-[24px] font-black text-white shadow-[0_3px_0_#0F0C0A]">
+              !
+            </span>
+          )}
           <span className="font-display text-[22px] font-extrabold uppercase tracking-[0.12em]">
             {skipReason.label}
           </span>
@@ -311,7 +338,7 @@ export default function CurrentPlayerStage({
             {skipReason.turns}턴 남음
           </span>
           <span className="font-display text-[15px] font-extrabold uppercase tracking-[0.16em] opacity-95">
-            쉬는 중
+            {skipReason.message ?? '쉬는 중'}
           </span>
         </div>
       </div>,
@@ -319,49 +346,63 @@ export default function CurrentPlayerStage({
     )}
 
     <section
-      className="relative grid flex-1 min-h-0 grid-cols-[1fr_248px] overflow-hidden"
+      className="relative grid flex-1 min-h-0 grid-cols-[1fr_248px] overflow-visible"
       style={{
         '--active-player-color': meta.color,
       }}
       data-component="CurrentPlayerStage"
     >
-      <div className="active-player-glow-layer pointer-events-none absolute inset-x-0 top-0 z-[75] h-[112px] rounded-lg" aria-hidden="true" />
+
       {settingsOpen && (
-        <div className="absolute right-3 top-14 z-40 w-[190px] rounded-md border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_4px_0_#0F0C0A,0_18px_34px_-18px_rgba(0,0,0,0.75)]">
+        <div className="absolute right-3 top-14 z-[96] w-[190px] rounded-md border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_4px_0_#0F0C0A,0_18px_34px_-18px_rgba(0,0,0,0.75)]">
           <div className="mb-2 border-b border-white/45 pb-1 font-display text-[10px] font-extrabold uppercase tracking-[0.22em] text-ink/55">
             게임 설정
           </div>
           <button
             type="button"
             onClick={handleQuitGame}
-            className="mb-2 w-full rounded-md border border-white/70 bg-white/66 px-3 py-2 font-board text-base text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.7)] transition active:translate-y-1 active:shadow-none"
+            className={cn('mb-2', settingsButtonBaseClass, 'bg-[#df2f35] text-white')}
           >
             게임 그만두기
           </button>
           <button
             type="button"
             onClick={handleRestartGame}
-            className="mb-2 w-full rounded-md border border-white/70 bg-[#fff0ed]/78 px-3 py-2 font-board text-base text-[#7a332d] shadow-[0_8px_18px_-16px_rgba(122,51,45,0.55)] transition active:translate-y-1 active:shadow-none"
+            className={cn('mb-2', settingsButtonBaseClass, 'bg-emerald-500 text-white')}
           >
             게임 다시하기
           </button>
           <button
             type="button"
             onClick={onToggleBgm}
-            className={cn('w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none', bgmEnabled ? 'bg-monopoly-gold text-ink' : 'bg-white text-ink')}
+            className="flex w-full items-center justify-between rounded-md border-2 border-ink-line bg-white px-3 py-2 font-board text-base text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none"
+            aria-pressed={bgmEnabled}
           >
-            BGM {bgmEnabled ? '끄기' : '켜기'}
+            <span>BGM</span>
+            <span
+              className={cn(
+                'relative h-6 w-12 rounded-full border-2 border-ink-line transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]',
+                bgmEnabled ? 'bg-emerald-400' : 'bg-slate-200',
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-2 border-ink-line bg-white shadow-[0_2px_0_rgba(15,12,10,0.45)] transition-transform',
+                  bgmEnabled ? 'translate-x-[23px]' : 'translate-x-[3px]',
+                )}
+              />
+            </span>
           </button>
         </div>
       )}
 
       {/* 좌측: 플레이어 정보와 보유 부동산 */}
-      <div className={cn('flex min-w-0 flex-col', isSkipping && 'grayscale')}>
+      <div className={cn('flex min-w-0 flex-col', (player.skipTurns ?? 0) > 0 && 'grayscale')}>
 
       {/* 상단 상태 영역 */}
       <div
         className="relative mx-2.5 mt-1.5 grid h-[100px] grid-cols-[74px_1fr] gap-2 overflow-visible rounded-xl border border-white/70 bg-white/82 px-2 py-1 pr-[116px]"
-        style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 2px ${meta.color}55, 0 0 0 5px ${meta.color}20, 0 0 24px ${meta.color}48, 0 10px 22px -18px rgba(36,57,74,0.7)` }}
+        style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 2px ${meta.color}9a, 0 0 10px ${meta.color}8a, 0 0 24px ${meta.color}72, 0 10px 22px -18px rgba(36,57,74,0.7)` }}
       >
         {/* 플레이어 아바타 */}
         <motion.div
@@ -458,7 +499,7 @@ export default function CurrentPlayerStage({
 
       </div>
       {/* 보유 부동산 */}
-      <div className="relative mx-2.5 mb-[14px] mt-[14px] flex flex-1 min-h-0 flex-col overflow-hidden rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22),0_12px_24px_-20px_rgba(36,57,74,0.72)]">
+      <div className="relative mx-2.5 mb-[6px] mt-[14px] flex flex-1 min-h-0 flex-col overflow-visible rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.18)]">
         <div className="mb-[5px] flex items-center justify-between">
           <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{'\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
             <span className="ml-1.5 font-semibold text-ink/40 tabular-nums">
@@ -469,16 +510,16 @@ export default function CurrentPlayerStage({
         </div>
 
         {/* 보유 부동산 캡슐 안에서 8개 섹션을 먼저 나누고, 각 섹션 안에 카드만 다시 그린다. */}
-        <div className="grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5">
+        <div className={cn('grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5', player.inJail && 'grayscale saturate-0 brightness-[0.72]')}>
           {Array.from({ length: OWNED_SLOTS }).map((_, idx) => {
             const pos = owned[idx];
             const isPending = idx === pendingPreviewSlot;
-            const sectionClassName = "relative min-h-0 overflow-visible rounded-lg border border-white/42 bg-white/18 p-[2px] shadow-[inset_0_1px_0_rgba(255,255,255,0.42),0_0_0_1px_rgba(148,163,184,0.14),0_0_10px_rgba(100,116,139,0.10)]";
+            const sectionClassName = "relative min-h-0 overflow-visible rounded-lg border border-slate-300/42 bg-white/10 p-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.30),0_0_10px_rgba(100,116,139,0.10)]";
             return (
               <div key={pos ?? `empty-${idx}`} data-deed-slot={idx} data-deed-pos={pos ?? undefined} className={sectionClassName}>
                 {pos == null ? (
                   <div className="h-full w-full overflow-visible">
-                    <EmptyDeed previewPos={isPending ? pendingPurchase.pos : null} state={state} onClick={isPending ? () => openModal(pendingPurchase.pos, index) : undefined} />
+                    <EmptyDeed previewPos={isPending ? pendingPurchase.pos : null} state={state} onClick={isPending ? () => onPendingPurchaseContract?.(pendingPurchase) : undefined} />
                   </div>
                 ) : (
                   <button
@@ -486,6 +527,9 @@ export default function CurrentPlayerStage({
                     onClick={() => openModal(pos, index)}
                     className="relative block h-full min-h-0 w-full overflow-visible rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/70"
                   >
+                    <span className="deed-slot-placeholder pointer-events-none absolute inset-0 opacity-0">
+                      <EmptyDeed />
+                    </span>
                     <span
                       key={`${pos}-${state._lastDeedAdded?.nonce ?? 'base'}`}
                       className={cn(
@@ -502,6 +546,8 @@ export default function CurrentPlayerStage({
           })}
         </div>
 
+        {player.inJail && <JailDeedSlotOverlay turns={jailTurnsRemaining} />}
+
         {modalLoan?.playerId === index && (
           <div
             className="absolute inset-1 z-[60] rounded-xl bg-ink/35 p-1.5 backdrop-blur-[2px]"
@@ -509,7 +555,7 @@ export default function CurrentPlayerStage({
             onClick={(event) => { event.preventDefault(); event.stopPropagation(); closeLoanModal?.(); }}
           >
             <div className="h-full" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-              <LoanModal open inline onClose={closeLoanModal} playerId={modalLoan.playerId} />
+              <LoanModal open inline onClose={closeLoanModal} playerId={modalLoan.playerId} onLoanSigned={onLoanSigned} />
             </div>
           </div>
         )}
@@ -526,12 +572,12 @@ export default function CurrentPlayerStage({
 
       {/* 우측: 사회자 브리핑 */}
       <aside
-        className="flex min-h-0 flex-col px-2.5 pb-[14px] pt-1"
+        className="flex min-h-0 flex-col px-2.5 pb-[6px] pt-1"
         style={{
           background: 'linear-gradient(90deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 100%)',
         }}
       >
-        <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-300/68 bg-white/72 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22),0_16px_32px_-28px_rgba(36,57,74,0.72)]">
+        <div className="relative flex flex-1 min-h-0 flex-col overflow-visible rounded-2xl border border-slate-300/68 bg-white/72 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.18)]">
           <div className="w-full shrink-0 rounded-xl border border-white/70 bg-white/82 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_0_0_1px_rgba(148,163,184,0.30),0_0_18px_rgba(100,116,139,0.28),0_10px_22px_-18px_rgba(36,57,74,0.7)]">
             <div className="flex items-center justify-between gap-2">
               <div
@@ -548,7 +594,7 @@ export default function CurrentPlayerStage({
               <button
                 type="button"
                 onClick={() => setSettingsOpen((open) => !open)}
-                className="grid h-[32px] w-10 shrink-0 place-items-center rounded-lg border border-white/70 bg-white/86 font-display text-[17px] font-extrabold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.20),0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none"
+                className="relative z-[95] grid h-[32px] w-10 shrink-0 place-items-center rounded-lg border border-white/70 bg-white/86 font-display text-[17px] font-extrabold text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.20),0_8px_18px_-16px_rgba(36,57,74,0.65)] transition active:translate-y-1 active:shadow-none"
                 aria-label="게임 설정"
               >
                 ⚙
@@ -568,27 +614,34 @@ export default function CurrentPlayerStage({
             </button>
           </div>
 
-          {/* 중복 정산 패널 제거: 도착 후 사회자창+알림창만 사용 */}
-
-          {hideDicePanel ? (
-            <div className="real-dice-panel mt-auto mb-[88px] translate-y-[70px] w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
-              {statusActions}
-            </div>
-          ) : (
-            <RealDiceTurnPanel
+          <div className="mt-2 flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[20px] border border-white/72 bg-white/38 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_0_0_1px_rgba(148,163,184,0.22),0_16px_30px_-24px_rgba(36,57,74,0.76)]" style={{ borderColor: `${meta.color}44`, background: `linear-gradient(180deg, rgba(255,255,255,0.42) 0%, ${meta.color}10 100%)` }}>
+            <SettlementBubble
+              key={`${state.round ?? 0}-${state.turnIndex ?? index}-${index}`}
+              content={settlementContent}
               color={meta.color}
-              result={turnResult}
-              onDiceRoll={onDiceRoll}
-              diceMode={diceMode}
-              onDiceModeChange={onDiceModeChange}
-              onAppDiceRoll={onAppDiceRoll}
-              lastDiceRoll={lastDiceRoll}
-              diceLocked={diceLocked}
-              onUnlockDice={onUnlockDice}
-              onOpenResultCard={onOpenResultCard}
-              disabled={hideSkipOverlay}
+              playerName={name}
             />
-          )}
+
+            {hideDicePanel ? (
+              <div className="real-dice-panel mt-2 mb-0 translate-y-0 w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
+                {statusActions}
+              </div>
+            ) : (
+              <RealDiceTurnPanel
+                color={meta.color}
+                result={turnResult}
+                onDiceRoll={onDiceRoll}
+                diceMode={diceMode}
+                onDiceModeChange={onDiceModeChange}
+                onAppDiceRoll={onAppDiceRoll}
+                lastDiceRoll={lastDiceRoll}
+                diceLocked={diceLocked}
+                onUnlockDice={onUnlockDice}
+                onOpenResultCard={onOpenResultCard}
+                disabled={hideSkipOverlay}
+              />
+            )}
+          </div>
         </div>
       </aside>
     </section>
@@ -610,7 +663,7 @@ function DiceFace({ value = 1, rolling = false, ready = false }) {
   const safeValue = Math.max(1, Math.min(6, value));
   return (
     <motion.div
-      className="relative grid h-[68px] w-[68px] place-items-center overflow-visible rounded-[18px]"
+      className="relative grid h-[61px] w-[61px] place-items-center overflow-visible rounded-[16px]"
       animate={rolling ? { scale: [1, 1.035, 1.01], y: [0, -1, 0] } : { scale: [1.03, 1] }}
       transition={rolling ? { duration: 0.18, ease: 'linear' } : { duration: 0.22, ease: 'easeOut' }}
     >
@@ -655,7 +708,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
   if (showCardResult) return null;
 
   return (
-    <div className="real-dice-panel mt-auto mb-[88px] translate-y-[70px] w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]" style={{ '--player-color': color }}>
+    <div className="real-dice-panel mt-2 mb-0 translate-y-0 w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]" style={{ '--player-color': color }}>
       {isJail ? (
         <div className="overflow-hidden rounded-xl border-2 border-ink-line bg-[linear-gradient(135deg,#f1f5f9_0%,#dbeafe_48%,#93c5fd_100%)] p-2 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.76),0_3px_0_#0F0C0A]">
           <div className="rounded-lg border-2 border-ink-line bg-white/88 px-3 py-2 text-center shadow-[0_2px_0_rgba(15,12,10,0.55)]">
@@ -845,12 +898,17 @@ function HostSpeechBubble({ content }) {
   );
 }
 
+function SettlementBalanceCounter({ value = 0 }) {
+  return <AnimatedCash value={value} duration={850} settleDelay={0} rollingEffect={false} />;
+}
+
 function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' }) {
   if (!content) return null;
   const rows = content.rows ?? [];
-  const total = content.total ?? 0;
-  const totalSteps = rows.length + (content.event ? 1 : 0) + 1;
-  const contentKey = `${content.title ?? ''}|${content.event ?? ''}|${total}|${rows.map((row) => `${row.label}:${row.amount}`).join(';')}`;
+  const total = content.balance ?? content.total ?? 0;
+  const balanceFrom = content.balance != null ? content.balance - (content.total ?? 0) : total;
+  const totalSteps = rows.length + (content.event ? 1 : 0);
+  const contentKey = `${content.title ?? ''}|${content.event ?? ''}|${balanceFrom}|${total}|${rows.map((row) => `${row.label}:${row.amount}`).join(';')}`;
   const [visibleSteps, setVisibleSteps] = useState(0);
 
   useEffect(() => {
@@ -861,30 +919,38 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [totalSteps, contentKey]);
 
+  const visibleRows = rows.slice(0, Math.min(visibleSteps, rows.length));
+  const balanceTarget = rows.length > 0
+    ? balanceFrom + visibleRows.reduce((sum, row) => sum + row.amount, 0)
+    : total;
   const showEvent = content.event && visibleSteps > rows.length;
-  const showTotal = visibleSteps >= totalSteps;
 
   return (
-    <div className="relative z-10 mt-2 max-h-[28vh] w-full overflow-y-auto rounded-[18px] border border-white/72 bg-white/78 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] no-scrollbar" style={{ borderColor: `${color}55`, background: `linear-gradient(180deg, rgba(255,255,255,0.82) 0%, ${color}18 100%)` }}>
-      <div className="mb-1.5 flex items-center justify-between border-b border-white/55 pb-1.5">
+    <div className="relative z-10 min-h-0 w-full flex-1 overflow-y-auto rounded-[16px] border border-white/72 bg-white/78 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_14px_28px_-22px_rgba(36,57,74,0.72)] no-scrollbar" style={{ borderColor: `${color}55`, background: `linear-gradient(180deg, rgba(255,255,255,0.82) 0%, ${color}18 100%)` }}>
+      <div className="mb-2 flex flex-col items-center justify-center gap-1.5 border-b border-white/55 pb-2 text-center">
         <span className="font-display text-[8px] font-black uppercase tracking-[0.2em]" style={{ color }}>{playerName}</span>
-        <span className="font-board text-[15px] font-extrabold leading-none text-[#182a35]" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{content.title ?? '이번 턴 정산'}</span>
+        <span
+          className="inline-flex max-w-full items-center justify-center rounded-full border px-4 py-1.5 text-center font-board text-[15px] font-extrabold leading-none text-[#182a35] shadow-[inset_0_1px_0_rgba(255,255,255,0.88),0_3px_10px_-8px_rgba(15,23,42,0.75)]"
+          style={{ borderColor: `${color}66`, background: `linear-gradient(180deg, rgba(255,255,255,0.92) 0%, ${color}24 100%)`, wordBreak: 'keep-all', overflowWrap: 'normal' }}
+        >
+          {content.title ?? '이번 턴 정산'}
+        </span>
       </div>
       <div className="space-y-1 font-board text-[14px] leading-none">
-        {rows.length > 0 ? rows.slice(0, visibleSteps).map((row, idx) => (
+        {rows.length > 0 ? visibleRows.map((row, idx) => (
           <motion.div
             key={`${row.label}-${idx}`}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between gap-2"
+            className="rounded-lg border border-white/45 bg-white/42 px-2 py-1.5"
           >
-            <span className="truncate text-ink/78">{row.label}</span>
-            <span className={cn('tabular-nums', row.amount >= 0 ? 'text-emerald-700' : 'text-monopoly-deep')}>
-              {row.amount >= 0 ? '+' : '-'}{fmt(Math.abs(row.amount))}만
-            </span>
+            <div className="truncate text-ink/78">{row.label}</div>
+            <div className={cn('mt-0.5 pl-3 text-right tabular-nums', row.amount >= 0 ? 'text-emerald-700' : 'text-monopoly-deep')}>
+              {row.amount >= 0 ? '+' : '-'}{fmt(Math.abs(row.amount))}만원
+            </div>
           </motion.div>
         )) : (
-          <div className="text-center text-ink/58">이번 턴 현금 변동 없음</div>
+          <div className="min-h-[42px]" aria-hidden="true" />
         )}
         {visibleSteps < rows.length && <span className="inline-block h-3 w-1.5 animate-pulse bg-ink/70 align-middle" />}
       </div>
@@ -898,17 +964,43 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
         </motion.div>
       )}
       <div className="mt-2 border-t-2 border-dashed border-ink-line/28 pt-1.5">
-        {showTotal ? (
-          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between font-board text-[17px] leading-none">
-            <span>최종</span>
-            <span className={cn('tabular-nums', total >= 0 ? 'text-emerald-700' : 'text-monopoly-deep')}>
-              {total >= 0 ? '+' : '-'}{fmt(Math.abs(total))}만
-            </span>
-          </motion.div>
-        ) : (
-          <div className="h-[17px] font-board text-[17px] leading-none text-ink/45">정산 중<span className="animate-pulse">...</span></div>
-        )}
+        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-2 font-board text-[17px] leading-none">
+          <span>⤷ 잔고</span>
+          <span className={cn('tabular-nums', balanceTarget < 0 ? 'text-monopoly-deep' : balanceTarget > 0 ? 'text-emerald-700' : 'text-[#182a35]')}>
+            <SettlementBalanceCounter value={balanceTarget} />만원
+          </span>
+        </motion.div>
       </div>
+    </div>
+  );
+}
+
+function JailDeedSlotOverlay({ turns = 0 }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-2 bottom-2 top-[34px] z-30 overflow-hidden rounded-lg border-2 border-slate-950/38 bg-slate-950/16 shadow-[inset_0_0_28px_rgba(15,23,42,0.34),0_0_22px_rgba(15,23,42,0.20)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.18),transparent_46%)]" />
+      <motion.img
+        src="/effects/jail-bars-overlay.png"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-[-8%] h-[116%] w-[116%] object-cover opacity-[0.76] mix-blend-multiply drop-shadow-[0_4px_10px_rgba(15,23,42,0.38)]"
+        initial={{ opacity: 0, scale: 1.04, y: -8 }}
+        animate={{ opacity: 0.76, scale: 1, y: 0 }}
+        transition={{ duration: 0.55, ease: 'easeOut' }}
+      />
+      <motion.div
+        className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center rounded-xl border-2 border-slate-950/80 bg-white/50 px-4 py-2 text-slate-950 shadow-[0_4px_0_rgba(15,23,42,0.48),0_0_18px_rgba(255,255,255,0.22)] backdrop-blur-[1px]"
+        initial={{ opacity: 0, scale: 0.92, rotate: -2 }}
+        animate={{ opacity: 0.72, scale: 1, rotate: [-1, 1, 0] }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="rounded-md border-2 border-slate-950 bg-slate-900 px-3 py-0.5 font-display text-[15px] font-black uppercase tracking-[0.18em] text-white shadow-[0_2px_0_rgba(15,23,42,0.7)]">
+          JAIL
+        </div>
+        <div className="mt-1 font-board text-[13px] font-black text-slate-900/78">감옥 수감 중</div>
+        {turns > 0 && <div className="mt-0.5 font-display text-[10px] font-black text-slate-900/56">남은 {turns}턴</div>}
+      </motion.div>
+      <div className="absolute inset-x-0 bottom-0 h-10 bg-[linear-gradient(180deg,transparent,rgba(15,23,42,0.28))]" />
     </div>
   );
 }
@@ -934,23 +1026,21 @@ function StatusBoard({ activePassives, player }) {
 function FinanceChip({ totalWorth, cash, debt = 0, onLoanClick }) {
   return (
     <span
-      className="inline-flex h-[34px] min-w-[316px] shrink-0 items-center justify-center gap-1.5 rounded-[9px] border-2 border-[#8c5b15] bg-[linear-gradient(180deg,#fff8dc_0%,#ffd875_48%,#db9b24_100%)] px-2 font-display text-[11px] font-bold leading-none text-[#4d330c]"
+      className="grid h-[34px] min-w-[316px] shrink-0 grid-cols-3 items-stretch overflow-hidden rounded-[9px] border-2 border-[#8c5b15] bg-[linear-gradient(180deg,#fff8dc_0%,#ffd875_48%,#db9b24_100%)] px-1.5 py-1 font-display text-[#4d330c]"
       style={{ boxShadow: TOY_BUTTON_SHADOW }}
     >
-      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink-line/35 bg-white/75 text-[12px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.95),inset_0_-1px_2px_rgba(0,0,0,0.12)]" aria-hidden="true">
-        ₩
+      <span className="flex min-w-0 items-center justify-center gap-1 border-r border-[#8c5b15]/35 pr-1.5 leading-none">
+        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-ink-line/35 bg-white/75 text-[12px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.95),inset_0_-1px_2px_rgba(0,0,0,0.12)]" aria-hidden="true">₩</span>
+        <span className="flex min-w-0 items-baseline gap-1 whitespace-nowrap">
+          <span className="text-[10px] font-bold opacity-75">총자산</span>
+          <span className="text-[14px] font-extrabold tabular-nums">{fmt(totalWorth)}<small className="ml-px text-[7px] opacity-70">만</small></span>
+        </span>
       </span>
-      <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-        <span className="opacity-75">총자산</span>
-        <span className="text-[14px] font-extrabold tabular-nums">{fmt(totalWorth)}<small className="ml-px text-[7px] opacity-70">만</small></span>
+      <span className="flex min-w-0 items-center justify-center gap-1 border-r border-[#8c5b15]/35 px-1.5 leading-none text-[#075d2b]">
+        <span className="whitespace-nowrap text-[12px] font-extrabold opacity-80">내 예금액</span>
+        <AnimatedCash value={cash} className="font-display text-[17px] font-extrabold leading-none" />
+        <small className="ml-[-2px] text-[8px] font-bold opacity-75">만</small>
       </span>
-      <span className="h-4 w-px bg-[#8c5b15]/35" aria-hidden="true" />
-      <span className="inline-flex items-baseline gap-1 whitespace-nowrap text-[#075d2b]">
-        <span className="opacity-75">예금</span>
-        <AnimatedCash value={cash} className="font-display text-[14px] font-extrabold leading-none" />
-        <small className="ml-[-2px] text-[7px] opacity-70">만</small>
-      </span>
-      <span className="h-4 w-px bg-[#8c5b15]/35" aria-hidden="true" />
       <button
         type="button"
         onPointerDown={(event) => {
@@ -960,11 +1050,11 @@ function FinanceChip({ totalWorth, cash, debt = 0, onLoanClick }) {
           event.stopPropagation();
           onLoanClick?.();
         }}
-        className="relative z-50 inline-flex cursor-pointer items-baseline gap-1 whitespace-nowrap rounded-md border border-[#8d1d1d]/25 bg-white/18 px-1.5 py-1 text-[#8d1d1d] transition hover:bg-white/45 hover:brightness-110 active:translate-y-0.5"
+        className="relative z-50 flex min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md bg-white/14 px-1.5 text-[#8d1d1d] transition hover:bg-white/45 hover:brightness-110 active:translate-y-0.5"
         title="대출 상담소 열기"
       >
-        <span className="opacity-75">대출금</span>
-        <span className="text-[14px] font-extrabold tabular-nums">{fmt(debt)}<small className="ml-px text-[7px] opacity-70">만</small></span>
+        <span className="font-board text-[14px] font-black leading-none">대출하기</span>
+        {debt > 0 && <span className="rounded-full bg-[#8d1d1d]/10 px-1.5 font-display text-[10px] font-extrabold tabular-nums">{fmt(debt)}만</span>}
       </button>
     </span>
   );
@@ -1175,15 +1265,22 @@ function GlobalChip({ label, value, unit, tone = 'neutral' }) {
 
 function EmptyDeed({ previewPos = null, state = null, onClick } = {}) {
   const tile = previewPos != null ? state?.board?.tiles?.[previewPos] : null;
+  const signatureColor = tile ? (PROPERTY_COLOR_HEX[tile.color] ?? '#C9A24B') : '#94A3B8';
   const body = tile ? (
-    <div className="relative h-full w-full overflow-hidden rounded-md">
-      <div className="h-full w-full grayscale opacity-72 saturate-0">
-        <PropertyDeedMini pos={previewPos} />
+    <div
+      className="relative h-full w-full overflow-hidden rounded-md"
+      style={{ boxShadow: `0 0 0 2px ${signatureColor}cc, 0 0 18px ${signatureColor}8a, 0 0 34px ${signatureColor}55` }}
+    >
+      <div className="h-full w-full opacity-72">
+        <PropertyDeedMini pos={previewPos} mutedPreview purchasePreview />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 top-[28%] z-10 flex -translate-y-1/2 items-center justify-center">
-        <div className="rotate-[-10deg] border-[3px] border-monopoly-deep bg-monopoly-red px-3 py-1 font-display text-[15px] font-extrabold uppercase tracking-[0.18em] text-white shadow-[0_2px_0_0_#9F1F1F,0_0_14px_rgba(159,31,31,0.48)]">
-          구매
+      <div className="pointer-events-none absolute inset-x-0 top-[12%] z-10 flex -translate-y-1/2 items-center justify-center">
+        <div className="rotate-[-7deg] border-[2px] border-[#111] bg-[#f2f2f2] px-2.5 py-0.5 font-display text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#111] shadow-[0_2px_0_#0F0C0A,0_0_12px_rgba(0,0,0,0.28)]">
+          이번 턴 구매가능
         </div>
+      </div>
+      <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 rounded-md border-2 border-red-950 bg-monopoly-red px-2 py-1 text-center font-board text-[14px] font-black text-white shadow-[0_2px_0_#7f1d1d,0_0_14px_rgba(220,38,38,0.42)]">
+        계약하기
       </div>
     </div>
   ) : (

@@ -17,7 +17,7 @@ const PROPERTY_COLOR_HEX = {
   darkblue: '#0072BB',
 };
 
-export default function LoanModal({ open, onClose, playerId, inline = false }) {
+export default function LoanModal({ open, onClose, playerId, inline = false, onLoanSigned }) {
   const state = useGameStore((s) => s.state);
   const takePropertyLoan = useGameStore((s) => s.takePropertyLoan);
   const repayPropertyLoan = useGameStore((s) => s.repayPropertyLoan);
@@ -57,8 +57,9 @@ export default function LoanModal({ open, onClose, playerId, inline = false }) {
   const canPartialRepay = partialPrincipal > 0 && (player.cash ?? 0) >= partialTotal;
   const confirmLoan = () => {
     if (!pendingLoan) return;
-    pendingLoan.action?.();
+    const ok = pendingLoan.action?.();
     setPendingLoan(null);
+    if (ok !== false) onLoanSigned?.({ type: pendingLoan.type, amount: pendingLoan.amount });
   };
 
   const panel = (

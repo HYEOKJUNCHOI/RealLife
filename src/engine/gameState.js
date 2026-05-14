@@ -118,7 +118,7 @@ export const quickWorth = (state, playerId) => {
       const tile = state.board.tiles[pos];
       if (tile.type === 'property') {
         const stage = ts.stage ?? 0;
-        total += tile.basePrice + (tile.houseCost ?? 0) * (stage <= 4 ? stage : 5);
+        total += tile.basePrice + (tile.houseCost ?? 0) * (stage === 5 ? 5 : Math.min(stage, 3));
       } else if (tile.type === 'railroad' && tile.subType === 'hub') {
         total += tile.basePrice ?? 400;
       }
