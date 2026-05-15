@@ -514,6 +514,21 @@ export default function CurrentPlayerStage({
 
         </div>
 
+        {initialDealActive && displayedOwned.slice(0, 4).map((pos, idx) => (
+          <div
+            key={`initial-fly-${index}-${pos}-${idx}`}
+            className="initial-deal-flying-card pointer-events-none absolute z-[55] w-[18%] max-w-[92px] rounded-md shadow-[0_6px_0_#17120c,0_18px_24px_-18px_rgba(0,0,0,0.78)]"
+            style={{
+              '--deal-slot-delay': `${0.38 + idx * 0.2}s`,
+              '--deal-target-x': `${12.5 + (idx % 4) * 25}%`,
+              '--deal-target-y': '54%',
+              '--deal-fly-rot': `${idx % 2 === 0 ? -5 : 5}deg`,
+            }}
+          >
+            <PropertyDeedMini pos={pos} />
+          </div>
+        ))}
+
         {/* 보유 부동산 캡슐 안에서 8개 섹션을 먼저 나누고, 각 섹션 안에 카드만 다시 그린다. */}
         <div className={cn('grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5', player.inJail && 'grayscale saturate-0 brightness-[0.72]', initialDealActive && 'initial-deal-owned-grid')}>
           {Array.from({ length: OWNED_SLOTS }).map((_, idx) => {

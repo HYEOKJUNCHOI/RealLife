@@ -424,6 +424,51 @@ h1, h2, h3, h4, .font-display {
   86% { transform: scale(0.985); }
 }
 
+@keyframes initial-deal-card-swoosh {
+  0% {
+    left: 50%;
+    top: 4%;
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(160px, -34px) rotate(18deg) scale(0.42);
+    filter: saturate(0.8) brightness(1.24);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(92px, 8px) rotate(10deg) scale(0.62);
+  }
+  62% {
+    left: var(--deal-target-x);
+    top: var(--deal-target-y);
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, -8px) rotate(var(--deal-fly-rot, -4deg)) scale(0.92);
+  }
+  80% {
+    left: var(--deal-target-x);
+    top: var(--deal-target-y);
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 2px) rotate(1deg) scale(1.02);
+  }
+  100% {
+    left: var(--deal-target-x);
+    top: var(--deal-target-y);
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(1);
+    filter: saturate(1.18) brightness(1.1);
+  }
+}
+
+@keyframes initial-deal-card-wave {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); filter: brightness(1) saturate(1); }
+  24% { transform: translateY(-6px) rotate(-0.9deg) scale(1.018); filter: brightness(1.14) saturate(1.16); }
+  52% { transform: translateY(2px) rotate(0.6deg) scale(0.994); }
+  76% { transform: translateY(-2px) rotate(-0.25deg) scale(1.006); }
+}
+
+@keyframes initial-deal-slot-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30),0 0 10px rgba(100,116,139,0.10); }
+  45% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65),0 0 0 2px rgba(251,191,36,0.38),0 0 22px rgba(251,191,36,0.42); }
+}
+
 @keyframes turn-card-touch {
   0%, 100% {
     transform: translateY(0) rotate(0deg) scale(1);
@@ -494,6 +539,31 @@ html.initial-deal-live [data-deed-slot] .deed-slot-card {
   animation: initial-deal-slot-reveal 0.48s cubic-bezier(0.18, 0.9, 0.18, 1) both;
 }
 
+.initial-deal-flying-card {
+  left: 50%;
+  top: 4%;
+  opacity: 0;
+  animation: initial-deal-card-swoosh 0.72s cubic-bezier(0.16, 0.9, 0.22, 1) var(--deal-slot-delay, 0s) both;
+  transform-origin: center;
+  will-change: left, top, transform, opacity;
+}
+
+.initial-deal-flying-card [data-component="PropertyDeedMini"] {
+  border-color: #17120c !important;
+  background: #fff7df !important;
+  backdrop-filter: none !important;
+}
+
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot] {
+  animation: initial-deal-slot-pulse 0.72s ease-out both;
+}
+
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot] .deed-slot-card {
+  animation:
+    initial-deal-slot-reveal 0.5s cubic-bezier(0.18, 0.9, 0.18, 1) both,
+    initial-deal-card-wave 0.62s ease-in-out both;
+}
+
 html.initial-deal-live [data-deed-slot] .deed-slot-placeholder {
   opacity: 1;
 }
@@ -502,6 +572,15 @@ html.initial-deal-live [data-deed-slot="0"] .deed-slot-card { animation-delay: 0
 html.initial-deal-live [data-deed-slot="1"] .deed-slot-card { animation-delay: 0.58s; }
 html.initial-deal-live [data-deed-slot="2"] .deed-slot-card { animation-delay: 0.68s; }
 html.initial-deal-live [data-deed-slot="3"] .deed-slot-card { animation-delay: 0.78s; }
+
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="0"],
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="0"] .deed-slot-card { animation-delay: 0.44s, 1.22s; }
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="1"],
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="1"] .deed-slot-card { animation-delay: 0.64s, 1.30s; }
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="2"],
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="2"] .deed-slot-card { animation-delay: 0.84s, 1.38s; }
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="3"],
+html.initial-deal-live .initial-deal-owned-grid [data-deed-slot="3"] .deed-slot-card { animation-delay: 1.04s, 1.46s; }
 
 html.initial-deal-live [data-current-player-deal-target],
 html.initial-deal-live [data-player-strip-index] {
@@ -542,7 +621,8 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   .initial-deal-deck,
   .initial-deal-caption,
   .initial-deal-player-stage,
-  .initial-deal-showcase-card { animation: none !important; }
+  .initial-deal-showcase-card,
+  .initial-deal-flying-card { animation: none !important; }
   html.initial-deal-live [data-deed-slot],
   html.initial-deal-live [data-deed-slot] .deed-slot-card,
   html.initial-deal-live [data-current-player-deal-target],
