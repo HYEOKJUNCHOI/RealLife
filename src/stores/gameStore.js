@@ -95,7 +95,11 @@ export const useGameStore = create((set, get) => ({
     }
 
     if (events.length || Math.floor(prevElapsed * 60) !== Math.floor(elapsedMin * 60)) {
-      set({ state: { ...state }, log: events.length ? [...log, ...events] : log });
+      set({
+        state: { ...state },
+        log: events.length ? [...log, ...events] : log,
+        modal: events.some((event) => event.kind === 'deathmatch_start') ? { ...get().modal, deathmatch: true } : get().modal,
+      });
       if (events.length || state.finished) get().save();
       return true;
     }
@@ -137,8 +141,10 @@ export const useGameStore = create((set, get) => ({
     const eventKinds = new Set(['war', 'multihouse', 'fire', 'bubble', 'redev', 'gtx', 'lottery_estate']);
     const eventCard = events.find((event) => event.card && eventKinds.has(event.kind));
     const arrivedUnownedProperty = events.find((event) => event.kind === 'arrive_property' && event.type === 'unowned');
+    const deathmatchStarted = events.some((event) => event.kind === 'deathmatch_start');
     const nextModal = {
       ...get().modal,
+      ...(deathmatchStarted ? { deathmatch: true } : {}),
       ...(eventCard ? { event: { eventId: eventCard.kind, description: `${eventCard.card} · ${eventCard.effectText ?? eventCard.description ?? ''}`, affected: eventCard } } : {}),
       ...(arrivedUnownedProperty && !turnOptions.deferPropertyModal ? { property: { pos: arrivedUnownedProperty.pos, visitorId: playerId } } : {}),
     };
@@ -166,6 +172,7 @@ export const useGameStore = create((set, get) => ({
       state: { ...state },
       log: [...log, ...events],
       lastTurn: null,
+      modal: events.some((event) => event.kind === 'deathmatch_start') ? { ...get().modal, deathmatch: true } : get().modal,
     });
     get().save();
     return events;
@@ -458,7 +465,7 @@ export const useGameStore = create((set, get) => ({
     }
 
     const swapKeys = [
-      'cash', 'salaryBonus', 'creditUsed', 'creditDebt', 'creditMisses', 'loansharkUsed', 'loansharkDebt', 'defenseCards',
+      'cash', 'salaryBonus', 'activatedPassives', 'creditUsed', 'creditDebt', 'creditMisses', 'loansharkUsed', 'loansharkDebt', 'defenseCards',
       'propertyLoans', 'chanceCards', 'welfareCards', 'activeCards', 'passives',
     ];
     for (const key of swapKeys) {

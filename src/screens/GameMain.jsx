@@ -2281,6 +2281,9 @@ function buildAiTurnSummary({ state, playerId, events, pendingBuy, cashBefore })
       case 'apartment_income':
         pushMoney('아파트 월세 수입', event.amt);
         break;
+      case 'salary_bonus':
+        pushMoney('패시브 월급', event.amt);
+        break;
       case 'arrive_property':
         if (event.type === 'rent') pushMoney(`${tileName(event.pos)} 통행료`, -event.rent);
         break;
@@ -3400,6 +3403,9 @@ function buildTurnBriefing(turn, state) {
         break;
       case 'apartment_income':
         push('아파트 월세', event.amt);
+        break;
+      case 'salary_bonus':
+        push('패시브 월급', event.amt);
         break;
       case 'living':
         push('생활비', -event.amt);

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createGameState } from '../gameState.js';
 import { createRng } from '../rng.js';
-import { playTurn } from '../rules.js';
+import { advanceTurn, playTurn } from '../rules.js';
 
 test('자기 턴 실행: 주사위 + 이동 + 도착 처리 (오류 없이 완주)', () => {
   const rng = createRng(1);
@@ -35,6 +35,23 @@ test('60분 종료: deathmatch + finish', () => {
   }
   assert.equal(state.finished, true);
   assert.notEqual(state.winner, null);
+});
+
+test('데스매치: 설정 시간 도달 시 deathmatch_start 이벤트가 기록된다', () => {
+  const rng = createRng(1);
+  const state = createGameState({
+    numPlayers: 4,
+    options: { predistribute: false, realTimeMode: false, eventCards: false, deathmatchStartMinutes: 30, totalGameMinutes: 999 },
+    rng,
+  });
+  state.elapsedMin = 27.5;
+  state.turnIndex = 3;
+  const log = [];
+
+  advanceTurn(state, rng, log);
+
+  assert.equal(state.deathmatch, true);
+  assert.ok(log.some((event) => event.kind === 'deathmatch_start'));
 });
 
 test('시뮬 재현성: 같은 시드 → 같은 결과', () => {
