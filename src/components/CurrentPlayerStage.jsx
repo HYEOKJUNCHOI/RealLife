@@ -189,6 +189,8 @@ export default function CurrentPlayerStage({
   year,
   loanRate,
   onExit,
+  onUndoMove,
+  canUndoMove = false,
   onStep,
   onDiceRoll,
   diceLocked,
@@ -290,6 +292,12 @@ export default function CurrentPlayerStage({
       restartSameGame?.();
     }, 650);
   };
+
+  const handleUndoMove = () => {
+    if (!canUndoMove) return;
+    onUndoMove?.();
+    setSettingsOpen(false);
+  };
   const settingsButtonBaseClass = 'w-full rounded-md border-2 border-ink-line px-3 py-2 font-board text-base shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none';
   const settingsPlainButtonClass = cn(settingsButtonBaseClass, 'bg-white text-ink');
 
@@ -377,6 +385,14 @@ export default function CurrentPlayerStage({
             className={cn('mb-2', settingsButtonBaseClass, 'bg-emerald-500 text-white')}
           >
             게임 다시하기
+          </button>
+          <button
+            type="button"
+            onClick={handleUndoMove}
+            disabled={!canUndoMove}
+            className={cn('mb-2', settingsButtonBaseClass, canUndoMove ? 'bg-monopoly-gold text-ink' : 'bg-white/65 text-ink/35')}
+          >
+            이동취소
           </button>
           <button
             type="button"

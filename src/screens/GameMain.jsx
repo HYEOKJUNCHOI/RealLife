@@ -128,6 +128,7 @@ export default function GameMain({ onExit }) {
   const [cardSettlementSeenKey, setCardSettlementSeenKey] = useState(null);
   const autoBoardTurnKeyRef = useRef(null);
   const diceSnapshotRef = useRef(null);
+  const [undoMoveReady, setUndoMoveReady] = useState(false);
   const [diceLocked, setDiceLocked] = useState(false);
   const [diceMode, setDiceMode] = useState('app');
   const [lastDiceRoll, setLastDiceRoll] = useState(null);
@@ -275,9 +276,11 @@ export default function GameMain({ onExit }) {
     if (showInitialDeal) {
       setGlobalNotice(null);
       diceSnapshotRef.current = null;
+      setUndoMoveReady(false);
       return;
     }
     diceSnapshotRef.current = null;
+    setUndoMoveReady(false);
     const key = `${state?.round ?? 0}-${state?.turnIndex ?? 0}`;
     if (activePlayer && turnStartNoticeKey !== key) {
       setTurnStartNoticeKey(key);
@@ -734,6 +737,7 @@ export default function GameMain({ onExit }) {
     setSettlementLocked(false);
     
     diceSnapshotRef.current = null;
+    setUndoMoveReady(false);
     const prevPlayerId = state?.turnIndex ?? 0;
     const prevPos = state?.players?.[prevPlayerId]?.position ?? 0;
     const cashBeforeEnd = state?.players?.[prevPlayerId]?.cash ?? 0;
@@ -825,6 +829,7 @@ export default function GameMain({ onExit }) {
     const startPos = turnPlayer?.position ?? 0;
     const cashBeforeMove = turnPlayer?.cash ?? 0;
     diceSnapshotRef.current = ai ? null : { state: JSON.parse(JSON.stringify(state)), log: JSON.parse(JSON.stringify(log)), lastTurn: JSON.parse(JSON.stringify(lastTurn)), modal: JSON.parse(JSON.stringify({ property: modalProperty, trade: modalTrade, tradeSelect: modalTradeSelect, event: modalEvent, yearEnd: modalYearEnd, deathmatch: modalDeathmatch, recovery: modalRecovery, loan: modalLoan })) };
+    setUndoMoveReady(!ai);
     setDiceLocked(true);
     setTurnResult(null);
     setGlobalNotice(null);
@@ -1110,17 +1115,23 @@ export default function GameMain({ onExit }) {
     runManualDiceMove(manualSteps);
   };
 
-  const unlockDiceInput = () => {
+  const undoLastMove = () => {
     if (diceSnapshotRef.current) restoreSnapshot?.(diceSnapshotRef.current);
     diceSnapshotRef.current = null;
+    setUndoMoveReady(false);
     setDiceLocked(false);
     setTurnMovedKey(null);
     setPendingPurchase(null);
     setTurnResult(null);
     setBoardTurn(null);
     setHubTeleport(null);
+    setGlobalNotice(null);
     setCardEffectNotice(null);
     setSettlementLocked(false);
+  };
+
+  const unlockDiceInput = () => {
+    undoLastMove();
   };
 
   const closeBoardToStatus = () => {
@@ -1313,6 +1324,8 @@ export default function GameMain({ onExit }) {
             turnResult={effectiveTurnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
+            onUndoMove={undoLastMove}
+            canUndoMove={undoMoveReady}
             onOpenBoard={toggleBoardInspect}
             pendingPurchase={pendingPurchase}
             onPendingPurchaseContract={reopenPurchaseNotice}
@@ -1349,6 +1362,8 @@ export default function GameMain({ onExit }) {
             turnResult={effectiveTurnResult}
             onOpenResultCard={handleOpenResultCard}
             onExit={onExit}
+            onUndoMove={undoLastMove}
+            canUndoMove={undoMoveReady}
             onOpenLoan={openLoanModal}
             onOpenBoard={toggleBoardInspect}
             pendingPurchase={pendingPurchase}
