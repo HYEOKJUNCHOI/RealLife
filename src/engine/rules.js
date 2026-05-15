@@ -218,7 +218,8 @@ export const handleTileArrival = (state, playerId, pos, rng, log, turnOptions = 
       break;
     }
     case 'jail': {
-      // 방문만 (그냥 머무름)
+      sendToJail(state, playerId);
+      log.push({ kind: 'jail_landed', pos });
       break;
     }
     case 'go_to_jail': {

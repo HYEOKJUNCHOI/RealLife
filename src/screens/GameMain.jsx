@@ -753,7 +753,7 @@ export default function GameMain({ onExit }) {
       const tileName = tileNameForPos(state, pendingBuy.pos);
       return { kind: 'buy', title: '매입 가능', text: `${tileName}에 도착했습니다. 주인이 없는 땅인데 구매할까요?`, icon: '🏠', pos: pendingBuy.pos, visitorId: playerId, tileName };
     }
-    const jailSent = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+    const jailSent = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail' || event.kind === 'jail_landed');
     if (jailSent) {
       return { kind: 'jail_sent', title: '감옥 수감', text: '경찰의 안내를 받아 감옥에 수감되었습니다. 다음 차례부터 출소 시도를 할 수 있습니다.', icon: '🚓', jailTurns: JAIL_TURNS };
     }
@@ -787,8 +787,8 @@ export default function GameMain({ onExit }) {
       const payerName = payer?.name ?? `${playerId + 1}P`;
       return { kind: 'rent', title: '정산 발생', text: `${payerName}님이 ${ownerName}님의 ${tileName}을 밟고 ${amount}만 지출했습니다.`, icon: '💸', amount, ownerName, payerName, tileName };
     }
-    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'parking_jackpot', 'go_to_jail'].includes(event.kind));
-    if (arrival) return { kind: 'arrival', title: '도착', text: arrival.tileName ?? arrival.name ?? '도착 처리 완료', icon: arrival.kind === 'go_to_jail' ? '🚓' : '📍' };
+    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'parking_jackpot', 'go_to_jail', 'jail_landed'].includes(event.kind));
+    if (arrival) return { kind: 'arrival', title: '도착', text: arrival.tileName ?? arrival.name ?? '도착 처리 완료', icon: (arrival.kind === 'go_to_jail' || arrival.kind === 'jail_landed') ? '🚓' : '📍' };
     return { kind: 'ready', title: '턴 처리 확인', text: '보드 이동과 도착 처리를 확인하세요.', icon: '📍' };
   };
 
@@ -824,9 +824,9 @@ export default function GameMain({ onExit }) {
     const buyState = pendingBuy ? { pos: pendingBuy.pos, visitorId: playerId, turnKey } : null;
     setPendingPurchase(buyState);
     const roll = events.find((event) => event.kind === 'roll' || event.kind === 'jail_turn');
-    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'income_tax', 'luxury_tax', 'chance_draw', 'welfare_draw', 'parking_jackpot', 'go_to_jail', 'three_doubles_jail'].includes(event.kind));
+    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'income_tax', 'luxury_tax', 'chance_draw', 'welfare_draw', 'parking_jackpot', 'go_to_jail', 'three_doubles_jail', 'jail_landed'].includes(event.kind));
     const card = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
-    const jailNoticeForEnd = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+    const jailNoticeForEnd = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail' || event.kind === 'jail_landed');
     const endPos = jailNoticeForEnd
       ? (latestState.players?.[playerId]?.position ?? jailNoticeForEnd.pos ?? startPos)
       : Number.isInteger(arrival?.pos)
@@ -860,7 +860,7 @@ export default function GameMain({ onExit }) {
       const toastMessage = buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPos });
       const isCardArrival = !!card;
       if (isCardArrival) setTurnResult(summarizeTurnResult(events, playerId, pendingBuy));
-      const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail');
+      const jailNotice = events.find((event) => event.kind === 'go_to_jail' || event.kind === 'three_doubles_jail' || event.kind === 'jail_landed');
       const rentEvent = events.find((event) => (event.kind === 'arrive_property' && event.type === 'rent') || event.kind === 'rent' || (event.kind === 'arrive_hub' && event.type === 'rent_forced'));
       const endTileForNotice = state.board?.tiles?.[endPos];
       const stationEvent = events.find((event) => event.kind === 'arrive_station') ?? ((endTileForNotice?.type === 'railroad' && endTileForNotice?.subType === 'station') ? { kind: 'arrive_station', pos: endPos, collected: 0 } : null);
@@ -2216,7 +2216,7 @@ function buildArrivalToast({ state, events, playerId, arrival, pendingBuy, endPo
   }
   if (arrival?.kind === 'arrive_station') return `${tileName} 적립금 ${arrival.collected ?? 0}만 수령! 새 역장 부임입니다 🎉`;
   if (arrival?.kind === 'parking_jackpot') return `무료주차 대박입니다 🎉 적립금 ${arrival.amt ?? 0}만 챙겨갑니다.`;
-  if (arrival?.kind === 'go_to_jail') return `${playerName}님 감옥행입니다 😭 다음 차례부터 출소 시도합니다.`;
+  if (arrival?.kind === 'go_to_jail' || arrival?.kind === 'jail_landed') return `${playerName}님 감옥행입니다 😭 다음 차례부터 출소 시도합니다.`;
   if (events?.some((event) => event.kind === 'three_doubles_jail')) return `${playerName}님 3연속 더블… 이건 감옥입니다 😭`;
   if (arrival?.kind === 'income_tax' || arrival?.kind === 'luxury_tax') return `${tileName}입니다 😅 ${arrival.amt ?? 0}만 납부합니다.`;
   if (arrival?.card || arrival?.kind === 'chance_draw' || arrival?.kind === 'welfare_draw' || arrival?.kind === 'event_card') return `${tileName} 카드 도착! 결과는 뒤집어봐야 압니다 👀`;
@@ -2838,8 +2838,8 @@ function CardEffectNoticeOverlay({ notice, onClose }) {
 }
 
 function BoardArrivalCard({ state, pos, event, activeColor = '#d83b2f' }) {
-  const isJailArrival = event?.kind === 'go_to_jail' || event?.kind === 'three_doubles_jail';
-  if (isJailArrival) return <JailArrivalCard reason={event.kind === 'three_doubles_jail' ? '3연속 더블' : '감옥행 칸'} />;
+  const isJailArrival = event?.kind === 'go_to_jail' || event?.kind === 'three_doubles_jail' || event?.kind === 'jail_landed';
+  if (isJailArrival) return <JailArrivalCard reason={event.kind === 'three_doubles_jail' ? '3연속 더블' : event.kind === 'jail_landed' ? '감옥 칸' : '감옥행 칸'} />;
   const tile = state?.board?.tiles?.[pos];
   if (!tile) return <FallbackArrivalCard title="도착 처리" icon="📍" text="도착 정보를 확인했습니다." />;
   const ts = state.tileState?.[pos] ?? {};
@@ -3008,7 +3008,7 @@ function describeArrival(event, tile) {
   if (event.kind === 'chance_draw') return `${name} · ${event.card ?? '찬스 카드'}`;
   if (event.kind === 'welfare_draw') return `${name} 카드 공개`;
   if (event.kind === 'parking_jackpot') return `${name} 보너스 수령`;
-  if (event.kind === 'go_to_jail') return '감옥으로 이동';
+  if (event.kind === 'go_to_jail' || event.kind === 'jail_landed') return '감옥으로 이동';
   return `${name} 도착`;
 }
 
@@ -3532,6 +3532,8 @@ function summarizeEvent(e) {
       return '\uD658\uC2B9 \uD5C8\uBE0C\uC5D0 \uB3C4\uCC29\uD588\uC2B5\uB2C8\uB2E4.';
     case 'hub_teleport':
       return '환승 이동을 완료했습니다.';
+    case 'jail_landed':
+      return '감옥 칸에 도착했습니다… 다음 차례부터 출소를 시도합니다.';
     case 'go_to_jail':
       return '감옥행입니다… 이건 아픕니다 😭';
     case 'deathmatch_start':
