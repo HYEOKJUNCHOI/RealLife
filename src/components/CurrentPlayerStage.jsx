@@ -211,6 +211,7 @@ export default function CurrentPlayerStage({
   onStationResign,
   hideDicePanel = false,
   statusActions = null,
+  initialDealStatus = null,
 }) {
   if (!player) return null;
   const baseMeta = CHAR_META[player.character] ?? { name: player.character, color: '#666', slot: null };
@@ -222,6 +223,10 @@ export default function CurrentPlayerStage({
   };
   const characterImg = getCharacterImg(player.character);
   const owned = getOwnedPositions(state, index);
+  const initialDealActive = !!initialDealStatus?.active;
+  const displayedOwned = initialDealActive
+    ? (initialDealStatus.cards ?? []).map((card) => card.pos).filter((pos) => pos != null)
+    : owned;
   const totalWorth = quickWorth(state, index);
   const livingCost = getLivingCost(totalWorth);
   const settlementContent = turnBriefing ?? {
@@ -291,8 +296,8 @@ export default function CurrentPlayerStage({
   const currentTile = state.board?.tiles?.[player.position];
   const currentTileState = state.tileState?.[player.position];
   const pendingOwner = pendingPurchase?.pos != null ? state.tileState?.[pendingPurchase.pos]?.owner : null;
-  const hasPendingPurchasePreview = pendingPurchase?.visitorId === index && pendingOwner == null;
-  const pendingPreviewSlot = hasPendingPurchasePreview && owned.length < OWNED_SLOTS ? owned.length : -1;
+  const hasPendingPurchasePreview = !initialDealActive && pendingPurchase?.visitorId === index && pendingOwner == null;
+  const pendingPreviewSlot = hasPendingPurchasePreview && displayedOwned.length < OWNED_SLOTS ? displayedOwned.length : -1;
 
   const isSkipping = !!player.inJail || (player.skipTurns ?? 0) > 0;
   const jailTurnsRemaining = Math.max(0, JAIL_TURNS - (player.jailTurns ?? 0));
@@ -501,18 +506,18 @@ export default function CurrentPlayerStage({
       {/* 보유 부동산 */}
       <div className="relative mx-2.5 mb-[6px] mt-[14px] flex flex-1 min-h-0 flex-col overflow-visible rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.18)]">
         <div className="mb-[5px] flex items-center justify-between">
-          <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{'\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{initialDealActive ? '권리증 분배' : '\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
             <span className="ml-1.5 font-semibold text-ink/40 tabular-nums">
-              {owned.length}{owned.length > OWNED_SLOTS ? `/${owned.length}` : ` / ${OWNED_SLOTS}`}
+              {displayedOwned.length}{displayedOwned.length > OWNED_SLOTS ? `/${displayedOwned.length}` : ` / ${OWNED_SLOTS}`}
             </span>
           </span>
 
         </div>
 
         {/* 보유 부동산 캡슐 안에서 8개 섹션을 먼저 나누고, 각 섹션 안에 카드만 다시 그린다. */}
-        <div className={cn('grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5', player.inJail && 'grayscale saturate-0 brightness-[0.72]')}>
+        <div className={cn('grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5', player.inJail && 'grayscale saturate-0 brightness-[0.72]', initialDealActive && 'initial-deal-owned-grid')}>
           {Array.from({ length: OWNED_SLOTS }).map((_, idx) => {
-            const pos = owned[idx];
+            const pos = displayedOwned[idx];
             const isPending = idx === pendingPreviewSlot;
             const sectionClassName = "relative min-h-0 overflow-visible rounded-lg border border-slate-300/42 bg-white/10 p-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.30),0_0_10px_rgba(100,116,139,0.10)]";
             return (
@@ -534,7 +539,7 @@ export default function CurrentPlayerStage({
                       key={`${pos}-${state._lastDeedAdded?.nonce ?? 'base'}`}
                       className={cn(
                         'deed-slot-card relative block h-full w-full',
-                        state._lastDeedAdded?.playerId === index && state._lastDeedAdded?.pos === pos && 'deed-slot-card-insert',
+                        (initialDealActive || (state._lastDeedAdded?.playerId === index && state._lastDeedAdded?.pos === pos)) && 'deed-slot-card-insert',
                       )}
                     >
                       <PropertyDeedMini pos={pos} />
@@ -560,9 +565,9 @@ export default function CurrentPlayerStage({
           </div>
         )}
 
-        {owned.length > OWNED_SLOTS && (
+        {displayedOwned.length > OWNED_SLOTS && (
           <div className="mt-1 text-right font-display text-[9px] font-semibold uppercase tracking-wider text-ink/50">
-            +{owned.length - OWNED_SLOTS} {'\uCD94\uAC00 \uBCF4\uC720'}
+            +{displayedOwned.length - OWNED_SLOTS} {'\uCD94\uAC00 \uBCF4\uC720'}
           </div>
         )}
       </div>

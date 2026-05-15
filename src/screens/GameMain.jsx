@@ -117,6 +117,7 @@ export default function GameMain({ onExit }) {
   const skipPromptKeyRef = useRef(null);
   const [showInitialDeal, setShowInitialDeal] = useState(false);
   const [initialDealPhase, setInitialDealPhase] = useState(null);
+  const [initialDealPlayerIndex, setInitialDealPlayerIndex] = useState(0);
   const [showTurnCardTouch, setShowTurnCardTouch] = useState(false);
   const [boardTurn, setBoardTurn] = useState(null);
   const [pendingPurchase, setPendingPurchase] = useState(null);
@@ -152,17 +153,13 @@ export default function GameMain({ onExit }) {
     byPlayer.forEach((items) => items.sort((a, b) => a.pos - b.pos));
     const maxCards = Math.max(...byPlayer.map((items) => Math.min(items.length, 4)), 0);
     const dealCards = [];
-    const footerPlayers = state.players.map((_, index) => index).filter((index) => index !== state.turnIndex);
-    for (let cardIndex = 0; cardIndex < maxCards; cardIndex += 1) {
-      footerPlayers.forEach((playerIndex, footerOrder) => {
-        const card = byPlayer[playerIndex][cardIndex];
-        if (!card) return;
+    for (let playerIndex = 0; playerIndex < byPlayer.length; playerIndex += 1) {
+      byPlayer[playerIndex].slice(0, maxCards).forEach((card, cardIndex) => {
         dealCards.push({
           ...card,
           playerIndex,
           cardIndex,
-          recipientOrder: footerOrder,
-          dealOrder: cardIndex * footerPlayers.length + footerOrder,
+          dealOrder: playerIndex * maxCards + cardIndex,
         });
       });
     }
@@ -185,7 +182,7 @@ export default function GameMain({ onExit }) {
   }, [state?._gameStartNonce]);
 
   useEffect(() => {
-    const active = showInitialDeal && initialDealPhase !== 'start';
+    const active = showInitialDeal && initialDealPhase === 'deal';
     document.documentElement.classList.toggle('initial-deal-live', active);
     return () => document.documentElement.classList.remove('initial-deal-live');
   }, [initialDealPhase, showInitialDeal]);
@@ -561,8 +558,19 @@ export default function GameMain({ onExit }) {
     return <div className="min-h-dvh bg-parchment-100" />;
   }
 
-  const turnIndex = state.turnIndex;
-  const turnPlayer = state.players[turnIndex];
+  const initialDealActive = showInitialDeal && initialDealPhase === 'deal';
+  const stageState = initialDealActive ? { ...state, turnIndex: initialDealPlayerIndex } : state;
+  const turnIndex = stageState.turnIndex;
+  const turnPlayer = stageState.players[turnIndex];
+  const initialDealStageCards = initialDealActive
+    ? initialDealCards.filter((card) => card.playerIndex === initialDealPlayerIndex).sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0))
+    : [];
+  const initialDealStageStatus = initialDealActive ? {
+    active: true,
+    playerOrder: initialDealPlayerIndex + 1,
+    totalPlayers: state.players.length,
+    cards: initialDealStageCards,
+  } : null;
   const turnBaseMeta = turnPlayer
     ? CHAR_META[turnPlayer.character] ?? { name: turnPlayer.character, color: '#666' }
     : { name: '-', color: '#666' };
@@ -1280,7 +1288,7 @@ export default function GameMain({ onExit }) {
           <CurrentPlayerStage
             player={turnPlayer}
             index={turnIndex}
-            state={state}
+            state={stageState}
             hostLine={hostLine}
             turnBriefing={turnBriefing}
             activeEvent={modalEvent && showEventModal ? modalEvent : null}
@@ -1306,13 +1314,16 @@ export default function GameMain({ onExit }) {
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
             onStationResign={handleStationResign}
+            hideDicePanel={initialDealActive}
+            statusActions={initialDealActive ? <InitialDealStatusActions status={initialDealStageStatus} playerName={turnMeta.name} /> : null}
+            initialDealStatus={initialDealStageStatus}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
           <CurrentPlayerStage
             player={turnPlayer}
             index={turnIndex}
-            state={state}
+            state={stageState}
             hostLine={hostLine}
             turnBriefing={turnBriefing}
             activeEvent={modalEvent && showEventModal ? modalEvent : null}
@@ -1340,12 +1351,15 @@ export default function GameMain({ onExit }) {
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
             onStationResign={handleStationResign}
+            hideDicePanel={initialDealActive}
+            statusActions={initialDealActive ? <InitialDealStatusActions status={initialDealStageStatus} playerName={turnMeta.name} /> : null}
+            initialDealStatus={initialDealStageStatus}
           />
         </div>
 
         {/* === FOOTER === */}
         <OtherPlayersStrip
-          state={state}
+          state={stageState}
           onStep={handleEndTurn}
           onViewPlayer={(playerIndex) => setViewPlayerIndex(playerIndex)}
           finished={state.finished}
@@ -1396,9 +1410,11 @@ export default function GameMain({ onExit }) {
             turnIndex={state.turnIndex}
             cards={initialDealCards}
             onPhaseChange={setInitialDealPhase}
+            onPlayerChange={setInitialDealPlayerIndex}
             onReady={() => {
               setShowInitialDeal(false);
               setInitialDealPhase(null);
+              setInitialDealPlayerIndex(0);
               if (state) state._initialDealShown = true;
               const activePlayer = state?.players?.[state?.turnIndex ?? 0];
               if (activePlayer) {
@@ -3012,7 +3028,24 @@ function describeArrival(event, tile) {
   return `${name} 도착`;
 }
 
-function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseChange }) {
+function InitialDealStatusActions({ status, playerName }) {
+  if (!status?.active) return null;
+  return (
+    <div className="flex min-h-[92px] flex-col justify-center rounded-xl border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.82),rgba(255,248,220,0.66))] px-3 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]">
+      <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">
+        INITIAL DEAL {status.playerOrder}/{status.totalPlayers}
+      </div>
+      <div className="mt-1 font-board text-[22px] leading-tight text-ink">
+        {playerName} 권리증 분배중
+      </div>
+      <div className="mt-1 font-board text-[15px] leading-tight text-ink/62">
+        받은 뒤 푸터 자리로 내려가고 다음 플레이어가 헤더로 올라옵니다.
+      </div>
+    </div>
+  );
+}
+
+function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseChange, onPlayerChange }) {
   const [phase, setPhase] = useState('intro');
   const [activeDealPlayer, setActiveDealPlayer] = useState(0);
   const [startImageReady, setStartImageReady] = useState(false);
@@ -3052,14 +3085,18 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
   useEffect(() => {
     if (!dealVisible) return undefined;
     setActiveDealPlayer(0);
+    onPlayerChange?.(dealPlayers[0] ?? 0);
     const stepMs = 2050;
-    const timers = dealPlayers.slice(1).map((_, index) => window.setTimeout(() => setActiveDealPlayer(index + 1), stepMs * (index + 1)));
+    const timers = dealPlayers.slice(1).map((playerIndex, index) => window.setTimeout(() => {
+      setActiveDealPlayer(index + 1);
+      onPlayerChange?.(playerIndex);
+    }, stepMs * (index + 1)));
     const doneTimer = window.setTimeout(() => onReadyRef.current?.(), Math.max(1, dealPlayers.length) * stepMs + 650);
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer));
       window.clearTimeout(doneTimer);
     };
-  }, [dealVisible, dealPlayers.length]);
+  }, [dealVisible, dealPlayers.length, onPlayerChange]);
 
   useEffect(() => {
     if (phase !== 'start' || !startImageReady) return undefined;
@@ -3075,7 +3112,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
 
   return (
     <div
-      className={cn('pointer-events-auto absolute inset-0 z-[80] overflow-hidden rounded-[18px]', phase === 'start' && 'bg-[#eef1ed]')}
+      className={cn('absolute inset-0 z-[80] overflow-hidden rounded-[18px]', dealVisible ? 'pointer-events-none' : 'pointer-events-auto', phase === 'start' && 'bg-[#eef1ed]')}
       onPointerDown={(event) => { event.stopPropagation(); }}
       onClick={handleOverlayTap}
     >
@@ -3136,50 +3173,13 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
                   <span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]">📜</span>
                   <div className="whitespace-pre-line font-board text-[clamp(28px,4.1vw,50px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">권리증<br />순차 분배</div>
                 </div>
-                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">1P부터 차례대로 카드섹션에서 권리증 {cardsPerPlayer}장을 확인합니다.</div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">1P부터 차례대로 평소 화면에서 헤더로 올라와 권리증 {cardsPerPlayer}장을 받습니다.</div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {dealVisible && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.18)_0%,rgba(15,12,10,0.32)_42%,rgba(15,12,10,0.68)_100%)] p-4">
-          <div
-            key={activePlayerIndex}
-            className="initial-deal-player-stage w-[min(94vw,920px)] rounded-[28px] border-[3px] border-ink-line bg-[linear-gradient(135deg,rgba(255,250,240,0.96)_0%,rgba(255,247,223,0.9)_58%,rgba(255,255,255,0.82)_100%)] p-4 shadow-[0_7px_0_#0F0C0A,0_26px_62px_-24px_rgba(0,0,0,0.78)]"
-            style={{ '--deal-player-color': activeColor }}
-          >
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border-2 border-ink-line bg-[linear-gradient(180deg,#17120c_0%,#31220f_100%)] px-4 py-3 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white/80 bg-white shadow-[0_2px_0_#0F0C0A]" style={{ boxShadow: `0 0 0 3px ${activeColor}88, 0 2px 0 #0F0C0A` }}>
-                  {getCharacterImg(activePlayer?.character) ? <img src={getCharacterImg(activePlayer.character)} alt="" className="h-full w-full scale-125 object-cover object-top" draggable={false} /> : <span className="font-display text-[18px] text-ink">{activePlayerIndex + 1}P</span>}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-white/54">권리증 분배중</div>
-                  <div className="truncate font-board text-[clamp(22px,3.3vw,36px)] leading-none">{activePlayerIndex + 1}P · {activeName}</div>
-                </div>
-              </div>
-              <div className="shrink-0 rounded-full border border-white/30 px-3 py-1 font-display text-[12px] font-black uppercase tracking-[0.16em] text-white/82" style={{ background: `${activeColor}88` }}>
-                {activeDealPlayer + 1}/{dealPlayers.length}
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              {activeCards.map((card) => (
-                <div
-                  key={`${activePlayerIndex}-${card.cardIndex}-${card.pos}`}
-                  className="initial-deal-showcase-card mx-auto w-full max-w-[178px] rounded-xl shadow-[0_4px_0_#17120c,0_18px_26px_-18px_rgba(0,0,0,0.72)]"
-                  style={{ '--deal-card-delay': `${(card.cardIndex ?? 0) * 0.14}s`, '--deed-color': activeColor }}
-                >
-                  <div className="h-[250px] w-[180px] max-w-full origin-top-left overflow-visible rounded-xl [&_[data-component=PropertyDeedMini]]:!border-[#17120c] [&_[data-component=PropertyDeedMini]]:!bg-[#fff7df] [&_[data-component=PropertyDeedMini]]:!backdrop-blur-none" style={{ transform: 'scale(0.84)', transformOrigin: 'top left' }}>
-                    <PropertyDeedMini pos={card.pos} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
