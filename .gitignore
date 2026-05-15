@@ -20,3 +20,9 @@ Thumbs.db
 scripts/__pycache__/
 public/npc/backup-*/
 
+# local browser/test profiles
+.chrome-*/
+
+# one-off patch/debug scripts
+tmp_*
+
