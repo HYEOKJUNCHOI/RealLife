@@ -501,12 +501,19 @@ export default function GameMain({ onExit }) {
     openLoanModal?.(playerId);
   };
 
-  const handlePurchaseLoanSigned = () => {
+  const reopenPurchaseAfterLoan = () => {
     const purchase = loanReturnPurchaseRef.current;
-    if (!purchase) return;
+    if (!purchase) {
+      closeLoanModal?.();
+      return;
+    }
     loanReturnPurchaseRef.current = null;
     closeLoanModal?.();
     window.setTimeout(() => reopenPurchaseNotice(purchase), 180);
+  };
+
+  const handlePurchaseLoanSigned = () => {
+    reopenPurchaseAfterLoan();
   };
 
   const reopenPurchaseNotice = (purchase = pendingPurchase) => {
@@ -1310,6 +1317,7 @@ export default function GameMain({ onExit }) {
             pendingPurchase={pendingPurchase}
             onPendingPurchaseContract={reopenPurchaseNotice}
             onLoanSigned={handlePurchaseLoanSigned}
+            onLoanClose={reopenPurchaseAfterLoan}
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
@@ -1346,6 +1354,7 @@ export default function GameMain({ onExit }) {
             pendingPurchase={pendingPurchase}
             onPendingPurchaseContract={reopenPurchaseNotice}
             onLoanSigned={handlePurchaseLoanSigned}
+            onLoanClose={reopenPurchaseAfterLoan}
             compact
             hideSkipOverlay={jailDialogOpen || skipDialogOpen || turnPlayer?.controller === 'ai'}
             bgmEnabled={bgmEnabled}
@@ -1774,8 +1783,8 @@ function GlobalNoticeBand({ notice, onDismiss }) {
                 type="button"
                 onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onClick={handleLoanClick}
-                className="shrink-0 rounded-full border-2 border-emerald-950 bg-[linear-gradient(180deg,#ecfdf5_0%,#34d399_100%)] px-4 py-1.5 font-board text-[16px] font-black leading-none text-emerald-950 shadow-[0_2px_0_#064e3b] active:translate-y-1 active:shadow-none"
-                animate={{ scale: [1, 1.06, 1], boxShadow: ['0 2px 0 #064e3b,0 0 0 rgba(16,185,129,0)', '0 2px 0 #064e3b,0 0 20px rgba(16,185,129,0.95)', '0 2px 0 #064e3b,0 0 0 rgba(16,185,129,0)'] }}
+                className="shrink-0 rounded-full border-2 border-blue-950 bg-[linear-gradient(180deg,#dbeafe_0%,#3b82f6_100%)] px-4 py-1.5 font-board text-[16px] font-black leading-none text-white shadow-[0_2px_0_#1e3a8a] active:translate-y-1 active:shadow-none"
+                animate={{ scale: [1, 1.06, 1], boxShadow: ['0 2px 0 #1e3a8a,0 0 0 rgba(59,130,246,0)', '0 2px 0 #1e3a8a,0 0 20px rgba(59,130,246,0.95)', '0 2px 0 #1e3a8a,0 0 0 rgba(59,130,246,0)'] }}
                 transition={{ duration: 0.9, repeat: Infinity }}
               >
                 대출상담
@@ -1821,9 +1830,11 @@ function GlobalNoticeBand({ notice, onDismiss }) {
                     onClick={handleBuyClick}
                     className={cn(
                       'rounded-xl border-2 border-ink-line px-3 py-3 font-board text-2xl font-black shadow-[0_3px_0_#0F0C0A] active:translate-y-1 active:shadow-none disabled:opacity-55',
-                      buyDeniedPulse
+                      notice.loanHint
                         ? 'bg-monopoly-red text-white'
-                        : 'bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] text-ink',
+                        : buyDeniedPulse
+                          ? 'bg-monopoly-red text-white'
+                          : 'bg-[linear-gradient(180deg,#ffffff_0%,#efe2c5_100%)] text-ink',
                     )}
                     animate={buyDeniedPulse ? { x: [-8, 8, -7, 7, -4, 4, 0], scale: [1, 1.04, 1], boxShadow: ['0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)', '0 3px 0 #7f1d1d,0 0 24px rgba(239,68,68,0.95)', '0 3px 0 #0F0C0A,0 0 0 rgba(239,68,68,0)'] } : { x: 0, scale: 1 }}
                     transition={{ duration: 0.72, ease: 'easeInOut' }}

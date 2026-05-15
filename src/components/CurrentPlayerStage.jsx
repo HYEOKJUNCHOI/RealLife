@@ -200,6 +200,7 @@ export default function CurrentPlayerStage({
   pendingPurchase,
   onPendingPurchaseContract,
   onLoanSigned,
+  onLoanClose,
   diceMode = 'keypad',
   onDiceModeChange,
   onAppDiceRoll,
@@ -572,10 +573,10 @@ export default function CurrentPlayerStage({
           <div
             className="absolute inset-1 z-[60] rounded-xl bg-ink/35 p-1.5 backdrop-blur-[2px]"
             onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); closeLoanModal?.(); }}
+            onClick={(event) => { event.preventDefault(); event.stopPropagation(); (onLoanClose ?? closeLoanModal)?.(); }}
           >
             <div className="h-full" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-              <LoanModal open inline onClose={closeLoanModal} playerId={modalLoan.playerId} onLoanSigned={onLoanSigned} />
+              <LoanModal open inline onClose={onLoanClose ?? closeLoanModal} playerId={modalLoan.playerId} onLoanSigned={onLoanSigned} />
             </div>
           </div>
         )}
