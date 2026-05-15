@@ -387,6 +387,19 @@ h1, h2, h3, h4, .font-display {
   100% { opacity: 0; transform: translate(-50%, -4px) scale(0.98); }
 }
 
+@keyframes initial-deal-player-stage-pop {
+  0% { opacity: 0; transform: translateY(14px) scale(0.97); filter: saturate(0.9) brightness(1.08); }
+  16%, 86% { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1.08) brightness(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.985); filter: saturate(0.95) brightness(1.04); }
+}
+
+@keyframes initial-deal-showcase-card-pop {
+  0% { opacity: 0; transform: translateY(-22px) rotate(-3deg) scale(0.86); }
+  42% { opacity: 1; transform: translateY(5px) rotate(1deg) scale(1.045); }
+  68% { transform: translateY(-2px) rotate(-0.4deg) scale(0.99); }
+  100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+}
+
 @keyframes initial-deal-slot-reveal {
   0%, 72% {
     opacity: 0;
@@ -515,10 +528,21 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   animation: initial-deal-caption-pop 2.6s ease-out both;
 }
 
+.initial-deal-player-stage {
+  animation: initial-deal-player-stage-pop 2.02s cubic-bezier(0.18, 0.9, 0.18, 1) both;
+}
+
+.initial-deal-showcase-card {
+  animation: initial-deal-showcase-card-pop 0.72s cubic-bezier(0.18, 0.9, 0.18, 1) var(--deal-card-delay, 0s) both;
+  transform-origin: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .initial-deal-card,
   .initial-deal-deck,
-  .initial-deal-caption { animation: none !important; display: none !important; }
+  .initial-deal-caption,
+  .initial-deal-player-stage,
+  .initial-deal-showcase-card { animation: none !important; }
   html.initial-deal-live [data-deed-slot],
   html.initial-deal-live [data-deed-slot] .deed-slot-card,
   html.initial-deal-live [data-current-player-deal-target],
