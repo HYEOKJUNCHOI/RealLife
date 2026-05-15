@@ -266,6 +266,10 @@ export default function GameMain({ onExit }) {
     setCardEffectNotice(null);
     setSettlementLocked(false);
     setLastDiceRoll(null);
+    setBoardTurn(null);
+    setPendingPurchase(null);
+    setHubTeleport(null);
+    setAiTurnSummary(null);
     const activePlayer = state?.players?.[state?.turnIndex ?? 0];
     const activeBaseMeta = activePlayer
       ? CHAR_META[activePlayer.character] ?? { name: activePlayer.character, color: '#d83b2f' }
@@ -789,7 +793,8 @@ export default function GameMain({ onExit }) {
   };
 
   const runManualDiceMove = async (manualSteps, { ai = false, allowLocked = false } = {}) => {
-    if (!state || state.finished || boardTurn || (!allowLocked && diceLocked)) return;
+    const boardBlocksDice = boardTurn && !['inspect', 'ready'].includes(boardTurn.phase);
+    if (!state || state.finished || boardBlocksDice || (!allowLocked && diceLocked)) return;
     const currentKey = `${state.round ?? 0}-${state.turnIndex ?? 0}`;
     if (turnMovedKey === currentKey) {
       return;
@@ -1059,7 +1064,8 @@ export default function GameMain({ onExit }) {
   };
 
   const rollAppDice = () => {
-    if (diceLocked || boardTurn || state?.finished) return;
+    const boardBlocksDice = boardTurn && !['inspect', 'ready'].includes(boardTurn.phase);
+    if (diceLocked || boardBlocksDice || state?.finished) return;
     setDiceLocked(true);
     const finalD1 = Math.floor(Math.random() * 6) + 1;
     const finalD2 = Math.floor(Math.random() * 6) + 1;
@@ -1085,7 +1091,7 @@ export default function GameMain({ onExit }) {
   };
 
   const handleBoardDiceRoll = (manualSteps) => {
-    if (!boardTurn || boardTurn.phase !== 'ready') return;
+    if (!boardTurn || !['ready', 'inspect'].includes(boardTurn.phase)) return;
     runManualDiceMove(manualSteps);
   };
 
@@ -2470,7 +2476,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
             onOpenLoan={onOpenLoan}
             onOpenBoard={onOpenBoard}
             pendingPurchase={null}
-            turnResult={effectiveTurnResult}
+            turnResult={turnResult}
             onDiceRoll={onDiceRoll}
             diceLocked={diceLocked}
             onUnlockDice={onUnlockDice}
@@ -2600,17 +2606,26 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
                     ))}
                   </div>
                 ) : replay.phase === 'inspect' ? (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      openTradeSelect?.(replay.playerId);
-                    }}
-                    className="rounded-xl border border-[#17120c]/45 bg-[linear-gradient(180deg,rgba(255,247,214,0.72)_0%,rgba(214,177,93,0.62)_100%)] px-5 py-2.5 font-board text-[20px] font-black leading-none text-[#4b3510] shadow-[0_2px_0_rgba(23,18,12,0.55),0_8px_16px_-14px_rgba(0,0,0,0.45)] transition active:translate-y-1 active:shadow-none"
-                  >
-                    거래 제의
-                  </button>
+                  <div className="space-y-3">
+                    <div className="board-turn-number-pad">
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                        <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openTradeSelect?.(replay.playerId);
+                      }}
+                      className="rounded-xl border border-[#17120c]/45 bg-[linear-gradient(180deg,rgba(255,247,214,0.72)_0%,rgba(214,177,93,0.62)_100%)] px-5 py-2.5 font-board text-[20px] font-black leading-none text-[#4b3510] shadow-[0_2px_0_rgba(23,18,12,0.55),0_8px_16px_-14px_rgba(0,0,0,0.45)] transition active:translate-y-1 active:shadow-none"
+                    >
+                      거래 제의
+                    </button>
+                  </div>
                 ) : (
                   <div className={cn('board-turn-manual-result scale-75', replay.phase === 'rolling' && 'is-rolling')}>
                     {rollSum ?? replay.manualSteps ?? '?'}
