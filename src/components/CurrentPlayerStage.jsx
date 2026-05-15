@@ -766,7 +766,7 @@ function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = '
                 disabled={disabled || diceLocked}
                 onClick={onAppDiceRoll}
                 className="h-14 w-full rounded-xl border border-white/80 px-2 font-board text-[20px] font-extrabold leading-none text-[#15324a] shadow-[0_12px_24px_-18px_rgba(36,57,74,0.78)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 whitespace-nowrap"
-                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(196,181,253,0.52) 100%)', borderColor: 'rgba(139,92,246,0.58)' }}
+                style={{ background: `linear-gradient(180deg, rgba(255,255,255,0.96) 0%, ${color}55 100%)`, borderColor: `${color}88` }}
               >
                 주사위 굴리기
               </button>
