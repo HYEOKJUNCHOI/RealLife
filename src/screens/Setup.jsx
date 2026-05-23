@@ -105,6 +105,7 @@ export default function Setup({ onStart }) {
   const [picked, setPicked] = useState([]);
   const [playerTypes, setPlayerTypes] = useState(() => Array.from({ length: 4 }, (_, i) => setupPrefs?.playerTypes?.[i] ?? 'human'));
   const [names, setNames] = useState({});
+  const [nameEdit, setNameEdit] = useState({ id: null, mode: 'idle' });
   const [numberPad, setNumberPad] = useState(null);
   const [preloading, setPreloading] = useState(false);
   const [bgmEnabled, setBgmEnabled] = useState(() => getBgmPreference());
@@ -115,6 +116,18 @@ export default function Setup({ onStart }) {
     setPicked((prev) => prev.slice(0, numPlayers));
     setPlayerTypes((prev) => Array.from({ length: numPlayers }, (_, i) => prev[i] ?? 'human'));
   }, [numPlayers]);
+
+  useEffect(() => {
+    setNameEdit((prev) => (prev.id && !picked.includes(prev.id) ? { id: null, mode: 'idle' } : prev));
+  }, [picked]);
+
+  useEffect(() => {
+    const closeNameEdit = (event) => {
+      if (event.key === 'Escape') setNameEdit({ id: null, mode: 'idle' });
+    };
+    window.addEventListener('keydown', closeNameEdit);
+    return () => window.removeEventListener('keydown', closeNameEdit);
+  }, []);
 
   const selectedCount = picked.length;
   const ready = selectedCount === numPlayers;
@@ -245,12 +258,40 @@ export default function Setup({ onStart }) {
     scroller?.classList.remove('roster-dragging');
   };
 
+  const armNameEdit = (id) => {
+    setNameEdit({ id, mode: 'target' });
+  };
+
+  const startNameEdit = (id) => {
+    setNameEdit({ id, mode: 'editing' });
+  };
+
+  const resetNameEdit = () => {
+    setNameEdit({ id: null, mode: 'idle' });
+  };
+
   const pickFromRoster = (id) => {
-    togglePick(id);
+    const alreadyPicked = picked.includes(id);
+    if (!alreadyPicked) {
+      togglePick(id);
+      resetNameEdit();
+      return;
+    }
+    setNameEdit((prev) => (
+      prev.id === id && prev.mode === 'target'
+        ? { id, mode: 'editing' }
+        : { id, mode: 'target' }
+    ));
   };
 
   return (
-    <div className="setup-screen relative h-full w-full overflow-hidden bg-[#f5dfad] text-[#17120c]">
+    <div
+      className="setup-screen relative h-full w-full overflow-hidden bg-[#f5dfad] text-[#17120c]"
+      onPointerDownCapture={(event) => {
+        if (event.target.closest?.('.character-card')) return;
+        if (nameEdit.id) resetNameEdit();
+      }}
+    >
       <img
         src="/cityscape/reallife-lobby-concept.webp"
         alt=""
@@ -337,6 +378,10 @@ export default function Setup({ onStart }) {
                       if (order < 0) return;
                       setPlayerTypes((prev) => prev.map((type, i) => i === order ? (type === 'ai' ? 'human' : 'ai') : type));
                     }}
+                    nameEditMode={nameEdit.id === character.id ? nameEdit.mode : 'idle'}
+                    onArmNameEdit={() => armNameEdit(character.id)}
+                    onStartNameEdit={() => startNameEdit(character.id)}
+                    onResetNameEdit={resetNameEdit}
                     edgeBias={column === 0 ? 'left' : column === 3 ? 'right' : 'center'}
                   />
                 );
@@ -559,12 +604,34 @@ function LockedCharacterSlot() {
   );
 }
 
-function CharacterCard({ character, selected, order, onPick, name, onName, playerType = 'human', onTogglePlayerType, edgeBias = 'center' }) {
+function CharacterCard({
+  character,
+  selected,
+  order,
+  onPick,
+  name,
+  onName,
+  playerType = 'human',
+  onTogglePlayerType,
+  nameEditMode = 'idle',
+  onArmNameEdit,
+  onStartNameEdit,
+  onResetNameEdit,
+  edgeBias = 'center',
+}) {
+  const inputRef = useRef(null);
   const color = selected ? PLAYER_COLORS[order] : '#17120c';
   const displayName = name || character.name;
+  const nameTargeted = selected && nameEditMode === 'target';
+  const nameEditing = selected && nameEditMode === 'editing';
   const glassShadow = selected
     ? `inset 0 1px 0 rgba(255,255,255,0.42), inset 1px 0 0 rgba(221,247,255,0.2), inset 0 -28px 44px rgba(7,28,44,0.1), 0 44px 58px -20px rgba(9,31,48,0.42), 0 24px 26px -16px rgba(9,31,48,0.28), 0 9px 12px -8px rgba(9,31,48,0.18), 0 0 0 1px rgba(232,250,255,0.28), 0 0 20px rgba(135,220,255,0.28), 0 0 30px ${color}22`
     : 'inset 0 1px 0 rgba(255,255,255,0.34), inset 1px 0 0 rgba(221,247,255,0.18), inset 0 -28px 44px rgba(7,28,44,0.08), 0 44px 58px -20px rgba(9,31,48,0.38), 0 24px 26px -16px rgba(9,31,48,0.24), 0 9px 12px -8px rgba(9,31,48,0.16), 0 0 0 1px rgba(232,250,255,0.22), 0 0 18px rgba(135,220,255,0.22)';
+
+  useEffect(() => {
+    if (!nameEditing) return;
+    inputRef.current?.focus();
+  }, [nameEditing]);
 
   return (
     <div
@@ -574,7 +641,16 @@ function CharacterCard({ character, selected, order, onPick, name, onName, playe
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
-          onPick?.();
+          if (!selected) {
+            onPick?.();
+            return;
+          }
+          if (nameTargeted) onStartNameEdit?.();
+          else if (!nameEditing) onArmNameEdit?.();
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onResetNameEdit?.();
         }
       }}
       className={cn(
@@ -612,7 +688,7 @@ function CharacterCard({ character, selected, order, onPick, name, onName, playe
             }}
             onPointerDown={(event) => event.stopPropagation()}
             className={cn(
-              'character-control-badge absolute left-1 top-1 z-20 rounded-full border-2 border-[#17120c] px-1.5 py-0.5 font-board text-[11px] text-white shadow-[0_2px_0_#17120c] transition active:translate-y-0.5 active:shadow-none',
+              'character-control-badge absolute left-1 top-1 rounded-full border-2 border-[#17120c] px-1.5 py-0.5 font-board text-[11px] text-white shadow-[0_2px_0_#17120c] transition active:translate-y-0.5 active:shadow-none',
               playerType === 'ai'
                 ? 'bg-[linear-gradient(180deg,#2f75c9_0%,#164d91_100%)]'
                 : 'bg-[linear-gradient(180deg,#f27a1a_0%,#b84a10_100%)]',
@@ -663,16 +739,47 @@ function CharacterCard({ character, selected, order, onPick, name, onName, playe
       </div>
       {selected ? (
         <input
+          ref={inputRef}
           value={name}
           placeholder={character.name}
+          readOnly={!nameEditing}
           onChange={(event) => onName(event.target.value)}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            if (nameEditing) return;
+            if (nameTargeted) {
+              onStartNameEdit?.();
+              return;
+            }
+            event.preventDefault();
+            onArmNameEdit?.();
+          }}
           onClick={(event) => {
             event.stopPropagation();
+            if (!nameEditing) return;
             event.currentTarget.focus();
           }}
           onTouchStart={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              event.currentTarget.blur();
+              onResetNameEdit?.();
+            }
+            if (event.key === 'Enter' && !nameEditing) {
+              event.preventDefault();
+              onStartNameEdit?.();
+            }
+          }}
+          onBlur={() => {
+            if (nameEditing) onResetNameEdit?.();
+          }}
           maxLength={10}
-          className="character-name-plate character-name-plate-input relative z-[80] flex h-[28px] max-w-full items-center justify-center px-3 py-0 text-center font-board text-[15px] font-extrabold leading-none text-[#1b2024] caret-[#1d5e9f] placeholder:text-[#3f4a52]/90 focus:outline-none"
+          className={cn(
+            'character-name-plate character-name-plate-input relative z-[80] flex h-[28px] max-w-full items-center justify-center px-3 py-0 text-center font-board text-[15px] font-extrabold leading-none text-[#1b2024] placeholder:text-[#3f4a52]/90 focus:outline-none',
+            nameTargeted && 'character-name-plate-target cursor-text caret-transparent',
+            nameEditing ? 'caret-[#1d5e9f]' : 'cursor-pointer caret-transparent',
+          )}
         />
       ) : (
         <div
