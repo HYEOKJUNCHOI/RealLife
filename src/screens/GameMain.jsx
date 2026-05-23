@@ -1,4 +1,4 @@
-// 메인 게임 화면 — 실제 보드 + 실제 주사위 입력 흐름
+﻿// 메인 게임 화면 — 실제 보드 + 실제 주사위 입력 흐름
 // 중앙 스테이지, 우측 정산/카드 패널, 하단 플레이어 스트립으로 구성
 // 카드/정산/환승/감옥 UX는 실제 플레이 진행을 방해하지 않도록 작게 제어한다.
 
@@ -95,6 +95,7 @@ export default function GameMain({ onExit }) {
   const revealCardEffect = useGameStore((s) => s.revealCardEffect);
   const settleLottoRoll = useGameStore((s) => s.settleLottoRoll);
   const closeTradeModal = useGameStore((s) => s.closeTradeModal);
+  const openTradeSelect = useGameStore((s) => s.openTradeSelect);
   const closeTradeSelect = useGameStore((s) => s.closeTradeSelect);
   const closeRecoveryModal = useGameStore((s) => s.closeRecoveryModal);
   const openLoanModal = useGameStore((s) => s.openLoanModal);
@@ -587,6 +588,12 @@ export default function GameMain({ onExit }) {
   const turnMeta = turnPlayer
     ? { ...turnBaseMeta, name: displayPlayerName(turnPlayer, turnBaseMeta.name) }
     : turnBaseMeta;
+  const profileViewIndex = !initialDealActive && viewPlayerIndex != null && stageState.players?.[viewPlayerIndex]
+    ? viewPlayerIndex
+    : null;
+  const isProfileView = profileViewIndex != null;
+  const stagePlayerIndex = profileViewIndex ?? turnIndex;
+  const stagePlayer = stageState.players[stagePlayerIndex] ?? turnPlayer;
 
   // 수술적 수정: 1인칭 시선 이동 제어용 변수 복구
   const isGazeBlocked = !!globalNotice;
@@ -1304,8 +1311,8 @@ export default function GameMain({ onExit }) {
         {/* === STAGE === */}
         <div className="hidden flex-1 min-h-0 md:flex">
           <CurrentPlayerStage
-            player={turnPlayer}
-            index={turnIndex}
+            player={stagePlayer}
+            index={stagePlayerIndex}
             state={stageState}
             hostLine={hostLine}
             turnBriefing={turnBriefing}
@@ -1327,6 +1334,9 @@ export default function GameMain({ onExit }) {
             onUndoMove={undoLastMove}
             canUndoMove={undoMoveReady}
             onOpenBoard={toggleBoardInspect}
+            profileView={isProfileView}
+            onBackToCurrent={() => setViewPlayerIndex(null)}
+            onTradeRequest={isProfileView ? () => openTradeSelect?.(profileViewIndex) : undefined}
             pendingPurchase={pendingPurchase}
             onPendingPurchaseContract={reopenPurchaseNotice}
             onLoanSigned={handlePurchaseLoanSigned}
@@ -1335,15 +1345,13 @@ export default function GameMain({ onExit }) {
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
             onStationResign={handleStationResign}
-            hideDicePanel={initialDealActive}
-            statusActions={initialDealActive ? <InitialDealStatusActions status={initialDealStageStatus} playerName={turnMeta.name} /> : null}
             initialDealStatus={initialDealStageStatus}
           />
         </div>
         <div className="flex flex-1 min-h-0 md:hidden">
           <CurrentPlayerStage
-            player={turnPlayer}
-            index={turnIndex}
+            player={stagePlayer}
+            index={stagePlayerIndex}
             state={stageState}
             hostLine={hostLine}
             turnBriefing={turnBriefing}
@@ -1366,6 +1374,9 @@ export default function GameMain({ onExit }) {
             canUndoMove={undoMoveReady}
             onOpenLoan={openLoanModal}
             onOpenBoard={toggleBoardInspect}
+            profileView={isProfileView}
+            onBackToCurrent={() => setViewPlayerIndex(null)}
+            onTradeRequest={isProfileView ? () => openTradeSelect?.(profileViewIndex) : undefined}
             pendingPurchase={pendingPurchase}
             onPendingPurchaseContract={reopenPurchaseNotice}
             onLoanSigned={handlePurchaseLoanSigned}
@@ -1375,8 +1386,6 @@ export default function GameMain({ onExit }) {
             bgmEnabled={bgmEnabled}
             onToggleBgm={handleToggleBgm}
             onStationResign={handleStationResign}
-            hideDicePanel={initialDealActive}
-            statusActions={initialDealActive ? <InitialDealStatusActions status={initialDealStageStatus} playerName={turnMeta.name} /> : null}
             initialDealStatus={initialDealStageStatus}
           />
         </div>
@@ -1389,27 +1398,8 @@ export default function GameMain({ onExit }) {
           finished={state.finished}
           winnerIndex={state.winner}
           readyToEnd={diceInputLocked}
+          locked={isProfileView}
         />
-
-        {viewPlayerIndex != null && state.players?.[viewPlayerIndex] && (
-          <PlayerCardSlotOverlay
-            state={state}
-            playerIndex={viewPlayerIndex}
-            currentIndex={turnIndex}
-            turnBriefing={turnBriefing}
-            turnResult={effectiveTurnResult}
-            diceLocked={diceInputLocked}
-            onDiceRoll={runManualDiceMove}
-            onUnlockDice={['bought', 'rent', 'card', 'tax'].includes(turnResult?.kind) ? undefined : unlockDiceInput}
-            onOpenResultCard={handleOpenResultCard}
-            onOpenBoard={toggleBoardInspect}
-            onBack={() => setViewPlayerIndex(null)}
-            onOpenLoan={openLoanModal}
-            onStationResign={handleStationResign}
-            canLifeChange={state.pendingLifeChange?.playerId != null && viewPlayerIndex !== state.pendingLifeChange.playerId}
-            onLifeChange={() => handleLifeChange(viewPlayerIndex)}
-          />
-        )}
 
         {!state.finished && boardTurn && (
           <BoardTurnOverlay
@@ -1434,7 +1424,7 @@ export default function GameMain({ onExit }) {
             turnIndex={state.turnIndex}
             cards={initialDealCards}
             onPhaseChange={setInitialDealPhase}
-            onPlayerChange={setInitialDealPlayerIndex}
+
             onReady={() => {
               setShowInitialDeal(false);
               setInitialDealPhase(null);
@@ -1725,15 +1715,19 @@ function GlobalNoticeBand({ notice, onDismiss }) {
   const isPropertyNotice = notice.kind === 'property' && notice.previewPos != null;
   const isRent = notice.kind === 'rent';
   const hostText = notice.hostText ?? notice.text;
+  const turnStartAccent = '#ff8c0a';
+  const visualAccent = isTurnStart ? turnStartAccent : accent;
   const noticeStyle = notice.color ? {
     background: isBuy
       ? 'linear-gradient(135deg,rgba(15,12,10,0.9)_0%,rgba(70,34,22,0.84)_48%,rgba(128,83,20,0.76)_100%)'
-      : `linear-gradient(135deg, rgba(15,12,10,0.92) 0%, ${accent}88 58%, rgba(255,255,255,0.18) 100%)`,
+      : isTurnStart
+        ? 'linear-gradient(135deg,rgba(7,7,8,0.98)_0%,rgba(18,18,20,0.96)_48%,rgba(255,140,10,0.82)_145%)'
+        : `linear-gradient(135deg, rgba(15,12,10,0.92) 0%, ${visualAccent}88 58%, rgba(255,255,255,0.18) 100%)`,
     boxShadow: isBuy
       ? '0 4px 0 #0F0C0A, 0 16px 36px rgba(0,0,0,0.34)'
       : isTurnStart
-        ? `0 0 0 4px ${accent}cc, 0 0 0 8px ${accent}35, 0 0 54px ${accent}b8, inset 0 0 34px ${accent}30`
-        : `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${accent}aa, 0 0 42px ${accent}8f, inset 0 0 30px ${accent}22`,
+        ? `0 5px 0 #0F0C0A, 0 0 0 3px ${turnStartAccent}d8, 0 0 0 7px rgba(255,140,10,0.24), 0 0 48px rgba(255,140,10,0.76), inset 0 0 30px rgba(255,140,10,0.18)`
+        : `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${visualAccent}aa, 0 0 42px ${visualAccent}8f, inset 0 0 30px ${visualAccent}22`,
   } : undefined;
   const visitorImg = notice.visitorCharacter ? getCharacterImg(notice.visitorCharacter) : null;
   const ownerImg = notice.ownerCharacter ? getCharacterImg(notice.ownerCharacter) : null;
@@ -1808,15 +1802,15 @@ function GlobalNoticeBand({ notice, onDismiss }) {
           </div>
         )}
         <div
-          className={cn('mx-auto grid w-full overflow-hidden border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[520px] grid-rows-[1fr_auto] rounded-[20px] border-0 bg-[#101216] p-3 shadow-none' : 'rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
+          className={cn('mx-auto grid w-full border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[520px] grid-rows-[1fr_auto] overflow-visible rounded-[20px] border-2 border-[#ff8c0a]/75 bg-[#101216] p-3 shadow-none' : 'overflow-hidden rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
           style={noticeStyle}
         >
           {isTurnStart ? (
-            <div className="relative flex min-h-0 items-center justify-center gap-3">
+            <div className="relative flex min-h-[104px] items-center justify-center gap-3 overflow-visible">
               {notice.playerCharacter ? (
                 <motion.div
-                  className="absolute left-5 h-20 w-20 shrink-0 rounded-full border-2 border-white/75 bg-white/70 shadow-[0_0_0_4px_rgba(255,255,255,0.22),0_0_24px_rgba(255,255,255,0.34)]"
-                  style={avatarStyle(notice.playerCharacter, noticePlayerImg, accent)}
+                  className="absolute -top-4 left-5 z-20 h-20 w-20 shrink-0 rounded-full border-2 border-[#ffb15c] bg-white/78 shadow-[0_0_0_4px_rgba(255,140,10,0.32),0_0_28px_rgba(255,140,10,0.62)]"
+                  style={avatarStyle(notice.playerCharacter, noticePlayerImg, visualAccent)}
                   animate={{ scale: [1, 1.08, 1] }}
                   transition={{ duration: 0.65 }}
                 />
@@ -3057,43 +3051,16 @@ function describeArrival(event, tile) {
   return `${name} 도착`;
 }
 
-function InitialDealStatusActions({ status, playerName }) {
-  if (!status?.active) return null;
-  return (
-    <div className="flex min-h-[92px] flex-col justify-center rounded-xl border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.82),rgba(255,248,220,0.66))] px-3 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]">
-      <div className="font-display text-[10px] font-black uppercase tracking-[0.24em] text-ink/50">
-        INITIAL DEAL {status.playerOrder}/{status.totalPlayers}
-      </div>
-      <div className="mt-1 font-board text-[22px] leading-tight text-ink">
-        {playerName} 권리증 분배중
-      </div>
-      <div className="mt-1 font-board text-[15px] leading-tight text-ink/62">
-        받은 뒤 푸터 자리로 내려가고 다음 플레이어가 헤더로 올라옵니다.
-      </div>
-    </div>
-  );
-}
-
-function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseChange, onPlayerChange }) {
+function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseChange }) {
+  const [targets, setTargets] = useState({});
   const [phase, setPhase] = useState('intro');
-  const [activeDealPlayer, setActiveDealPlayer] = useState(0);
   const [startImageReady, setStartImageReady] = useState(false);
   const [portalCharged, setPortalCharged] = useState(false);
   const introVisible = phase === 'intro';
   const dealVisible = phase === 'deal';
   const onReadyRef = useRef(onReady);
-  const dealPlayers = players.map((_, index) => index);
-  const activePlayerIndex = dealPlayers[activeDealPlayer] ?? 0;
-  const activePlayer = players[activePlayerIndex];
-  const activeBase = activePlayer
-    ? CHAR_META[activePlayer.character] ?? { name: activePlayer.character, color: '#d83b2f' }
-    : { name: `${activePlayerIndex + 1}P`, color: '#d83b2f' };
-  const activeName = activePlayer ? displayPlayerName(activePlayer, activeBase.name) : activeBase.name;
-  const activeColor = playerColor(activePlayerIndex, activeBase.color);
-  const activeCards = cards
-    .filter((card) => card.playerIndex === activePlayerIndex)
-    .sort((a, b) => (a.cardIndex ?? 0) - (b.cardIndex ?? 0));
   const cardsPerPlayer = cards.length > 0 ? Math.max(...cards.map((card) => card.cardIndex ?? 0)) + 1 : 0;
+  const footerDealCards = cards.filter((card) => card.playerIndex !== turnIndex);
 
   useEffect(() => {
     onReadyRef.current = onReady;
@@ -3105,33 +3072,59 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
 
   useEffect(() => {
     document.documentElement.classList.toggle('initial-deal-pending', introVisible);
+    document.documentElement.classList.toggle('initial-deal-live', dealVisible);
     return () => {
       document.documentElement.classList.remove('initial-deal-pending');
       document.documentElement.classList.remove('initial-deal-live');
     };
-  }, [introVisible]);
+  }, [introVisible, dealVisible]);
 
   useEffect(() => {
     if (!dealVisible) return undefined;
-    setActiveDealPlayer(0);
-    onPlayerChange?.(dealPlayers[0] ?? 0);
-    const stepMs = 2050;
-    const timers = dealPlayers.slice(1).map((playerIndex, index) => window.setTimeout(() => {
-      setActiveDealPlayer(index + 1);
-      onPlayerChange?.(playerIndex);
-    }, stepMs * (index + 1)));
-    const doneTimer = window.setTimeout(() => onReadyRef.current?.(), Math.max(1, dealPlayers.length) * stepMs + 650);
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-      window.clearTimeout(doneTimer);
-    };
-  }, [dealVisible, dealPlayers.length, onPlayerChange]);
+    const timer = window.setTimeout(() => onReadyRef.current?.(), 4200);
+    return () => window.clearTimeout(timer);
+  }, [dealVisible]);
 
   useEffect(() => {
     if (phase !== 'start' || !startImageReady) return undefined;
     setPortalCharged(false);
     return undefined;
   }, [phase, startImageReady]);
+
+  useEffect(() => {
+    const readTargets = () => {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const next = {};
+      footerDealCards.forEach((card) => {
+        const chipEl = document.querySelector(`[data-player-strip-index="${card.playerIndex}"]`);
+        if (!chipEl) return;
+        const rect = chipEl.getBoundingClientRect();
+        const cashAnchorEl = document.querySelector(`[data-player-cash-anchor="${card.playerIndex}"]`);
+        const cashRect = cashAnchorEl?.getBoundingClientRect();
+        const startX = cashRect ? cashRect.left + cashRect.width / 2 - centerX : rect.left + rect.width / 2 - centerX;
+        const startY = cashRect ? cashRect.top - 8 - centerY : rect.top + 10 - centerY;
+        next[`${card.playerIndex}-${card.cardIndex}`] = {
+          x: rect.left + rect.width / 2 - centerX,
+          y: rect.top + 10 - centerY,
+          startX,
+          startY,
+          w: 69,
+          h: 96,
+        };
+      });
+      setTargets(next);
+    };
+    readTargets();
+    window.addEventListener('resize', readTargets);
+    return () => window.removeEventListener('resize', readTargets);
+  }, [footerDealCards]);
+
+  const fallbackTargets = players.length === 2
+    ? [{ x: -220, y: -120 }, { x: 220, y: 160 }]
+    : players.length === 3
+      ? [{ x: -250, y: -130 }, { x: 250, y: -130 }, { x: 0, y: 190 }]
+      : [{ x: -260, y: -130 }, { x: 260, y: -130 }, { x: -260, y: 180 }, { x: 260, y: 180 }];
 
   const handleOverlayTap = (event) => {
     event.preventDefault();
@@ -3141,7 +3134,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
 
   return (
     <div
-      className={cn('absolute inset-0 z-[80] overflow-hidden rounded-[18px]', dealVisible ? 'pointer-events-none' : 'pointer-events-auto', phase === 'start' && 'bg-[#eef1ed]')}
+      className={cn('pointer-events-auto absolute inset-0 z-[80] overflow-hidden rounded-[18px]', phase === 'start' && 'bg-[#eef1ed]')}
       onPointerDown={(event) => { event.stopPropagation(); }}
       onClick={handleOverlayTap}
     >
@@ -3163,7 +3156,7 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
                 type="button"
                 onPointerDown={(event) => { event.stopPropagation(); }}
                 onClick={(event) => { event.preventDefault(); event.stopPropagation(); setPortalCharged(true); setPhase('intro'); }}
-                className={cn('pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border border-white/55 px-12 py-4 font-board text-[26px] font-black leading-none shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)] backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]', portalCharged ? 'initial-start-button-pulse bg-[linear-gradient(180deg,rgba(255,92,92,0.92),rgba(168,23,31,0.94))] text-white' : 'initial-start-button-loading cursor-wait bg-[linear-gradient(180deg,#ffe682_0%,#f4b72f_56%,#b86a09_100%)] text-[#4a2200]')}
+                className={cn('pointer-events-auto absolute left-1/2 top-[calc(62%+82px)] z-30 -translate-x-1/2 rounded-full border px-12 py-4 font-board text-[26px] font-black leading-none backdrop-blur-[12px] transition active:translate-y-0.5 active:scale-[0.99]', portalCharged ? 'initial-start-button-pulse border-[#ffb15c]/80 bg-[linear-gradient(180deg,#ffb15c_0%,#ff8c0a_48%,#101216_100%)] text-white shadow-[0_20px_42px_-20px_rgba(255,140,10,0.95),0_0_0_3px_rgba(255,140,10,0.28),0_0_32px_rgba(255,140,10,0.62),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(15,18,22,0.48)]' : 'initial-start-button-loading cursor-wait border-white/55 bg-[linear-gradient(180deg,#ffe682_0%,#f4b72f_56%,#b86a09_100%)] text-[#4a2200] shadow-[0_20px_42px_-20px_rgba(118,13,20,0.9),inset_0_1px_0_rgba(255,255,255,0.58),inset_0_-10px_24px_rgba(96,0,10,0.28)]')}
               >
                 시작하기
               </button>
@@ -3184,31 +3177,65 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
 
       {introVisible && (
         <div className="pointer-events-none absolute left-1/2 top-[47%] z-30 flex w-full max-w-[920px] -translate-x-1/2 -translate-y-1/2 flex-col items-center px-3">
-          <div className="mb-[5px] flex w-full max-w-[960px] items-center justify-center gap-2 rounded-[18px] border border-fuchsia-300/50 bg-[linear-gradient(135deg,rgba(5,5,5,0.9)_0%,rgba(49,10,54,0.85)_45%,rgba(219,39,119,0.45)_100%)] px-5 py-2 text-center text-white shadow-[0_12px_28px_-22px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-[16px]">
+          <div className="mb-3 flex w-full max-w-[960px] items-center justify-center gap-2 rounded-[18px] border border-emerald-200/75 bg-[linear-gradient(135deg,rgba(5,5,5,0.9)_0%,rgba(7,30,24,0.82)_45%,rgba(16,185,129,0.42)_100%)] px-5 py-2 text-center text-white shadow-[0_12px_28px_-22px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-[16px]">
             <div className="flex min-w-0 items-center justify-start gap-2">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[linear-gradient(135deg,#3b82f6_0%,#d946ef_100%)] text-white shadow-[0_2px_0_#0f0c0a]">🎙️</span>
-              <span className="font-board text-[clamp(15px,2vw,21px)] font-extrabold leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>자, 첫 출발은 권리증부터 한 명씩 나눠드릴게요 👀</span>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">🎙️</span>
+              <span className="font-board text-[clamp(15px,2vw,21px)] font-extrabold leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>자, 첫 출발은 권리증부터 나눠드릴게요 👀</span>
             </div>
           </div>
           <div
-            className="mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line bg-[linear-gradient(135deg,rgba(15,12,10,0.92)_0%,rgba(59,130,246,0.45)_30%,rgba(217,70,239,0.45)_65%,rgba(234,179,8,0.35)_100%)] p-3 text-center text-white shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46),0_0_0_2px_rgba(217,70,239,0.5),0_0_42px_rgba(59,130,246,0.4),inset_0_0_30px_rgba(234,179,8,0.15)] backdrop-blur-[3px]"
+            className="mx-auto grid w-full overflow-hidden rounded-[24px] border-[3px] border-ink-line bg-[linear-gradient(135deg,rgba(15,12,10,0.92)_0%,rgba(23,63,150,0.53)_58%,rgba(255,255,255,0.16)_100%)] p-3 text-center text-white shadow-[0_0_0_4px_rgba(23,63,150,0.80),0_0_0_8px_rgba(23,63,150,0.22),0_0_54px_rgba(23,63,150,0.58),inset_0_0_34px_rgba(23,63,150,0.20)] backdrop-blur-[1px]"
           >
             <div className="grid min-h-0 grid-cols-[minmax(150px,236px)_1fr] items-center gap-5 px-2 text-left">
-              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] border-[#d946efcc] bg-white shadow-[0_5px_0_#0F0C0A,0_0_24px_rgba(217,70,239,0.5)]">
-                <NoticeIconCard notice={{ kind: 'go_reward', icon: '📝', title: '초기 자산' }} accent="#d946ef" />
+              <div className="mx-auto h-[190px] w-[150px] scale-[0.92] overflow-hidden rounded-xl border-[3px] border-[#7aa7ffcc] bg-white shadow-[0_5px_0_#0F0C0A,0_0_22px_rgba(122,167,255,0.34)]">
+                <NoticeIconCard notice={{ kind: 'go_reward', icon: '📝', title: '초기 자산' }} accent="#173f96" />
               </div>
               <div className="min-w-0 text-center sm:text-left">
                 <div className="flex items-center justify-center gap-3 sm:justify-start">
                   <span className="text-[46px] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]">📜</span>
-                  <div className="whitespace-pre-line font-board text-[clamp(28px,4.1vw,50px)] leading-[0.98] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">권리증<br />순차 분배</div>
+                  <div className="whitespace-nowrap font-board text-[clamp(26px,3.4vw,44px)] leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]">권리증 초기 분배</div>
                 </div>
-                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">1P부터 차례대로 평소 화면에서 헤더로 올라와 권리증 {cardsPerPlayer}장을 받습니다.</div>
+                <div className="mt-2 font-board text-[clamp(17px,2.4vw,26px)] leading-tight text-white/86">각 플레이어당 {cardsPerPlayer}개의 권리증이 분배됩니다.</div>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {dealVisible && footerDealCards.map((card, dealIndex) => {
+        const targetKey = `${card.playerIndex}-${card.cardIndex}`;
+        const fallback = fallbackTargets[card.playerIndex] ?? fallbackTargets[0];
+        const target = targets[targetKey] ?? { ...fallback, w: 68, h: 96 };
+        const startX = target.startX ?? target.x;
+        const startY = target.startY ?? target.y;
+        return (
+          <div
+            key={`${card.playerIndex}-${card.cardIndex}-${card.pos}`}
+            className="initial-deal-card absolute left-1/2 top-1/2 rounded-lg"
+            style={{
+              width: '69px',
+              height: '96px',
+              '--deal-delay': `${(card.dealOrder ?? dealIndex) * 0.18}s`,
+              '--deal-start-x': `${startX}px`,
+              '--deal-start-y': `${startY}px`,
+              '--deal-x': `${target.x}px`,
+              '--deal-y': `${target.y}px`,
+              '--deal-stack-x': '0px',
+              '--deal-stack-y': '0px',
+              '--deal-rot': `${(card.cardIndex - 1.5) * 8}deg`,
+              '--deed-color': '#17120c',
+              zIndex: 30 + dealIndex,
+            }}
+          >
+            <div
+              className="h-[288px] w-[208px] overflow-visible rounded-lg shadow-[0_4px_0_rgba(15,12,10,0.72),0_16px_22px_-15px_rgba(0,0,0,0.72)]"
+              style={{ transform: 'scale(0.333)', transformOrigin: 'top left' }}
+            >
+              <PropertyDeedMini pos={card.pos} solidSurface />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

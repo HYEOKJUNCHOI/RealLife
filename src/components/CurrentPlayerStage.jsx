@@ -213,8 +213,10 @@ export default function CurrentPlayerStage({
   onToggleBgm,
   onStationResign,
   hideDicePanel = false,
-  statusActions = null,
   initialDealStatus = null,
+  profileView = false,
+  onBackToCurrent,
+  onTradeRequest,
 }) {
   if (!player) return null;
   const baseMeta = CHAR_META[player.character] ?? { name: player.character, color: '#666', slot: null };
@@ -279,6 +281,9 @@ export default function CurrentPlayerStage({
   const closeLoanModal = useGameStore((s) => s.closeLoanModal);
   const saveGame = useGameStore((s) => s.save);
   const restartSameGame = useGameStore((s) => s.restartSameGame);
+  const setHeaderCapsuleOption = useGameStore((s) => s.setHeaderCapsuleOption);
+  const headerCapsules = state.options?.headerCapsules ?? {};
+  const isHeaderCapsuleOn = (key) => headerCapsules[key] !== false;
 
   const handleQuitGame = () => {
     saveGame?.();
@@ -368,7 +373,25 @@ export default function CurrentPlayerStage({
     >
 
       {settingsOpen && (
-        <div className="absolute right-3 top-14 z-[96] w-[190px] rounded-md border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_4px_0_#0F0C0A,0_18px_34px_-18px_rgba(0,0,0,0.75)]">
+        <>
+        <div
+          className="absolute inset-0 z-[94] bg-ink/18 backdrop-blur-[2px]"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setSettingsOpen(false);
+          }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute right-3 top-14 z-[96] w-[230px] rounded-md border-2 border-ink-line bg-parchment-50 p-2 shadow-[0_4px_0_#0F0C0A,0_18px_34px_-18px_rgba(0,0,0,0.75)]"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="mb-2 border-b border-white/45 pb-1 font-display text-[10px] font-extrabold uppercase tracking-[0.22em] text-ink/55">
             게임 설정
           </div>
@@ -394,28 +417,24 @@ export default function CurrentPlayerStage({
           >
             이동취소
           </button>
-          <button
-            type="button"
-            onClick={onToggleBgm}
-            className="flex w-full items-center justify-between rounded-md border-2 border-ink-line bg-white px-3 py-2 font-board text-base text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none"
-            aria-pressed={bgmEnabled}
-          >
-            <span>BGM</span>
-            <span
-              className={cn(
-                'relative h-6 w-12 rounded-full border-2 border-ink-line transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]',
-                bgmEnabled ? 'bg-emerald-400' : 'bg-slate-200',
-              )}
-            >
-              <span
-                className={cn(
-                  'absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-2 border-ink-line bg-white shadow-[0_2px_0_rgba(15,12,10,0.45)] transition-transform',
-                  bgmEnabled ? 'translate-x-[23px]' : 'translate-x-[3px]',
-                )}
-              />
-            </span>
-          </button>
+          <SettingsToggle label="BGM" checked={bgmEnabled} onClick={onToggleBgm} />
+          <div className="my-2 border-t border-ink-line/15 pt-2">
+            <div className="mb-1 font-display text-[9px] font-extrabold uppercase tracking-[0.18em] text-ink/45">
+              헤더 캡슐 표시
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <SettingsToggle label="0년" checked={isHeaderCapsuleOn('year')} onClick={() => setHeaderCapsuleOption?.('year', !isHeaderCapsuleOn('year'))} compact />
+              <SettingsToggle label="물가" checked={isHeaderCapsuleOn('inflation')} onClick={() => setHeaderCapsuleOption?.('inflation', !isHeaderCapsuleOn('inflation'))} compact />
+              <SettingsToggle label="금리" checked={isHeaderCapsuleOn('loanRate')} onClick={() => setHeaderCapsuleOption?.('loanRate', !isHeaderCapsuleOn('loanRate'))} compact />
+              <SettingsToggle label="상태" checked={isHeaderCapsuleOn('status')} onClick={() => setHeaderCapsuleOption?.('status', !isHeaderCapsuleOn('status'))} compact />
+              <SettingsToggle label="생활" checked={isHeaderCapsuleOn('living')} onClick={() => setHeaderCapsuleOption?.('living', !isHeaderCapsuleOn('living'))} compact />
+              <SettingsToggle label="이자" checked={isHeaderCapsuleOn('interest')} onClick={() => setHeaderCapsuleOption?.('interest', !isHeaderCapsuleOn('interest'))} compact />
+              <SettingsToggle label="총자산" checked={isHeaderCapsuleOn('finance')} onClick={() => setHeaderCapsuleOption?.('finance', !isHeaderCapsuleOn('finance'))} compact />
+              <SettingsToggle label="수익" checked={isHeaderCapsuleOn('income')} onClick={() => setHeaderCapsuleOption?.('income', !isHeaderCapsuleOn('income'))} compact />
+            </div>
+          </div>
         </div>
+        </>
       )}
 
       {/* 좌측: 플레이어 정보와 보유 부동산 */}
@@ -472,7 +491,7 @@ export default function CurrentPlayerStage({
 
         <div className="grid min-w-0 grid-cols-[auto_1fr] gap-x-1.5 gap-y-2 self-center">
           <div className="relative flex min-w-0 items-center gap-1.5 overflow-visible">
-            <CashDeltaFloat value={player.cash ?? 0} className="left-[118px] top-[31px]" />
+            {!profileView && <CashDeltaFloat value={player.cash ?? 0} className="left-[118px] top-[31px]" />}
             <span
               className="inline-flex h-[29px] shrink-0 items-center rounded-lg border border-white/55 px-2 font-display text-[12px] font-extrabold uppercase tracking-[0.12em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_8px_16px_-13px_rgba(0,0,0,0.8)]"
               style={{ background: `linear-gradient(180deg, ${meta.color}ee 0%, ${meta.color}ba 100%)` }}
@@ -493,35 +512,44 @@ export default function CurrentPlayerStage({
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-              <HeaderChip icon={'\uD83D\uDCC5'} value={`${year ?? 0}\uB144`} tone="paper" size="mini" />
-              <HeaderChip icon={'\uD83D\uDCC8'} label={'\uBB3C\uAC00'} value={'+' + INFLATION_RATE} unit="%" tone="blue" size="mini" />
-              <HeaderChip
-                icon={'\uD83C\uDFE6'}
-                label={'\uAE08\uB9AC'}
-                value={Math.round((loanRate ?? 0.02) * 100)}
-                unit="%"
-                tone="red"
-                size="mini"
-              />
-              <StatusBoard
-                activePassives={activePassives}
-                player={player}
-              />
+              {isHeaderCapsuleOn('year') && <HeaderChip icon={'\uD83D\uDCC5'} value={`${year ?? 0}\uB144`} tone="paper" size="mini" />}
+              {isHeaderCapsuleOn('inflation') && <HeaderChip icon={'\uD83D\uDCC8'} label={'\uBB3C\uAC00'} value={'+' + INFLATION_RATE} unit="%" tone="blue" size="mini" />}
+              {isHeaderCapsuleOn('loanRate') && (
+                <HeaderChip
+                  icon={'\uD83C\uDFE6'}
+                  label={'\uAE08\uB9AC'}
+                  value={Math.round((loanRate ?? 0.02) * 100)}
+                  unit="%"
+                  tone="red"
+                  size="mini"
+                />
+              )}
+              {isHeaderCapsuleOn('status') && <StatusBoard player={player} />}
             </div>
 
-          <div className="col-span-2 -mt-1 flex min-w-0 items-center gap-1.5 overflow-visible">
-            <FinanceChip totalWorth={totalWorth} cash={player.cash ?? 0} debt={totalDebt} onLoanClick={() => openLoanModal?.(index)} />
-            <HeaderChip icon={'\uD83D\uDED2'} label={'\uC0DD\uD65C'} value={'-' + livingCost} unit={'\uB9CC'} tone="red" size="normal" />
-            <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-' + fmt(loanInterest)} unit={'\uB9CC'} tone="red" size="normal" />
-            {aptIncome > 0 && <RentIncomeChip value={aptIncome} />}
-            {stationTiles.length > 0 && <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * stationTiles.length} sub={`${stationTiles.length}역 · 누적 ${fmt(stationFund)}만`} onClick={onStationResign} />}
-            {institutionIncome > 0 && <IncomeBadge icon="⚡" label="기관 월급" value={institutionIncome} sub={`${institutionTiles.length}곳 보유`} />}
+          <div className="col-start-2 -mt-1 flex min-w-0 items-center gap-1.5 overflow-visible">
+            {isHeaderCapsuleOn('living') && <HeaderChip icon={'\uD83D\uDED2'} label={'\uC0DD\uD65C'} value={'-' + livingCost} unit={'\uB9CC'} tone="red" size="normal" />}
+            {isHeaderCapsuleOn('interest') && <HeaderChip icon={'\uD83C\uDFE6'} label={'\uC774\uC790'} value={'-' + fmt(loanInterest)} unit={'\uB9CC'} tone="red" size="normal" />}
+            {isHeaderCapsuleOn('finance') && (
+              <FinanceChip
+                totalWorth={totalWorth}
+                cash={player.cash ?? 0}
+                debt={totalDebt}
+                onLoanClick={() => openLoanModal?.(index)}
+                hideLoan={profileView}
+                cashLabel={profileView ? '예금액' : '내 예금액'}
+                disableCashAnimation={profileView}
+              />
+            )}
+            {isHeaderCapsuleOn('income') && aptIncome > 0 && <RentIncomeChip value={aptIncome} />}
+            {isHeaderCapsuleOn('income') && stationTiles.length > 0 && <IncomeBadge icon="🚉" label="역장 적립" value={stationRate * stationTiles.length} sub={`${stationTiles.length}역 · 누적 ${fmt(stationFund)}만`} onClick={onStationResign} />}
+            {isHeaderCapsuleOn('income') && institutionIncome > 0 && <IncomeBadge icon="⚡" label="기관 월급" value={institutionIncome} sub={`${institutionTiles.length}곳 보유`} />}
           </div>
         </div>
 
       </div>
       {/* 보유 부동산 */}
-      <div className="relative mx-2.5 mb-[6px] mt-[14px] flex flex-1 min-h-0 flex-col overflow-visible rounded-xl border border-slate-300/68 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.18)]">
+      <div className="relative z-[20] mx-2.5 mb-[6px] mt-[14px] flex flex-1 min-h-0 flex-col overflow-visible rounded-xl border border-orange-300/78 bg-white/74 px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(251,146,60,0.36),0_0_18px_rgba(249,115,22,0.22),0_8px_18px_-16px_rgba(124,45,18,0.55)]">
         <div className="mb-[5px] flex items-center justify-between">
           <span className="font-display text-[10px] font-bold uppercase tracking-[0.22em] text-ink">{initialDealActive ? '권리증 분배' : '\uBCF4\uC720 \uBD80\uB3D9\uC0B0'}
             <span className="ml-1.5 font-semibold text-ink/40 tabular-nums">
@@ -531,27 +559,13 @@ export default function CurrentPlayerStage({
 
         </div>
 
-        {initialDealActive && displayedOwned.slice(0, 4).map((pos, idx) => (
-          <div
-            key={`initial-fly-${index}-${pos}-${idx}`}
-            className="initial-deal-flying-card pointer-events-none absolute z-[55] w-[18%] max-w-[92px] rounded-md shadow-[0_6px_0_#17120c,0_18px_24px_-18px_rgba(0,0,0,0.78)]"
-            style={{
-              '--deal-slot-delay': `${0.38 + idx * 0.2}s`,
-              '--deal-target-x': `${12.5 + (idx % 4) * 25}%`,
-              '--deal-target-y': '54%',
-              '--deal-fly-rot': `${idx % 2 === 0 ? -5 : 5}deg`,
-            }}
-          >
-            <PropertyDeedMini pos={pos} />
-          </div>
-        ))}
 
         {/* 보유 부동산 캡슐 안에서 8개 섹션을 먼저 나누고, 각 섹션 안에 카드만 다시 그린다. */}
-        <div className={cn('grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5', player.inJail && 'grayscale saturate-0 brightness-[0.72]', initialDealActive && 'initial-deal-owned-grid')}>
+        <div className={cn('relative z-[25] grid flex-1 min-h-0 grid-cols-4 grid-rows-2 gap-x-1.5 gap-y-2 pb-1 pt-0.5', player.inJail && 'grayscale saturate-0 brightness-[0.72]', initialDealActive && 'initial-deal-owned-grid')}>
           {Array.from({ length: OWNED_SLOTS }).map((_, idx) => {
             const pos = displayedOwned[idx];
             const isPending = idx === pendingPreviewSlot;
-            const sectionClassName = "relative min-h-0 overflow-visible rounded-lg border border-slate-300/42 bg-white/10 p-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.30),0_0_10px_rgba(100,116,139,0.10)]";
+            const sectionClassName = "relative z-[30] min-h-0 overflow-visible rounded-lg border border-orange-300/58 bg-orange-50/18 p-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.42),0_0_10px_rgba(249,115,22,0.18)]";
             return (
               <div key={pos ?? `empty-${idx}`} data-deed-slot={idx} data-deed-pos={pos ?? undefined} className={sectionClassName}>
                 {pos == null ? (
@@ -574,7 +588,7 @@ export default function CurrentPlayerStage({
                         (initialDealActive || (state._lastDeedAdded?.playerId === index && state._lastDeedAdded?.pos === pos)) && 'deed-slot-card-insert',
                       )}
                     >
-                      <PropertyDeedMini pos={pos} />
+                      <PropertyDeedMini pos={pos} solidSurface={initialDealActive} />
                     </span>
                   </button>
                 )}
@@ -642,12 +656,17 @@ export default function CurrentPlayerStage({
           <div className="mt-2 w-full shrink-0 rounded-2xl border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.34),rgba(255,255,255,0.16),rgba(148,163,184,0.10))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.28),0_0_18px_rgba(100,116,139,0.24),0_10px_24px_-20px_rgba(36,57,74,0.7)] backdrop-blur-[10px]">
             <button
               type="button"
-              onClick={onOpenBoard}
-              disabled={!onOpenBoard}
-              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-xl border border-white/75 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(241,245,249,0.52),rgba(255,255,255,0.24))] px-3 font-board text-[18px] leading-none text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.18),0_10px_22px_-18px_rgba(36,57,74,0.72)] backdrop-blur-[8px] transition active:translate-y-1 active:shadow-none disabled:opacity-45"
+              onClick={profileView ? onBackToCurrent : onOpenBoard}
+              disabled={profileView ? !onBackToCurrent : !onOpenBoard}
+              className={cn(
+                'flex h-[38px] w-full items-center justify-center gap-2 rounded-xl border px-3 font-board text-[18px] leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_1px_rgba(148,163,184,0.22),0_0_12px_rgba(100,116,139,0.18),0_10px_22px_-18px_rgba(36,57,74,0.72)] backdrop-blur-[8px] transition active:translate-y-1 active:shadow-none disabled:opacity-45',
+                profileView
+                  ? 'animate-pulse border-red-950 bg-[linear-gradient(180deg,#ff7474_0%,#e12d39_58%,#9f1725_100%)] text-white shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_3px_0_#7f1d1d,0_0_18px_rgba(220,38,38,0.58)]'
+                  : 'border-white/75 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(241,245,249,0.52),rgba(255,255,255,0.24))] text-ink',
+              )}
             >
-              <span>🗺️</span>
-              <span>보드판</span>
+              <span>{profileView ? '↩' : '🗺️'}</span>
+              <span>{profileView ? '돌아가기' : '보드판'}</span>
             </button>
           </div>
 
@@ -657,12 +676,11 @@ export default function CurrentPlayerStage({
               content={settlementContent}
               color={meta.color}
               playerName={name}
+              disableActions={profileView}
             />
 
-            {hideDicePanel ? (
-              <div className="real-dice-panel mt-2 mb-0 translate-y-0 w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]">
-                {statusActions}
-              </div>
+            {profileView ? (
+              <ProfileTradePanel color={meta.color} playerName={meta.name} onTradeRequest={onTradeRequest} />
             ) : (
               <RealDiceTurnPanel
                 color={meta.color}
@@ -730,6 +748,26 @@ function DiceFace({ value = 1, rolling = false, ready = false }) {
         />
       )}
     </motion.div>
+  );
+}
+
+function ProfileTradePanel({ color = '#6fb3ff', playerName, onTradeRequest }) {
+  return (
+    <div className="real-dice-panel mt-2 mb-0 translate-y-0 w-full shrink-0 rounded-xl border border-slate-300/80 bg-white/74 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_2px_rgba(148,163,184,0.38),0_0_22px_rgba(100,116,139,0.34),0_14px_28px_-22px_rgba(36,57,74,0.72)]" style={{ '--player-color': color }}>
+      <div className="mb-2 rounded-xl border border-white/70 bg-white/82 px-3 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_0_0_1px_rgba(148,163,184,0.18)]">
+        <div className="font-display text-[9px] font-black uppercase tracking-[0.22em] text-ink/45">상대 프로필</div>
+        <div className="mt-1 font-board text-[15px] font-extrabold leading-snug text-ink">{playerName}님과 거래를 준비합니다</div>
+      </div>
+      <button
+        type="button"
+        onClick={onTradeRequest}
+        disabled={!onTradeRequest}
+        className="h-[118px] w-full rounded-2xl border-2 border-ink-line px-3 font-board text-[25px] font-extrabold leading-none text-white shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_4px_0_#0F0C0A,0_16px_28px_-18px_rgba(0,0,0,0.82)] transition active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45"
+        style={{ background: `linear-gradient(180deg, ${color} 0%, #9f1725 100%)` }}
+      >
+        🤝 거래제의
+      </button>
+    </div>
   );
 }
 
@@ -935,11 +973,11 @@ function HostSpeechBubble({ content }) {
   );
 }
 
-function SettlementBalanceCounter({ value = 0 }) {
-  return <AnimatedCash value={value} duration={850} settleDelay={0} rollingEffect={false} />;
+function SettlementBalanceCounter({ value = 0, disabled = false }) {
+  return <AnimatedCash value={value} duration={850} settleDelay={0} rollingEffect={false} disabled={disabled} />;
 }
 
-function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' }) {
+function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER', disableActions = false }) {
   if (!content) return null;
   const rows = content.rows ?? [];
   const total = content.balance ?? content.total ?? 0;
@@ -949,12 +987,17 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
   const [visibleSteps, setVisibleSteps] = useState(0);
 
   useEffect(() => {
+    if (disableActions) {
+      setVisibleSteps(totalSteps);
+      return undefined;
+    }
+
     setVisibleSteps(0);
     const timers = Array.from({ length: totalSteps }, (_, index) => (
       window.setTimeout(() => setVisibleSteps(index + 1), 130 + index * 190)
     ));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [totalSteps, contentKey]);
+  }, [totalSteps, contentKey, disableActions]);
 
   const visibleRows = rows.slice(0, Math.min(visibleSteps, rows.length));
   const balanceTarget = rows.length > 0
@@ -977,7 +1020,7 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
         {rows.length > 0 ? visibleRows.map((row, idx) => (
           <motion.div
             key={`${row.label}-${idx}`}
-            initial={{ opacity: 0, y: 4 }}
+            initial={disableActions ? false : { opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-lg border border-white/45 bg-white/42 px-2 py-1.5"
           >
@@ -993,7 +1036,7 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
       </div>
       {showEvent && (
         <motion.div
-          initial={{ opacity: 0, y: 4 }}
+          initial={disableActions ? false : { opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-2 rounded-lg border border-monopoly-deep/35 bg-red-50 px-2 py-1 font-board text-[13px] leading-none text-monopoly-deep"
         >
@@ -1001,10 +1044,10 @@ function SettlementBubble({ content, color = '#6fb3ff', playerName = 'PLAYER' })
         </motion.div>
       )}
       <div className="mt-2 border-t-2 border-dashed border-ink-line/28 pt-1.5">
-        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-2 font-board text-[17px] leading-none">
+        <motion.div initial={disableActions ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-2 font-board text-[17px] leading-none">
           <span>⤷ 잔고</span>
           <span className={cn('tabular-nums', balanceTarget < 0 ? 'text-monopoly-deep' : balanceTarget > 0 ? 'text-emerald-700' : 'text-[#182a35]')}>
-            <SettlementBalanceCounter value={balanceTarget} />만원
+            <SettlementBalanceCounter value={balanceTarget} disabled={disableActions} />만원
           </span>
         </motion.div>
       </div>
@@ -1045,25 +1088,22 @@ function JailDeedSlotOverlay({ turns = 0 }) {
 // =====================================================
 // 상태 보드
 // =====================================================
-function StatusBoard({ activePassives, player }) {
+function StatusBoard({ player }) {
   return (
     <div className="flex min-w-0 items-center gap-1 overflow-visible">
-      <span className="inline-flex h-[32px] shrink-0 items-center rounded-[9px] border-2 border-emerald-700 bg-emerald-50/80 px-1.5 font-display text-[9px] font-bold leading-none text-emerald-950 shadow-[inset_0_2px_0_rgba(255,255,255,0.62),0_2px_0_#0F0C0A]">
-        <span className="mr-1 whitespace-nowrap text-[8px] font-extrabold text-emerald-950/70">패시브</span>
-        {PASSIVE_SLOTS.map((p, i) => (
-          <PassiveChip key={p.id} passive={p} active={activePassives.has(p.id)} compact separated={i > 0} />
-        ))}
-      </span>
       {player.creditDebt > 0 && <MiniBadge text={'\uC2E0\uC6A9 -10'} tone="amber" />}
       <StatusBadges player={player} />
     </div>
   );
 }
 
-function FinanceChip({ totalWorth, cash, debt = 0, onLoanClick }) {
+function FinanceChip({ totalWorth, cash, debt = 0, onLoanClick, hideLoan = false, cashLabel = '내 예금액', disableCashAnimation = false }) {
   return (
     <span
-      className="grid h-[34px] min-w-[316px] shrink-0 grid-cols-3 items-stretch overflow-hidden rounded-[9px] border-2 border-[#8c5b15] bg-[linear-gradient(180deg,#fff8dc_0%,#ffd875_48%,#db9b24_100%)] px-1.5 py-1 font-display text-[#4d330c]"
+      className={cn(
+        'grid h-[34px] shrink-0 items-stretch overflow-hidden rounded-[9px] border-2 border-[#8c5b15] bg-[linear-gradient(180deg,#fff8dc_0%,#ffd875_48%,#db9b24_100%)] px-1.5 py-1 font-display text-[#4d330c]',
+        hideLoan ? 'min-w-[218px] grid-cols-2' : 'min-w-[316px] grid-cols-3',
+      )}
       style={{ boxShadow: TOY_BUTTON_SHADOW }}
     >
       <span className="flex min-w-0 items-center justify-center gap-1 border-r border-[#8c5b15]/35 pr-1.5 leading-none">
@@ -1074,25 +1114,27 @@ function FinanceChip({ totalWorth, cash, debt = 0, onLoanClick }) {
         </span>
       </span>
       <span className="flex min-w-0 items-center justify-center gap-1 border-r border-[#8c5b15]/35 px-1.5 leading-none text-[#075d2b]">
-        <span className="whitespace-nowrap text-[12px] font-extrabold opacity-80">내 예금액</span>
-        <AnimatedCash value={cash} className="font-display text-[17px] font-extrabold leading-none" />
+        <span className="whitespace-nowrap text-[12px] font-extrabold opacity-80">{cashLabel}</span>
+        <AnimatedCash value={cash} className="font-display text-[17px] font-extrabold leading-none" disabled={disableCashAnimation} />
         <small className="ml-[-2px] text-[8px] font-bold opacity-75">만</small>
       </span>
-      <button
-        type="button"
-        onPointerDown={(event) => {
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.stopPropagation();
-          onLoanClick?.();
-        }}
-        className="relative z-50 flex min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md bg-white/14 px-1.5 text-[#8d1d1d] transition hover:bg-white/45 hover:brightness-110 active:translate-y-0.5"
-        title="대출 상담소 열기"
-      >
-        <span className="font-board text-[14px] font-black leading-none">대출하기</span>
-        {debt > 0 && <span className="rounded-full bg-[#8d1d1d]/10 px-1.5 font-display text-[10px] font-extrabold tabular-nums">{fmt(debt)}만</span>}
-      </button>
+      {!hideLoan && (
+        <button
+          type="button"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onLoanClick?.();
+          }}
+          className="relative z-50 flex min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-md bg-white/14 px-1.5 text-[#8d1d1d] transition hover:bg-white/45 hover:brightness-110 active:translate-y-0.5"
+          title="대출 상담소 열기"
+        >
+          <span className="font-board text-[14px] font-black leading-none">대출하기</span>
+          {debt > 0 && <span className="rounded-full bg-[#8d1d1d]/10 px-1.5 font-display text-[10px] font-extrabold tabular-nums">{fmt(debt)}만</span>}
+        </button>
+      )}
     </span>
   );
 }
@@ -1119,6 +1161,37 @@ function IncomeBadge({ icon, label, value, sub, onClick }) {
     return <button type="button" onClick={onClick} className={cn(className, 'active:translate-y-0.5 active:shadow-none')} title={`${sub ?? `${label} +${fmt(value)}만`} · 퇴직신청`}>{content}</button>;
   }
   return <span className={className} title={sub ?? `${label} +${fmt(value)}만`}>{content}</span>;
+}
+
+function SettingsToggle({ label, checked, onClick, compact = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center justify-between rounded-md border-2 border-ink-line bg-white font-board text-ink shadow-[0_8px_18px_-16px_rgba(36,57,74,0.68)] transition active:translate-y-1 active:shadow-none',
+        compact ? 'px-2 py-1.5 text-[13px]' : 'w-full px-3 py-2 text-base',
+      )}
+      aria-pressed={checked}
+    >
+      <span>{label}</span>
+      <span
+        className={cn(
+          'relative rounded-full border-2 border-ink-line transition-colors shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]',
+          compact ? 'h-5 w-9' : 'h-6 w-12',
+          checked ? 'bg-emerald-400' : 'bg-slate-200',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-1/2 rounded-full border-2 border-ink-line bg-white shadow-[0_2px_0_rgba(15,12,10,0.45)] transition-transform',
+            compact ? 'h-3.5 w-3.5 -translate-y-1/2' : 'h-4 w-4 -translate-y-1/2',
+            checked ? (compact ? 'translate-x-[17px]' : 'translate-x-[23px]') : 'translate-x-[3px]',
+          )}
+        />
+      </span>
+    </button>
+  );
 }
 
 function HeaderChip({ label, value, unit, tone = 'paper', icon, size = 'normal', subValue = null }) {

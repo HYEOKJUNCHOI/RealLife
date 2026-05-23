@@ -95,7 +95,7 @@ function propertyStats(state, playerId) {
   return { deeds, houses, apts };
 }
 
-export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finished, winnerIndex, readyToEnd = false }) {
+export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finished, winnerIndex, readyToEnd = false, locked = false }) {
   const others = state.players
     .map((p, i) => ({ p, i }))
     .filter(({ i }) => i !== state.turnIndex);
@@ -104,21 +104,36 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
     <footer
       className="relative z-30 mx-2.5 -mt-1 flex min-h-[66px] items-stretch gap-2.5 overflow-visible rounded-2xl border border-slate-300/68 bg-white/14 px-2 pb-1.5 pt-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_0_0_1px_rgba(100,116,139,0.30),0_0_18px_rgba(71,85,105,0.22)]"
       data-component="OtherPlayersStrip"
+      aria-disabled={locked}
     >
+      {locked && (
+        <div
+          className="absolute inset-0 z-[90] rounded-2xl bg-ink/22 backdrop-blur-[2px]"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          aria-hidden="true"
+        />
+      )}
       <div className="flex flex-1 items-stretch gap-2.5 overflow-visible no-scrollbar">
         {others.map(({ p, i }) => (
-          <PlayerChip key={i} player={p} index={i} state={state} onClick={() => onViewPlayer?.(i)} />
+          <PlayerChip key={i} player={p} index={i} state={state} onClick={() => !locked && onViewPlayer?.(i)} locked={locked} />
         ))}
       </div>
 
       <button
         type="button"
         onClick={onStep}
-        disabled={finished}
+        disabled={finished || locked}
         className={cn(
           'group relative shrink-0 inline-flex w-[128px] items-center justify-center gap-1.5 rounded-lg border border-white/70 px-2 py-1.5 transition-transform duration-100 ease-out shadow-[0_10px_20px_-16px_rgba(36,57,74,0.8)]',
           'active:translate-y-[1px] active:shadow-none',
-          finished
+          finished || locked
             ? 'cursor-not-allowed bg-parchment-200 text-ink/40 shadow-none'
             : readyToEnd
               ? 'bg-monopoly-red text-white shadow-none hover:bg-monopoly-deep turn-end-ready-glow'
@@ -127,7 +142,7 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
       >
         <span className="font-display text-[18px] leading-none">↻</span>
         <span className="font-display text-[12px] font-extrabold uppercase tracking-wider">
-          {finished ? `승자 ${winnerIndex + 1}p` : '턴종료'}
+          {finished ? `승자 ${winnerIndex + 1}p` : locked ? '확인중' : '턴종료'}
         </span>
       </button>
 
@@ -135,7 +150,7 @@ export default function OtherPlayersStrip({ state, onStep, onViewPlayer, finishe
   );
 }
 
-function PlayerChip({ player: p, index: i, state, onClick }) {
+function PlayerChip({ player: p, index: i, state, onClick, locked = false }) {
   const baseMeta = CHAR_META[p.character] ?? { name: p.character, color: '#666', slot: null };
   const meta = { ...baseMeta, name: displayPlayerName(p, baseMeta.name) };
   const frameColor = PLAYER_SIGNATURE_COLORS[i] ?? meta.color;
@@ -149,9 +164,11 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
     <button
       type="button"
       onClick={onClick}
+      disabled={locked}
       data-player-strip-index={i}
       className={cn(
         'relative flex h-full shrink-0 items-center gap-1.5 overflow-visible rounded-lg border border-white/60 bg-white/92 py-1 pl-1 pr-1.5 text-left transition active:translate-y-[1px] active:shadow-none',
+        locked && 'cursor-not-allowed',
         (p.bankrupt || isCashBankrupt) && 'opacity-55 grayscale saturate-50',
       )}
       style={{
@@ -170,6 +187,7 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
       {/* 캐릭터 — 동그랗게 얼굴 잘 보이게 (캐릭터별 모자 높이 따라 position 분기) */}
       <div className="ml-0 shrink-0">
         <div
+          data-player-strip-avatar-index={i}
           className="h-11 w-11 rounded-full border-2 shadow-[0_0_0_2px_rgba(255,255,255,0.18),0_0_8px_rgba(255,213,79,0.24)]"
           style={{
             backgroundImage: characterImg ? `url(${characterImg})` : undefined,
@@ -224,7 +242,10 @@ function PlayerChip({ player: p, index: i, state, onClick }) {
       </div>
 
       {/* 우측: 현금 */}
-      <div className="ml-0.5 mt-auto inline-flex shrink-0 items-baseline gap-0.5 self-end rounded-md border-2 border-ink-line bg-white px-2 py-1 font-display tabular-nums shadow-[0_2px_0_0_#0F0C0A]">
+      <div
+        data-player-cash-anchor={i}
+        className="ml-0.5 mt-auto inline-flex shrink-0 items-baseline gap-0.5 self-end rounded-md border-2 border-ink-line bg-white px-2 py-1 font-display tabular-nums shadow-[0_2px_0_0_#0F0C0A]"
+      >
         <span className="text-[10px] font-bold text-emerald-900/60">₩</span>
         <span className="text-[14px] font-extrabold leading-none text-ink">{fmt(p.cash)}</span>
         <span className="text-[10px] font-bold text-ink/55">만</span>
