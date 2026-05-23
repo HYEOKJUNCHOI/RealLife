@@ -758,19 +758,6 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
     0 0 16px rgba(70,207,255,0.26);
 }
 
-.character-name-plate-target {
-  border-color: #f97316 !important;
-  background:
-    linear-gradient(135deg, rgba(255,247,237,0.92), rgba(255,190,110,0.76) 52%, rgba(194,91,20,0.44)),
-    repeating-linear-gradient(90deg, rgba(124,45,18,0.26) 0 1px, transparent 1px 10px),
-    repeating-linear-gradient(0deg, rgba(124,45,18,0.22) 0 1px, transparent 1px 10px) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.82),
-    inset 0 -8px 14px rgba(124,45,18,0.14),
-    0 0 0 2px rgba(249,115,22,0.46),
-    0 0 14px rgba(249,115,22,0.52) !important;
-}
-
 @keyframes character-card-selected-pulse {
   0% { transform: scale(1); }
   45% { transform: scale(1.14); }
@@ -2700,12 +2687,6 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 .setup-screen .character-player-badge {
   position: absolute !important;
   z-index: 60 !important;
-  isolation: isolate;
-}
-
-.setup-screen .character-control-badge {
-  position: absolute !important;
-  z-index: 90 !important;
   isolation: isolate;
 }
 
