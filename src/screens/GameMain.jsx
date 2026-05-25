@@ -2560,6 +2560,33 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
   const rawCameraY = cameraActive ? (6 - cameraRow) * 5.1 : 0;
   const cameraX = Math.max(-22, Math.min(22, rawCameraX));
   const cameraY = Math.max(-22, Math.min(22, rawCameraY));
+  const boardOwnerRails = tiles
+    .map((tile) => {
+      const ownerId = state.tileState?.[tile.pos]?.owner;
+      const owner = typeof ownerId === 'number' ? state.players?.[ownerId] : null;
+      if (!owner) return null;
+      const grid = boardGridStyle(tile.pos);
+      const side = tile.pos <= 10 ? 'bottom' : tile.pos <= 20 ? 'left' : tile.pos <= 30 ? 'top' : 'right';
+      return {
+        pos: tile.pos,
+        grid,
+        side,
+        color: playerColor(ownerId, CHAR_META[owner.character]?.color ?? '#d83b2f'),
+        title: `${owner.name || `${ownerId + 1}P`} 소유`,
+      };
+    })
+    .filter(Boolean);
+  const centerBoardContent = showCardPanel ? (
+    <BoardCardRevealPanel card={cardResult} onReveal={onRevealCard} />
+  ) : isTeleportSelect ? (
+    <BoardTeleportSelectPanel request={teleportRequest} player={player} playerColor={activePlayerColor} />
+  ) : replay.phase === 'arrived' ? (
+    <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} activeColor={activePlayerColor} />
+  ) : replay.phase === 'rolling' || replay.phase === 'moving' ? (
+    <div className={cn('board-turn-manual-result scale-75', replay.phase === 'rolling' && 'is-rolling')}>
+      {rollSum ?? replay.manualSteps ?? '?'}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -2574,16 +2601,13 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
       <div className="board-turn-shell relative grid h-full w-full grid-rows-[1fr] overflow-hidden rounded-[18px] border-2 border-[#17120c] bg-[#efe1bb] shadow-[0_5px_0_#17120c,0_20px_40px_-26px_rgba(0,0,0,0.82)]">
         <div className="relative min-h-0 overflow-hidden p-3 md:p-4">
           <div
-            className="board-turn-grid mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 rounded-[16px] border-2 border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.13),0_10px_28px_rgba(0,0,0,0.25)] will-change-transform"
+            className="board-turn-grid relative mx-auto grid h-full max-h-full aspect-square grid-cols-11 grid-rows-11 gap-0.5 overflow-visible rounded-[16px] border-2 border-[#17120c] bg-[#4e8b62] p-1.5 shadow-[inset_0_0_0_4px_rgba(255,255,255,0.13),0_10px_28px_rgba(0,0,0,0.25)] will-change-transform"
             style={{ transform: `translate(${cameraX}%, ${cameraY}%) scale(${cameraZoom})`, transition: replay.phase === 'moving' ? 'transform 190ms cubic-bezier(.2,.8,.2,1)' : 'transform 360ms ease-out' }}
           >
             {tiles.map((tile) => {
               const grid = boardGridStyle(tile.pos);
               const isActive = tile.pos === pos;
               const isEnd = replay.endPos === tile.pos && replay.phase === 'arrived';
-              const ownerId = state.tileState?.[tile.pos]?.owner;
-              const owner = typeof ownerId === 'number' ? state.players?.[ownerId] : null;
-              const ownerColor = owner ? playerColor(ownerId, CHAR_META[owner.character]?.color ?? '#d83b2f') : null;
               const isCenterSpecial = ['go', 'free_parking', 'jail', 'go_to_jail', 'chance', 'community_chest', 'tax', 'railroad', 'utility'].includes(tile.type);
               return (
                 <div
@@ -2591,7 +2615,6 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
                   className={cn('board-turn-tile relative overflow-hidden rounded-md border border-[#17120c] bg-[#fff7df] p-1 text-center shadow-[0_1px_0_rgba(0,0,0,0.42)]', isActive && 'board-turn-tile-current', isEnd && 'board-turn-tile-arrived')}
                   style={grid}
                 >
-                  {owner && <div className="board-turn-owner-bookmark" style={{ backgroundColor: ownerColor }} title={`${owner.name || `${ownerId + 1}P`} 소유`} />}
                   {!isCenterSpecial && <div className="h-1.5 rounded-sm" style={{ backgroundColor: tile.color ?? (tile.type === 'tax' ? '#e44' : tile.type === 'community_chest' ? '#4f7edb' : '#d6b15d') }} />}
                   <div className={cn('board-turn-tile-name', isCenterSpecial && 'board-turn-tile-name-special')} title={tile.names?.ko ?? tile.name ?? String(tile.pos)}>{isCenterSpecial ? specialTileContent(tile) : shortTileName(tile.names?.ko ?? tile.name ?? tile.pos)}</div>
                   {isTeleportSelect && tile.pos !== teleportRequest.fromPos && (
@@ -2624,37 +2647,21 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
                 </div>
               );
             })}
-            <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
-              <div className="space-y-3">
-                {showCardPanel ? (
-                  <BoardCardRevealPanel card={cardResult} onReveal={onRevealCard} />
-                ) : isTeleportSelect ? (
-                  <BoardTeleportSelectPanel request={teleportRequest} player={player} playerColor={activePlayerColor} />
-                ) : replay.phase === 'arrived' ? (
-                  <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} activeColor={activePlayerColor} />
-                ) : replay.phase === 'ready' ? (
-                  <div className="board-turn-number-pad">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-                      <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                ) : replay.phase === 'inspect' ? (
-                  <div className="board-turn-number-pad">
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-                      <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={cn('board-turn-manual-result scale-75', replay.phase === 'rolling' && 'is-rolling')}>
-                    {rollSum ?? replay.manualSteps ?? '?'}
-                  </div>
-                )}
+            {boardOwnerRails.map((rail) => (
+              <div
+                key={`owner-rail-${rail.pos}`}
+                className={cn('board-turn-owner-rail', `board-turn-owner-rail-${rail.side}`)}
+                style={{ ...rail.grid, backgroundColor: rail.color }}
+                title={rail.title}
+              />
+            ))}
+            {centerBoardContent && (
+              <div className={cn('col-start-3 col-end-10 row-start-3 row-end-10 grid place-items-center rounded-[16px] border-2 border-[#17120c] bg-[linear-gradient(135deg,#fffaf0_0%,#ead8ad_100%)] p-2 text-center shadow-[inset_0_2px_0_rgba(255,255,255,0.55)]', cameraActive && 'opacity-30')}>
+                <div className="space-y-3">
+                  {centerBoardContent}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -3042,8 +3049,13 @@ function InitialDealOverlay({ players, turnIndex = 0, cards, onReady, onPhaseCha
   const introVisible = phase === 'intro';
   const dealVisible = phase === 'deal';
   const onReadyRef = useRef(onReady);
-  const cardsPerPlayer = cards.length > 0 ? Math.max(...cards.map((card) => card.cardIndex ?? 0)) + 1 : 0;
-  const footerDealCards = cards.filter((card) => card.playerIndex !== turnIndex);
+  const cardsPerPlayer = useMemo(() => (
+    cards.length > 0 ? Math.max(...cards.map((card) => card.cardIndex ?? 0)) + 1 : 0
+  ), [cards]);
+  const footerDealCards = useMemo(
+    () => cards.filter((card) => card.playerIndex !== turnIndex),
+    [cards, turnIndex],
+  );
 
   useEffect(() => {
     onReadyRef.current = onReady;
@@ -3590,3 +3602,5 @@ function summarizeEvent(e) {
       return String(e.kind ?? '\uC774\uBCA4\uD2B8').replaceAll('_', ' ');
   }
 }
+
+export { GameMain };

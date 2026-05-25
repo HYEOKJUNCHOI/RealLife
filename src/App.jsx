@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '@/stores/gameStore.js';
 import Setup from '@/screens/Setup.jsx';
-import GameMain from '@/screens/GameMain.jsx';
+import * as GameMainModule from '@/screens/GameMain.jsx';
 import AdminAssets from '@/screens/AdminAssets.jsx';
 import TabletShell from '@/components/TabletShell.jsx';
 import { GameDialogProvider } from '@/components/GameDialog.jsx';
 
 // URL 해시 → 화면 결정 (#admin 이면 관리자 페이지)
 const getScreenFromHash = () => (window.location.hash === '#admin' ? 'admin' : null);
+const GameMain = GameMainModule.default ?? GameMainModule.GameMain;
 
 export default function App() {
   const [screen, setScreen] = useState('setup');

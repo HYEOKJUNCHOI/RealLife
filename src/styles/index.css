@@ -2746,20 +2746,38 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
 }
 
 
-/* Board overlay fit refinement: align to left play area, not inside with extra margins */
+/* Board overlay fit refinement: stack after reset — match deed-slot section, reduce vertical dead space, keep board square */
+.board-turn-number-pad::before {
+  content: none !important;
+  display: none !important;
+}
+
 .board-turn-layer {
   top: 116px !important;
   left: 10px !important;
-  right: 258px !important;
-  bottom: 100px !important;
+  right: 248px !important;
+  bottom: 6px !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
   padding: 0 !important;
 }
 
 .board-turn-shell {
+  aspect-ratio: 1 / 1 !important;
+  width: auto !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
   border-radius: 14px !important;
 }
 
+.board-turn-shell > div {
+  padding: 4px !important;
+}
+
 .board-turn-shell .board-turn-grid {
+  width: 100% !important;
+  height: 100% !important;
   max-width: 100% !important;
   max-height: 100% !important;
 }
@@ -2769,7 +2787,12 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
     top: 96px !important;
     left: 6px !important;
     right: 6px !important;
-    bottom: 74px !important;
+    bottom: 8px !important;
+  }
+
+  .board-turn-shell {
+    width: min(100%, calc(100vh - 104px)) !important;
+    height: auto !important;
   }
 }
 
@@ -2910,4 +2933,94 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   100% { filter: drop-shadow(0 0 8px rgba(255, 191, 62, 0.34)) hue-rotate(0deg); }
 }
 
+/* Board overlay final pass: beige stage + outside ownership rails */
+.board-turn-layer {
+  top: 116px !important;
+  left: 18px !important;
+  right: 232px !important;
+  bottom: 86px !important;
+  padding: 4px !important;
+}
+
+.board-turn-shell {
+  background: #efe1bb !important;
+}
+
+.board-turn-shell > div {
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  padding: 18px 22px !important;
+}
+
+.board-turn-shell .board-turn-grid {
+  --owner-rail-gap: 3px;
+  --owner-rail-thickness: 7px;
+  height: 100% !important;
+  width: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  justify-self: center !important;
+  align-self: center !important;
+  overflow: visible !important;
+}
+
+.board-turn-owner-bookmark {
+  display: none !important;
+}
+
+.board-turn-owner-rail {
+  position: relative;
+  z-index: 12;
+  pointer-events: none;
+  border: 1px solid rgba(23, 18, 12, 0.78);
+  border-radius: 999px;
+  box-shadow: 0 1px 0 rgba(23, 18, 12, 0.72), 0 0 5px rgba(0,0,0,0.18);
+  opacity: 0.98;
+}
+
+.board-turn-owner-rail-top,
+.board-turn-owner-rail-bottom {
+  width: calc(100% - 8px);
+  height: var(--owner-rail-thickness);
+  justify-self: center;
+}
+
+.board-turn-owner-rail-left,
+.board-turn-owner-rail-right {
+  width: var(--owner-rail-thickness);
+  height: calc(100% - 8px);
+  align-self: center;
+}
+
+.board-turn-owner-rail-top {
+  align-self: start;
+  transform: translateY(calc(-1 * (100% + var(--owner-rail-gap))));
+}
+
+.board-turn-owner-rail-bottom {
+  align-self: end;
+  transform: translateY(calc(100% + var(--owner-rail-gap)));
+}
+
+.board-turn-owner-rail-left {
+  justify-self: start;
+  transform: translateX(calc(-1 * (100% + var(--owner-rail-gap))));
+}
+
+.board-turn-owner-rail-right {
+  justify-self: end;
+  transform: translateX(calc(100% + var(--owner-rail-gap)));
+}
+
+@media (max-width: 767px) {
+  .board-turn-layer {
+    left: 10px !important;
+    right: 10px !important;
+  }
+
+  .board-turn-shell > div {
+    padding: 14px 16px !important;
+  }
+}
 
