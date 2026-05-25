@@ -1066,11 +1066,21 @@ export default function GameMain({ onExit }) {
       setTurnResult(nextResult);
       const hubEvent = events.find((event) => event.kind === 'arrive_hub' && ['self_teleport_free', 'stay_no_fee'].includes(event.type));
       if (!ai && hubEvent) {
-        setHubTeleport({
+        const request = {
           playerId,
           fromPos: hubEvent.pos,
           fee: hubEvent.type === 'stay_no_fee' ? HUB_TELEPORT_FEE : 0,
           title: hubEvent.type === 'stay_no_fee' ? '환승 선택' : '무료 환승',
+        };
+        setHubTeleport(request);
+        setBoardTurn({
+          phase: 'teleport_select',
+          playerId,
+          startPos: hubEvent.pos,
+          displayPos: hubEvent.pos,
+          endPos: hubEvent.pos,
+          arrival: hubEvent,
+          nonce: Date.now(),
         });
       }
       const lifeChangeEvent = events.find((event) => event.kind === 'chance_draw' && event.cardId === 'life_change');
@@ -1148,9 +1158,12 @@ export default function GameMain({ onExit }) {
 
   const resolveHubTeleport = (destPos) => {
     if (!hubTeleport) return false;
-    const ok = hubTeleportAction?.(hubTeleport.playerId, destPos, hubTeleport.fee ?? 0);
-    if (!ok) return false;
+    const teleportResult = hubTeleportAction?.(hubTeleport.playerId, destPos, hubTeleport.fee ?? 0);
+    if (!teleportResult) return false;
     const latest = useGameStore.getState().state ?? state;
+    const events = Array.isArray(teleportResult?.appendedEvents)
+      ? teleportResult.appendedEvents
+      : [{ kind: 'hub_teleport', playerId: hubTeleport.playerId, fromPos: hubTeleport.fromPos, destPos, fee: hubTeleport.fee ?? 0 }];
     const boardSize = latest?.board?.tiles?.length ?? 40;
     const fromPos = hubTeleport.fromPos ?? latest?.players?.[hubTeleport.playerId]?.position ?? 0;
     const forwardSteps = (destPos - fromPos + boardSize) % boardSize;
@@ -1158,13 +1171,15 @@ export default function GameMain({ onExit }) {
     const tile = latest?.board?.tiles?.[destPos];
     const tileName = tile?.names?.ko ?? tile?.name ?? '선택한 칸';
     const isChanceTeleport = hubTeleport.source === 'chance';
+    const pendingBuy = events.find((event) => event.kind === 'arrive_property' && event.type === 'unowned');
+    const card = events.find((event) => event.kind === 'chance_draw' || event.kind === 'welfare_draw' || event.kind === 'event_card' || event.card);
+    const arrival = [...events].reverse().find((event) => ['arrive_property', 'arrive_hub', 'arrive_station', 'arrive_institution', 'income_tax', 'luxury_tax', 'chance_draw', 'welfare_draw', 'parking_jackpot', 'go_to_jail', 'three_doubles_jail', 'jail_landed'].includes(event.kind));
+    const turnKey = `${latest?.round ?? state?.round ?? 0}-${hubTeleport.playerId}`;
+    if (pendingBuy) {
+      setPendingPurchase({ pos: pendingBuy.pos, visitorId: hubTeleport.playerId, turnKey });
+    }
     setHubTeleport(null);
-    setTurnResult({
-      kind: 'arrival',
-      title: isChanceTeleport ? '찬스 환승 완료' : hubTeleport.fee > 0 ? '환승 완료' : '무료 환승 완료',
-      text: `${tileName}(으)로 이동`,
-      icon: isChanceTeleport ? '🎴' : '🧭',
-    });
+    setTurnResult({ ...summarizeTurnResult(events, hubTeleport.playerId, pendingBuy), playerId: hubTeleport.playerId });
     setBoardTurn({
       phase: 'moving',
       playerId: hubTeleport.playerId,
@@ -1172,7 +1187,8 @@ export default function GameMain({ onExit }) {
       displayPos: fromPos,
       endPos: destPos,
       path,
-      arrival: { kind: 'hub_teleport', pos: destPos, tileName, source: hubTeleport.source },
+      arrival: arrival ?? { kind: 'hub_teleport', pos: destPos, tileName, source: hubTeleport.source },
+      card,
       nonce: Date.now(),
     });
     path.forEach((pathPos, idx) => {
@@ -1180,22 +1196,46 @@ export default function GameMain({ onExit }) {
     });
     window.setTimeout(() => {
       setBoardTurn((prev) => prev ? { ...prev, phase: 'arrived', displayPos: destPos, endPos: destPos } : prev);
-      pushGlobalNotice({
-        kind: 'teleport_done',
-        speaker: '사회자',
-        hostText: isChanceTeleport ? `찬스 환승 성공! ${tileName}까지 말이 이동했습니다 🎴` : `환승 완료! ${tileName}까지 말이 이동했습니다 🚉`,
-        title: isChanceTeleport ? '찬스 환승 완료' : '환승 완료',
-        text: hubTeleport.fee > 0 ? `요금 ${hubTeleport.fee}만 정산 후 이동했습니다.` : '요금 없이 이동했습니다.',
-        icon: isChanceTeleport ? '🎴' : '🚉',
-        color: playerColor(hubTeleport.playerId, CHAR_META[latest?.players?.[hubTeleport.playerId]?.character]?.color ?? '#2f75c9'),
-        cta: '터치해서 닫기',
-      });
+      if (pendingBuy) {
+        const buyCash = latest.players?.[hubTeleport.playerId]?.cash ?? 0;
+        const buyPrice = pendingBuy.buyPrice ?? 0;
+        pushGlobalNotice({
+          kind: 'buy',
+          speaker: '사회자',
+          title: buyOfferLine(pendingBuy.pos),
+          hostText: buyCash < buyPrice ? loanOfferLine(pendingBuy.pos) : `환승으로 도착했지만, 실제로 밟은 땅처럼 권리증을 확인합니다 🧓`,
+          text: '',
+          icon: '🧓',
+          cta: '매입 / 스킵',
+          previewPos: pendingBuy.pos,
+          price: buyPrice,
+          cash: buyCash,
+          loanHint: buyCash < buyPrice,
+          color: playerColor(hubTeleport.playerId, CHAR_META[latest?.players?.[hubTeleport.playerId]?.character]?.color ?? '#2f75c9'),
+          onBuy: () => handleBuyProperty(hubTeleport.playerId, pendingBuy.pos),
+          onLoan: () => openLoanForPurchase({ pos: pendingBuy.pos, visitorId: hubTeleport.playerId, turnKey }, hubTeleport.playerId),
+          onPass: () => { setBoardTurn(null); closePropertyModal?.(); },
+        });
+      } else if (!card) {
+        const summary = summarizeTurnResult(events, hubTeleport.playerId, null);
+        pushGlobalNotice({
+          kind: 'teleport_done',
+          speaker: '사회자',
+          hostText: isChanceTeleport ? `찬스 환승 성공! ${tileName}까지 말이 이동했습니다 🎴` : `환승 완료! ${tileName}까지 말이 이동했습니다 🚉`,
+          title: summary.title ?? (isChanceTeleport ? '찬스 환승 완료' : '환승 완료'),
+          text: summary.text ?? (hubTeleport.fee > 0 ? `요금 ${hubTeleport.fee}만 정산 후 이동했습니다.` : '요금 없이 이동했습니다.'),
+          icon: summary.icon ?? (isChanceTeleport ? '🎴' : '🚉'),
+          color: playerColor(hubTeleport.playerId, CHAR_META[latest?.players?.[hubTeleport.playerId]?.character]?.color ?? '#2f75c9'),
+          cta: '터치해서 닫기',
+        });
+      }
     }, 520 + path.length * 115);
     return true;
   };
 
   const stayHubTeleport = () => {
     setHubTeleport(null);
+    setBoardTurn(null);
   };
 
   const handleStationResign = async () => {
@@ -1404,8 +1444,9 @@ export default function GameMain({ onExit }) {
             cardResult={cardSettlementPending && turnResult?.kind === 'card' ? turnResult : null}
             onRevealCard={() => handleOpenResultCard(turnResult)}
             onRoll={handleBoardDiceRoll}
-            teleportRequest={hubTeleport?.source === 'chance' ? hubTeleport : null}
+            teleportRequest={hubTeleport}
             onTeleportSelect={resolveHubTeleport}
+            onTeleportStay={stayHubTeleport}
             onClose={closeBoardToStatus}
           />
         )}
@@ -1449,7 +1490,7 @@ export default function GameMain({ onExit }) {
           />
         )}
 
-        {!state.finished && hubTeleport && hubTeleport.source !== 'chance' && (
+        {false && !state.finished && hubTeleport && hubTeleport.source !== 'chance' && (
           <HubTeleportModal
             state={state}
             request={hubTeleport}
@@ -2524,7 +2565,7 @@ function PlayerCardSlotOverlay({ state, playerIndex, currentIndex, turnBriefing,
   );
 }
 
-function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRoll, teleportRequest = null, onTeleportSelect, onClose }) {
+function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRoll, teleportRequest = null, onTeleportSelect, onTeleportStay, onClose }) {
   const openTradeSelect = useGameStore((s) => s.openTradeSelect);
   const tiles = state.board?.tiles ?? [];
   const player = state.players?.[replay.playerId];
@@ -2579,7 +2620,7 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
   const centerBoardContent = showCardPanel ? (
     <BoardCardRevealPanel card={cardResult} onReveal={onRevealCard} />
   ) : isTeleportSelect ? (
-    <BoardTeleportSelectPanel request={teleportRequest} player={player} playerColor={activePlayerColor} />
+    <BoardTeleportSelectPanel request={teleportRequest} player={player} playerColor={activePlayerColor} onStay={onTeleportStay} />
   ) : replay.phase === 'arrived' ? (
     <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} activeColor={activePlayerColor} />
   ) : replay.phase === 'rolling' || replay.phase === 'moving' ? (
@@ -2670,17 +2711,29 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
   );
 }
 
-function BoardTeleportSelectPanel({ request, player, playerColor = '#FACC15' }) {
+function BoardTeleportSelectPanel({ request, player, playerColor = '#FACC15', onStay }) {
   const name = player?.name ?? `${(request?.playerId ?? 0) + 1}P`;
+  const isChance = request?.source === 'chance';
   return (
     <div className="mx-auto w-[min(48vw,300px)] rounded-[20px] border-[3px] border-[#17120c] bg-[linear-gradient(145deg,#020617_0%,#111827_58%,#facc15_160%)] p-4 text-center text-white shadow-[0_6px_0_#17120c,0_0_26px_rgba(250,204,21,0.42)]">
-      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border-2 border-white/70 bg-white/16 text-[30px] shadow-[0_3px_0_rgba(0,0,0,0.45)]">🎴</div>
-      <div className="mt-2 font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/54">chance transfer</div>
-      <div className="mt-1 font-board text-[24px] leading-none" style={{ color: playerColor }}>환승역 찬스</div>
+      <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border-2 border-white/70 bg-white/16 text-[30px] shadow-[0_3px_0_rgba(0,0,0,0.45)]">{isChance ? '🎴' : '🚉'}</div>
+      <div className="mt-2 font-display text-[9px] font-black uppercase tracking-[0.24em] text-white/54">{isChance ? 'chance transfer' : 'highway transfer'}</div>
+      <div className="mt-1 font-board text-[24px] leading-none" style={{ color: playerColor }}>{request?.title ?? (isChance ? '환승역 찬스' : '고속도로 이동')}</div>
       <div className="mt-2 rounded-xl border border-white/18 bg-white/12 px-3 py-2 font-board text-[15px] leading-tight text-white/86">
         {name}님, 보드판에서 이동할 칸을 눌러주세요.
+        {request?.fee > 0 ? ` 요금 ${request.fee}만이 먼저 정산됩니다.` : ''}
       </div>
-      <div className="mt-2 font-display text-[10px] font-black uppercase tracking-[0.14em] text-yellow-200/80">노란빛 칸 선택 → 말 이동 → 정리 멘트</div>
+      <div className="mt-2 font-display text-[10px] font-black uppercase tracking-[0.14em] text-yellow-200/80">노란빛 칸 선택 → 말 이동 → 도착칸 처리</div>
+      {!isChance && (
+        <button
+          type="button"
+          onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+          onClick={(event) => { event.preventDefault(); event.stopPropagation(); onStay?.(); }}
+          className="mt-3 h-10 rounded-xl border-2 border-white/60 bg-white/12 px-4 font-board text-[16px] text-white shadow-[0_2px_0_rgba(0,0,0,0.45)] active:translate-y-0.5 active:shadow-none"
+        >
+          이동하지 않고 머무르기
+        </button>
+      )}
     </div>
   );
 }

@@ -305,21 +305,23 @@ export const useGameStore = create((set, get) => ({
   },
 
   hubTeleport: (playerId, destPos, fee = 0) => {
-    const { state, log, lastTurn } = get();
+    const { state, rng, log, lastTurn } = get();
     if (!state || state.finished) return false;
     const player = state.players[playerId];
     const target = state.board?.tiles?.[destPos];
     const safeFee = Math.max(0, Number(fee) || 0);
     if (!player || !target) return false;
     if (safeFee > 0 && (player.cash ?? 0) < safeFee) return false;
+    const cashBefore = player.cash ?? 0;
     const fromPos = player.position ?? 0;
     if (safeFee > 0) player.cash -= safeFee;
     player.position = destPos;
     const event = { kind: 'hub_teleport', playerId, fromPos, destPos, fee: safeFee };
     const arrivalEvents = [];
-    if (target.type === 'utility') {
-      arrivalEvents.push({ kind: 'arrive_institution', ...handleInstitutionArrival(state, playerId, destPos) });
-    }
+    handleTileArrival(state, playerId, destPos, rng, arrivalEvents, {
+      deferCardEffects: true,
+      deferPropertyModal: true,
+    });
     const appendedEvents = [event, ...arrivalEvents];
     const nextEvents = lastTurn?.playerId === playerId ? [...(lastTurn.events ?? []), ...appendedEvents] : appendedEvents;
     set({
@@ -327,14 +329,14 @@ export const useGameStore = create((set, get) => ({
       log: [...log, ...appendedEvents],
       lastTurn: {
         playerId,
-        cashBefore: lastTurn?.playerId === playerId ? lastTurn.cashBefore : (player.cash ?? 0) + safeFee,
+        cashBefore: lastTurn?.playerId === playerId ? lastTurn.cashBefore : cashBefore,
         cashAfter: player.cash ?? 0,
         events: nextEvents,
       },
     });
     if (safeFee > 0) get().addToast({ type: 'expense', amount: safeFee });
     get().save();
-    return true;
+    return { event, arrivalEvents, appendedEvents };
   },
 
   // ===== 부동산 단계 변경 (집짓기 +/-) — 룰 §6 =====
@@ -521,34 +523,58 @@ export const useGameStore = create((set, get) => ({
   },
 
   submitTrade: ({ fromId, toId, givePos = [], getPos = [], giveCash = 0, getCash = 0 }) => {
-    const { state } = get();
-    if (!state) return;
+    const { state, log, lastTurn } = get();
+    if (!state) return false;
     const from = state.players[fromId];
     const to = state.players[toId];
-    if (!from || !to) return;
-    if (from.cash < giveCash || to.cash < getCash) return;
+    if (!from || !to || from.bankrupt || to.bankrupt || fromId === toId) return false;
+    const safeGivePos = [...new Set((givePos ?? []).map(Number).filter(Number.isInteger))];
+    const safeGetPos = [...new Set((getPos ?? []).map(Number).filter(Number.isInteger))];
+    const safeGiveCash = Math.max(0, round10(Number(giveCash) || 0));
+    const safeGetCash = Math.max(0, round10(Number(getCash) || 0));
+    if ((from.cash ?? 0) < safeGiveCash || (to.cash ?? 0) < safeGetCash) return false;
+    const fromCashBefore = from.cash ?? 0;
     // 부동산 이전
-    for (const pos of givePos) {
+    for (const pos of safeGivePos) {
       const ts = state.tileState[pos];
-      if (!ts || ts.owner !== fromId) return;
+      if (!ts || ts.owner !== fromId) return false;
       ts.owner = toId;
       from.properties = (from.properties ?? []).filter((p) => p !== pos);
-      to.properties = [...(to.properties ?? []), pos];
+      to.properties = [...new Set([...(to.properties ?? []), pos])];
     }
-    for (const pos of getPos) {
+    for (const pos of safeGetPos) {
       const ts = state.tileState[pos];
-      if (!ts || ts.owner !== toId) return;
+      if (!ts || ts.owner !== toId) return false;
       ts.owner = fromId;
       to.properties = (to.properties ?? []).filter((p) => p !== pos);
-      from.properties = [...(from.properties ?? []), pos];
+      from.properties = [...new Set([...(from.properties ?? []), pos])];
     }
     // 현금 이전
-    from.cash -= giveCash;
-    to.cash += giveCash;
-    to.cash -= getCash;
-    from.cash += getCash;
-    set({ state: { ...state }, modal: { ...get().modal, trade: null } });
+    from.cash -= safeGiveCash;
+    to.cash += safeGiveCash;
+    to.cash -= safeGetCash;
+    from.cash += safeGetCash;
+    const event = {
+      kind: 'trade',
+      fromId,
+      toId,
+      givePos: safeGivePos,
+      getPos: safeGetPos,
+      giveCash: safeGiveCash,
+      getCash: safeGetCash,
+    };
+    const nextEvents = lastTurn?.playerId === fromId ? [...(lastTurn.events ?? []), event] : [event];
+    set({
+      state: { ...state },
+      modal: { ...get().modal, trade: null },
+      log: [...log, event],
+      lastTurn: lastTurn?.playerId === fromId
+        ? { ...lastTurn, cashAfter: from.cash ?? 0, events: nextEvents }
+        : { playerId: fromId, cashBefore: fromCashBefore, cashAfter: from.cash ?? 0, events: nextEvents },
+    });
+    get().addToast({ message: `${from.name ?? `${fromId + 1}P`} ↔ ${to.name ?? `${toId + 1}P`} 거래 완료`, tone: 'success' });
     get().save();
+    return true;
   },
 
   // ===== 회생 모달 =====

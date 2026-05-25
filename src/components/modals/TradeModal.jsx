@@ -107,61 +107,26 @@ const cleanMoney = (value, max = 999999) => {
 function MoneyKeypad({ value, max = 0, marketAmount = 0, onChange, disabled = false }) {
   const current = Number.parseInt(value || '0', 10) || 0;
   const setAmount = (next) => onChange?.(cleanMoney(next, max));
-  const append = (digit) => {
-    if (disabled) return;
-    setAmount(`${current}${digit}`);
-  };
   const quickAdd = (amount) => {
     if (disabled) return;
     setAmount(current + amount);
   };
-  const quickSub = (amount) => {
-    if (disabled) return;
-    setAmount(Math.max(0, current - amount));
-  };
 
   return (
-    <div className={cn('mt-1 grid gap-1.5', disabled && 'pointer-events-none opacity-45')}>
-      <div className="grid grid-cols-5 gap-1.5">
-        {[10, 50, 100, 500].map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            onClick={() => quickAdd(amount)}
-            className="h-8 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_56%,#e9bd56_100%)] font-board text-[13px] text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
-          >
-            +{amount}
-          </button>
-        ))}
-        <button type="button" onClick={() => setAmount(max)} className="h-8 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#f0fff6_0%,#9de8c8_58%,#44b990_100%)] font-board text-[13px] text-emerald-950 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">최대</button>
-      </div>
-      <div className="grid grid-cols-5 gap-1.5">
+    <div className={cn('mt-1 grid grid-cols-6 gap-1', disabled && 'pointer-events-none opacity-45')}>
         {[10, 50, 100].map((amount) => (
           <button
             key={amount}
             type="button"
-            onClick={() => quickSub(amount)}
-            className="h-8 rounded-lg border-2 border-ink-line bg-white font-board text-[13px] text-ink/70 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
+            onClick={() => quickAdd(amount)}
+            className="h-7 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#ffffff_0%,#ffe8a8_56%,#e9bd56_100%)] font-board text-[12px] text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
           >
-            -{amount}
+            +{amount}
           </button>
         ))}
-        <button type="button" onClick={() => setAmount(marketAmount || 0)} className="h-8 rounded-lg border-2 border-ink-line bg-red-50 font-board text-[13px] text-red-700 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">시세</button>
-        <button type="button" onClick={() => setAmount(String(value ?? '0').slice(0, -1) || '0')} className="h-8 rounded-lg border-2 border-ink-line bg-slate-50 font-board text-[13px] text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">⌫</button>
-      </div>
-      <div className="grid grid-cols-3 gap-1.5">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-          <button
-            key={num}
-            type="button"
-            onClick={() => append(num)}
-            className="h-7 rounded-lg border border-ink-line/35 bg-white font-display text-[13px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none"
-          >
-            {num}
-          </button>
-        ))}
-        <button type="button" onClick={() => append(0)} className="col-span-3 h-7 rounded-lg border border-ink-line/35 bg-white font-display text-[13px] font-bold text-ink shadow-[0_1px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">0</button>
-      </div>
+        <button type="button" onClick={() => setAmount(marketAmount || 0)} className="h-7 rounded-lg border-2 border-ink-line bg-red-50 font-board text-[12px] text-red-700 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">시세</button>
+        <button type="button" onClick={() => setAmount(max)} className="h-7 rounded-lg border-2 border-ink-line bg-[linear-gradient(180deg,#f0fff6_0%,#9de8c8_58%,#44b990_100%)] font-board text-[12px] text-emerald-950 shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">최대</button>
+        <button type="button" onClick={() => setAmount(0)} className="h-7 rounded-lg border-2 border-ink-line bg-slate-50 font-board text-[12px] text-ink shadow-[0_2px_0_#0F0C0A] active:translate-y-0.5 active:shadow-none">초기화</button>
     </div>
   );
 }
@@ -176,6 +141,7 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
   const [giveCash, setGiveCash] = useState(0);
   const [getCash, setGetCash] = useState(0);
   const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState('');
 
   // 모달 열릴 때 초기화 (미니맵에서 미리 선택된 부동산 있으면 반영)
   useEffect(() => {
@@ -186,6 +152,7 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
       setGiveCash(0);
       setGetCash(0);
       setConfirming(false);
+      setError('');
     }
   }, [open, initialToId, initialGetPos]);
 
@@ -212,10 +179,11 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
   const onSubmit = () => {
     if (toId == null || tradeEmpty) return;
     if (!confirming) {
+      setError('');
       setConfirming(true);
       return;
     }
-    handleSubmit?.({
+    const ok = handleSubmit?.({
       fromId,
       toId,
       givePos,
@@ -223,22 +191,27 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
       giveCash: Math.max(0, parseInt(giveCash, 10) || 0),
       getCash: Math.max(0, parseInt(getCash, 10) || 0),
     });
+    if (!ok) {
+      setError('거래 조건이 바뀌었거나 잔액/소유권이 맞지 않습니다. 선택을 다시 확인해주세요.');
+      setConfirming(false);
+      return;
+    }
     onClose?.();
   };
 
   return (
-    <ModalBase open={open} onClose={onClose} className="w-[min(98vw,720px)] max-h-[92vh] overflow-hidden">
-      <div className="px-5 py-3 rounded-t-2xl bg-monopoly-red text-white shadow-[inset_0_-3px_0_rgba(15,12,10,0.32)]">
+    <ModalBase open={open} onClose={onClose} className="flex h-full max-h-full w-[min(98vw,860px)] flex-col overflow-hidden">
+      <div className="shrink-0 px-5 py-2 rounded-t-2xl bg-monopoly-red text-white shadow-[inset_0_-3px_0_rgba(15,12,10,0.32)]">
         <div className="text-center">
           <div className="text-xs opacity-80 tracking-widest">— TRADE —</div>
-          <div className="text-lg font-bold">거래 제안</div>
+          <div className="text-lg font-bold">거래 제안 · 한 화면 모드</div>
         </div>
       </div>
 
-      <div className="space-y-3 p-3">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto_auto] gap-2 p-2">
         {/* 거래 상대 선택 */}
-        <div>
-          <div className="text-xs text-gray-500 mb-1">거래 상대</div>
+        <div className="min-h-0">
+          <div className="text-[11px] text-gray-500 mb-1">거래 상대</div>
           <div className="flex gap-2 flex-wrap">
             {otherPlayers.map((p) => {
               const pid = state.players.indexOf(p);
@@ -247,9 +220,15 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
                 <button
                   key={pid}
                   type="button"
-                  onClick={() => setToId(pid)}
+                  onClick={() => {
+                    setToId(pid);
+                    setGetPos([]);
+                    setGetCash(0);
+                    setConfirming(false);
+                    setError('');
+                  }}
                   className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm border-2',
+                    'inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs border-2',
                     toId === pid
                       ? 'border-matrix-green bg-green-50 text-black font-bold'
                       : 'border-gray-300 bg-white text-gray-600',
@@ -268,11 +247,11 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
         </div>
 
         {/* 좌우 분할 */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid min-h-0 grid-cols-2 gap-2 overflow-hidden">
           {/* 좌측 — 내가 줄 것 */}
-          <div className="space-y-2 rounded-xl border-2 border-ink-line bg-white/80 p-2">
+          <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-1 rounded-xl border-2 border-ink-line bg-white/80 p-2">
             <div className="font-board text-[15px] font-extrabold text-gray-700">📤 내가 줄 것</div>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid min-h-0 content-start grid-cols-2 gap-1 overflow-hidden">
               {myProperties.map((pos) => (
                 <PropertyChip
                   key={pos}
@@ -284,7 +263,7 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
               ))}
               {myProperties.length === 0 && <div className="text-xs text-gray-400">거래 가능 부동산 없음</div>}
             </div>
-            <div>
+            <div className="min-h-0">
               <label className="text-xs text-gray-500">현금 (만원)</label>
               <input
                 type="text"
@@ -302,9 +281,9 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
           </div>
 
           {/* 우측 — 받을 것 */}
-          <div className="space-y-2 rounded-xl border-2 border-ink-line bg-white/80 p-2">
+          <div className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-1 rounded-xl border-2 border-ink-line bg-white/80 p-2">
             <div className="font-board text-[15px] font-extrabold text-gray-700">📥 받을 것</div>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid min-h-0 content-start grid-cols-2 gap-1 overflow-hidden">
               {theirProperties.map((pos) => (
                 <PropertyChip
                   key={pos}
@@ -319,7 +298,7 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
                 <div className="text-xs text-gray-400">상대 부동산 없음</div>
               )}
             </div>
-            <div>
+            <div className="min-h-0">
               <label className="text-xs text-gray-500">현금 (만원)</label>
               <input
                 type="text"
@@ -339,8 +318,9 @@ export default function TradeModal({ open, onClose, fromId, toId: initialToId, i
         </div>
 
         {/* 거래 정보카드 */}
-        <div className={cn('rounded-xl border-2 p-3 text-sm shadow-[0_2px_0_#0F0C0A]', confirming ? 'border-emerald-700 bg-emerald-50 text-emerald-950' : 'border-ink-line bg-white text-gray-700')}>
-          <div className="mb-2 font-board text-lg text-ink">{confirming ? '거래 승인 요청' : '거래 정보카드'}</div>
+        <div className={cn('rounded-xl border-2 p-2 text-sm shadow-[0_2px_0_#0F0C0A]', confirming ? 'border-emerald-700 bg-emerald-50 text-emerald-950' : 'border-ink-line bg-white text-gray-700')}>
+          <div className="mb-1 font-board text-base text-ink">{confirming ? '거래 승인 요청' : '거래 정보카드'}</div>
+          {error && <div className="mb-1 rounded-md border border-red-300 bg-red-50 px-2 py-1 font-board text-[13px] text-red-700">{error}</div>}
           <div className="grid grid-cols-2 gap-2">
             <TradeInfoGroup title="내가 주는 것" tone="red" positions={givePos} cash={giveCash} state={state} />
             <TradeInfoGroup title="내가 받는 것" tone="green" positions={getPos} cash={getCash} state={state} />

@@ -111,9 +111,9 @@ export default function TradeSelectModal({ open, onClose, fromId }) {
   return (
     <>
     {/* ══ 좌측 플레이어 프로필 패널 — Portal (모달 overflow 우회) ══ */}
-    <ModalBase open={open} onClose={onClose} className="w-[min(95vw,720px)]">
+    <ModalBase open={open} onClose={onClose} className="flex h-full max-h-full w-[min(95vw,720px)] flex-col overflow-hidden">
       {/* 헤더 */}
-      <div className="rounded-t-2xl bg-monopoly-red px-5 py-3 text-center text-white">
+      <div className="shrink-0 rounded-t-2xl bg-monopoly-red px-5 py-2 text-center text-white">
         <div className="font-display text-[10px] uppercase tracking-[0.3em] opacity-80">
           — Trade Select —
         </div>
@@ -129,7 +129,7 @@ export default function TradeSelectModal({ open, onClose, fromId }) {
 
       {/* 미니 보드판 11×11 */}
 
-      <div className="border-b-2 border-ink-line bg-parchment-50 px-3 py-2">
+      <div className="shrink-0 border-b-2 border-ink-line bg-parchment-50 px-3 py-1.5">
         <div className="grid grid-cols-4 gap-1.5">
           {state.players.map((p, i) => {
             const m = playerMeta(state, i);
@@ -170,8 +170,8 @@ export default function TradeSelectModal({ open, onClose, fromId }) {
           })}
         </div>
       </div>
-      <div className="bg-parchment-100 p-3">
-        <div className="mx-auto aspect-square w-full max-w-[640px]">
+      <div className="min-h-0 flex-1 bg-parchment-100 p-2">
+        <div className="mx-auto aspect-square h-full max-h-full max-w-[640px]">
           <div className="grid h-full w-full grid-cols-[repeat(11,1fr)] grid-rows-[repeat(11,1fr)] gap-[2px] rounded-md border-2 border-ink-line bg-ink-line/20 p-[2px]">
             {Array.from({ length: 11 * 11 }).map((_, idx) => {
               const row = Math.floor(idx / 11);
@@ -363,7 +363,7 @@ export default function TradeSelectModal({ open, onClose, fromId }) {
       </div>
 
       {/* 액션 — 진행 / 취소 */}
-      <div className="flex items-stretch gap-2 border-t-2 border-ink-line bg-parchment-100 px-4 py-3">
+      <div className="shrink-0 flex items-stretch gap-2 border-t-2 border-ink-line bg-parchment-100 px-4 py-2">
         <button
           type="button"
           onClick={onClose}
