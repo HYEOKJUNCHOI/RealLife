@@ -31,12 +31,4 @@ Negative requirements: no text, no logo, no watermark, no card, no frame, no slo
 If transparent background is not supported, use a perfectly flat solid chroma green background (#00FF00) for later background removal. No shadows on the background, no gradients, no floor. Avoid green colors on the character.
 ```
 
-## 예시: 전두환 타입
 
-```text
-Character name: 전두환
-Character concept: fictionalized 1980s Korean military-authority archetype inspired by historical imagery.
-Appearance: elderly Korean male, mostly bald top and crown, short dark-gray hair on both sides and around the sideburn area, receding hairline, round broad face, thick eyebrows, small eyes, gold-rim square glasses, calm neutral-friendly expression.
-Outfit: simplified olive drab 1980s-style military officer uniform, structured jacket, epaulets, brass buttons, small medal ribbons, black tie, black belt, glossy black boots.
-Prop: one small decorative military cap or tiny command baton held downward at his side.
-```

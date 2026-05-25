@@ -38,23 +38,19 @@ const AVATAR_POSITION = {
   general: '36% 29%',
   magistrate: 'center 26%',
   farmer: 'center 26%',
-  chunDooHwan: 'center 18%',
   genghisKhan: 'center 24%',
   steveJobs: 'center 24%',
   billGates: 'center 24%',
   donaldTrump: 'center 22%',
-  leeJaeMyung: 'center 22%',
   wakizakaYasuharu: 'center 24%',
   toyotomiHideyoshi: 'center 24%',
 };
 const AVATAR_SIZE = {
   general: '135%',
-  chunDooHwan: '145%',
   genghisKhan: '142%',
   steveJobs: '138%',
   billGates: '138%',
   donaldTrump: '138%',
-  leeJaeMyung: '138%',
   wakizakaYasuharu: '140%',
   toyotomiHideyoshi: '140%',
 };
@@ -1263,7 +1259,7 @@ export default function GameMain({ onExit }) {
     if (!state || state.finished || turnPlayer?.controller !== 'ai') return undefined;
     if (boardTurn || diceLocked || aiTurnSummary || hubTeleport || modalProperty || modalTrade || modalTradeSelect || modalEvent || modalYearEnd || modalDeathmatch || modalRecovery || modalLoan) return undefined;
     const timer = window.setTimeout(() => {
-      const steps = Math.floor(Math.random() * 12) + 1;
+      const steps = Math.floor(Math.random() * 10) + 1;
       runManualDiceMove(steps, { ai: true });
     }, 750);
     return () => window.clearTimeout(timer);
@@ -1726,7 +1722,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
     boxShadow: isBuy
       ? '0 4px 0 #0F0C0A, 0 16px 36px rgba(0,0,0,0.34)'
       : isTurnStart
-        ? `0 5px 0 #0F0C0A, 0 0 0 3px ${turnStartAccent}d8, 0 0 0 7px rgba(255,140,10,0.24), 0 0 48px rgba(255,140,10,0.76), inset 0 0 30px rgba(255,140,10,0.18)`
+        ? '0 8px 24px rgba(0,0,0,0.34)'
         : `0 6px 0 #0F0C0A, 0 22px 54px rgba(0,0,0,0.46), 0 0 0 2px ${visualAccent}aa, 0 0 42px ${visualAccent}8f, inset 0 0 30px ${visualAccent}22`,
   } : undefined;
   const visitorImg = notice.visitorCharacter ? getCharacterImg(notice.visitorCharacter) : null;
@@ -1775,7 +1771,7 @@ function GlobalNoticeBand({ notice, onDismiss }) {
     >
       <motion.div
         key={`${notice.kind}-${notice.title}-${notice.text}`}
-        className={cn('flex w-full flex-col items-center', isTurnStart ? 'max-w-[520px]' : 'max-w-[920px]')}
+        className={cn('flex w-full flex-col items-center', isTurnStart ? 'max-w-[740px]' : 'max-w-[920px]')}
         initial={{ opacity: 0, scale: 0.96, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: -10 }}
@@ -1802,24 +1798,24 @@ function GlobalNoticeBand({ notice, onDismiss }) {
           </div>
         )}
         <div
-          className={cn('mx-auto grid w-full border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[132px] max-w-[520px] grid-rows-[1fr_auto] overflow-visible rounded-[20px] border-2 border-[#ff8c0a]/75 bg-[#101216] p-3 shadow-none' : 'overflow-hidden rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
+          className={cn('mx-auto grid w-full border-ink-line text-center text-white backdrop-blur-[1px]', isTurnStart ? 'min-h-[116px] max-w-[740px] grid-rows-[1fr] overflow-visible rounded-[22px] border-2 border-[#ff8c0a] bg-[#101216] px-7 py-3 shadow-none' : 'overflow-hidden rounded-[24px] border-[3px] p-3 shadow-[0_6px_0_#0F0C0A,0_22px_54px_rgba(0,0,0,0.46)]', !isTurnStart && (notice.subtle ? 'min-h-[18vh] max-w-[720px] grid-rows-[1fr] bg-[linear-gradient(135deg,rgba(15,12,10,0.86)_0%,rgba(70,34,22,0.82)_55%,rgba(128,83,20,0.82)_100%)]' : 'min-h-[calc(30vh-30px)] max-w-[920px] grid-rows-[1fr_auto] bg-[linear-gradient(135deg,rgba(15,12,10,0.91)_0%,rgba(70,34,22,0.88)_45%,rgba(128,83,20,0.86)_100%)]'))}
           style={noticeStyle}
         >
           {isTurnStart ? (
-            <div className="relative flex min-h-[104px] items-center justify-center gap-3 overflow-visible">
+            <div className="relative flex min-h-[88px] items-center justify-center gap-5 overflow-visible">
               {notice.playerCharacter ? (
                 <motion.div
-                  className="absolute -top-4 left-5 z-20 h-20 w-20 shrink-0 rounded-full border-2 border-[#ffb15c] bg-white/78 shadow-[0_0_0_4px_rgba(255,140,10,0.32),0_0_28px_rgba(255,140,10,0.62)]"
+                  className="relative z-10 h-[78px] w-[78px] shrink-0 rounded-full border-2 border-[#ff8c0a] bg-white/82 shadow-none"
                   style={avatarStyle(notice.playerCharacter, noticePlayerImg, visualAccent)}
-                  animate={{ scale: [1, 1.08, 1] }}
+                  animate={{ scale: [1, 1.04, 1] }}
                   transition={{ duration: 0.65 }}
                 />
               ) : (
-                <motion.span className={cn('leading-none drop-shadow-[0_4px_0_rgba(0,0,0,0.36)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
+                <motion.span className={cn('leading-none drop-shadow-[0_3px_0_rgba(0,0,0,0.30)]', notice.subtle ? 'text-[34px]' : 'text-[46px]')} animate={{ rotate: [-4, 4, -2, 0], scale: [1, 1.1, 1] }} transition={{ duration: 0.65 }}>{notice.icon ?? '📣'}</motion.span>
               )}
-              <div className={cn('min-w-0', 'translate-x-[45px]')}>
-                <div className={cn('font-board font-black leading-[0.95] drop-shadow-[0_4px_0_rgba(0,0,0,0.42)]', 'text-[clamp(18px,2.55vw,27px)]')}>{notice.title}</div>
-                <div className={cn('mt-1 line-clamp-1 font-board font-black tracking-normal text-monopoly-gold/86', 'text-[clamp(15px,2vw,21px)]')}>{notice.text}</div>
+              <div className="min-w-0 flex-1 text-center">
+                <div className="font-board text-[clamp(22px,3.2vw,38px)] font-black leading-[1.02] tracking-[-0.02em] drop-shadow-[0_3px_0_rgba(0,0,0,0.38)]">{notice.title}</div>
+                <div className="mt-2 line-clamp-1 font-board text-[clamp(17px,2.35vw,27px)] font-black tracking-normal text-white/95 drop-shadow-[0_2px_0_rgba(0,0,0,0.32)]">{notice.text}</div>
               </div>
             </div>
           ) : isBuy ? (
@@ -2638,32 +2634,19 @@ function BoardTurnOverlay({ state, replay, cardResult = null, onRevealCard, onRo
                   <BoardArrivalCard state={state} pos={replay.endPos ?? pos} event={replay.arrival} activeColor={activePlayerColor} />
                 ) : replay.phase === 'ready' ? (
                   <div className="board-turn-number-pad">
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
                       <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
                         {num}
                       </button>
                     ))}
                   </div>
                 ) : replay.phase === 'inspect' ? (
-                  <div className="space-y-3">
-                    <div className="board-turn-number-pad">
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
-                        <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
-                          {num}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        openTradeSelect?.(replay.playerId);
-                      }}
-                      className="rounded-xl border border-[#17120c]/45 bg-[linear-gradient(180deg,rgba(255,247,214,0.72)_0%,rgba(214,177,93,0.62)_100%)] px-5 py-2.5 font-board text-[20px] font-black leading-none text-[#4b3510] shadow-[0_2px_0_rgba(23,18,12,0.55),0_8px_16px_-14px_rgba(0,0,0,0.45)] transition active:translate-y-1 active:shadow-none"
-                    >
-                      거래 제의
-                    </button>
+                  <div className="board-turn-number-pad">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                      <button key={num} type="button" onClick={() => onRoll(num)} className="board-turn-number-button">
+                        {num}
+                      </button>
+                    ))}
                   </div>
                 ) : (
                   <div className={cn('board-turn-manual-result scale-75', replay.phase === 'rolling' && 'is-rolling')}>

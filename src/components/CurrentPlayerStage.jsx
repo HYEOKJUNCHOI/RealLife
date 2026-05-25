@@ -82,12 +82,10 @@ const AVATAR_POSITION = {
   general: '36% 23%',
   magistrate: 'center 22%',
   farmer: 'center 23%',
-  chunDooHwan: 'center 18%',
   genghisKhan: 'center 20%',
   steveJobs: 'center calc(18% + 12px)',
   billGates: 'center calc(18% + 12px)',
   donaldTrump: 'center calc(18% + 7px)',
-  leeJaeMyung: 'center 18%',
   wakizakaYasuharu: 'center 20%',
   toyotomiHideyoshi: 'center 20%',
   elonMusk: 'center calc(18% + 12px)',
@@ -112,12 +110,10 @@ const AVATAR_SIZE = {
   general: '205%',
   magistrate: '220%',
   farmer: '220%',
-  chunDooHwan: '220%',
   genghisKhan: '220%',
   steveJobs: '255%',
   billGates: '255%',
   donaldTrump: '255%',
-  leeJaeMyung: '245%',
   wakizakaYasuharu: '245%',
   toyotomiHideyoshi: '245%',
   elonMusk: '255%',
@@ -772,7 +768,7 @@ function ProfileTradePanel({ color = '#6fb3ff', playerName, onTradeRequest }) {
 }
 
 function RealDiceTurnPanel({ color = '#6fb3ff', result, onDiceRoll, diceMode = 'keypad', onDiceModeChange, onAppDiceRoll, lastDiceRoll, diceLocked, onUnlockDice, onOpenResultCard, disabled }) {
-  const nums = Array.from({ length: 12 }, (_, i) => i + 1);
+  const nums = Array.from({ length: 10 }, (_, i) => i + 1);
   const resultTitle = result?.title ?? '주사위';
   const resultText = result?.text ?? '굴릴 준비 완료';
   const resultIcon = result?.icon ?? '🎲';

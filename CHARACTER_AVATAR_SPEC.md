@@ -57,16 +57,4 @@ characterId: '/characters/character-id.png',
 - 전신/게임창/원형 아바타 모두 같은 기본 이미지 로직을 탄다.
 - 작게 보였을 때 얼굴 식별이 되도록 머리와 얼굴을 크게, 몸 디테일은 단순하게 만든다.
 
-## 규격 변환 스크립트
 
-현재 전두환 에셋은 아래 스크립트로 세종대왕 규격에 맞췄다.
-
-```text
-scripts/fit_character_like_magistrate.py
-```
-
-사용 예:
-
-```powershell
-python .\scripts\fit_character_like_magistrate.py .\public\characters\source.png .\public\characters\target.png
-```

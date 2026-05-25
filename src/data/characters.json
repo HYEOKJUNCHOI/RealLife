@@ -117,28 +117,16 @@
       "groupLabel": "조선시대"
     },
     {
-      "id": "chunDooHwan",
-      "name": "전두환",
-      "role": "군복",
-      "description": "군복 차림의 현대사 인물 토큰",
-      "emoji": "🪖",
-      "slot": "character.chunDooHwan",
-      "color": "#5F6F3A",
-      "_promptHint": "1980년대 한국 군복, 대머리 윗부분과 짧은 옆머리, 금테 안경, 귀여운 3D 보드게임 토큰",
-      "group": "modernKorea",
-      "groupLabel": "근현대사"
-    },
-    {
-      "id": "leeJaeMyung",
-      "name": "이재명",
-      "role": "정치인",
-      "description": "파란 넥타이를 맨 현대 정치인 캐릭터",
-      "emoji": "🗳️",
-      "slot": "character.leeJaeMyung",
-      "color": "#2563EB",
-      "_promptHint": "이재명풍 현대 정치인, 남색 정장과 파란 넥타이, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
-      "group": "modernCelebrity",
-      "groupLabel": "현대유명인"
+      "id": "ahnJungGeun",
+      "name": "안중근",
+      "role": "독립운동가",
+      "description": "근대 한국의 독립운동가를 가족용 보드게임 토큰 스타일로 표현한 캐릭터",
+      "emoji": "📜",
+      "slot": "character.ahnJungGeun",
+      "color": "#374151",
+      "_promptHint": "안중근풍 근대 한국 독립운동가, 짧은 검은 머리와 작은 콧수염, 검은 코트, 작은 문서, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
+      "group": "modernHistory",
+      "groupLabel": "근현대"
     },
     {
       "id": "steveJobs",
@@ -197,6 +185,18 @@
       "slot": "character.liuBei",
       "color": "#16A34A",
       "_promptHint": "유비풍 삼국지 군주, 한나라풍 도포, 온화한 영웅 표정, 고급 3D 보드게임 토큰",
+      "group": "threeKingdoms",
+      "groupLabel": "삼국지"
+    },
+    {
+      "id": "zhugeLiang",
+      "name": "제갈공명",
+      "role": "삼국지 책략가",
+      "description": "깃털 부채를 든 촉한의 지략가 캐릭터",
+      "emoji": "🪭",
+      "slot": "character.zhugeLiang",
+      "color": "#5F7F8A",
+      "_promptHint": "제갈공명풍 삼국지 책략가, 학자 관모, 옅은 청록색 도포, 작은 깃털 부채, 세종대왕 캐릭터와 같은 고급 3D 게임 캐릭터 스타일",
       "group": "threeKingdoms",
       "groupLabel": "삼국지"
     },

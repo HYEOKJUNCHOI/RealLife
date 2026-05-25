@@ -22,12 +22,10 @@ const AVATAR_POSITION = {
   general:    '36% 23%',     // 투구 얼굴 중앙 맞춤
   magistrate: 'center 22%',  // 익선관
   farmer:     'center 23%',  // 패랭이
-  chunDooHwan: 'center 18%',
   genghisKhan: 'center 20%',
   steveJobs: 'center calc(18% + 7px)',
   billGates: 'center calc(18% + 7px)',
   donaldTrump: 'center calc(18% + 7px)',
-  leeJaeMyung: 'center 18%',
   wakizakaYasuharu: 'center 20%',
   toyotomiHideyoshi: 'center 20%',
   elonMusk: 'center calc(18% + 7px)',
@@ -53,12 +51,10 @@ const AVATAR_SIZE = {
   general: '205%',
   magistrate: '220%',
   farmer: '220%',
-  chunDooHwan: '220%',
   genghisKhan: '220%',
   steveJobs: '255%',
   billGates: '255%',
   donaldTrump: '255%',
-  leeJaeMyung: '245%',
   wakizakaYasuharu: '245%',
   toyotomiHideyoshi: '245%',
   elonMusk: '255%',
