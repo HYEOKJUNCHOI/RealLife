@@ -3025,3 +3025,50 @@ html.initial-deal-live [data-player-strip-index="3"] { animation-delay: 0.78s; }
   }
 }
 
+/* Board overlay size pass: when the board is opened, let it own the screen. */
+.board-turn-layer {
+  top: 72px !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 12px !important;
+  padding: 4px !important;
+}
+
+.board-turn-shell {
+  aspect-ratio: 1 / 1 !important;
+  width: auto !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  justify-self: center !important;
+}
+
+.board-turn-shell > div {
+  padding: 8px !important;
+}
+
+.board-turn-shell .board-turn-grid {
+  --owner-rail-gap: 2px;
+  --owner-rail-thickness: 6px;
+}
+
+@media (min-width: 768px) and (max-height: 860px) {
+  .board-turn-layer {
+    top: 62px !important;
+    bottom: 10px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .board-turn-layer {
+    top: 56px !important;
+    left: 6px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+  }
+
+  .board-turn-shell > div {
+    padding: 6px !important;
+  }
+}
+
